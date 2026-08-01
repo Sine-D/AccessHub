@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-scale: 1;
+  }
+
+  body {
+    font-size: calc(1rem * var(--font-scale));
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
+  }
+}
+
+/* Dynamic Font Scaling Modes */
+.font-scale-sm { --font-scale: 0.9; }
+.font-scale-md { --font-scale: 1; }
+.font-scale-lg { --font-scale: 1.15; }
+.font-scale-xl { --font-scale: 1.3; }
+
+/* WCAG High Contrast Theme */
+.high-contrast {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
+
+.high-contrast .hc-card {
+  background-color: #121212 !important;
+  border: 2px solid #FFD700 !important;
+  color: #FFFFFF !important;
+}
+
+.high-contrast .hc-text-yellow {
+  color: #FFD700 !important;
+}
+
+.high-contrast .hc-bg-yellow {
+  background-color: #FFD700 !important;
+  color: #000000 !important;
+}
+
+.high-contrast .hc-btn {
+  border: 3px solid #00FFFF !important;
+  background-color: #000000 !important;
+  color: #00FFFF !important;
+  font-weight: 800 !important;
+}
+
+/* Glassmorphism subtle overlay */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.dark .glass-panel {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Large Tap Target utility for accessibility */
+.large-tap-targets button,
+.large-tap-targets a,
+.large-tap-targets input,
+.large-tap-targets select {
+  min-height: 52px !important;
+  min-width: 52px !important;
+}
+
+/* One Hand Mode Shift (reachability) */
+.one-hand-mode {
+  padding-top: 120px;
+}
+
+/* Skeleton Loading Shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
