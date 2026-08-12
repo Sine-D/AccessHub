@@ -171,4 +171,11 @@ Contributions make the open-source community an incredible place to learn, inspi
 4. 🚀 **Push** to the Branch (`git push origin feature/AmazingFeature`)
 5. 📬 **Open** a Pull Request
 
+---
+
+<p align="center">
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="License: MIT" />
+  </a>
+</p>
 
