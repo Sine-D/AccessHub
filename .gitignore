@@ -39,6 +39,7 @@ build/
 Thumbs.db
 
 # Temporary & Cache
+.expo/
 .cache/
 .eslintcache
 .stylelintcache
