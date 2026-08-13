@@ -228,6 +228,8 @@ export const mockMapPins: MapPin[] = [
     lng: 79.8612,
     address: 'No 45, Flower Road, Colombo 07',
     badge: 'Wheelchair Accessible Entrance & Ramp',
+    accessibilityFeatures: ['Step-free entrance', 'Wheelchair ramp', 'Accessible parking'],
+    accessibilityRating: 4.8,
     distance: '2.4 km away',
     image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=300'
   },
@@ -239,6 +241,8 @@ export const mockMapPins: MapPin[] = [
     lng: 79.8778,
     address: 'Galle Road, Colombo 03',
     badge: 'Sign Language Staff & Braille Docs',
+    accessibilityFeatures: ['Sign-language support', 'Braille documents', 'Accessible restroom'],
+    accessibilityRating: 4.6,
     distance: '3.8 km away',
     image: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&q=80&w=300'
   },
@@ -250,6 +254,8 @@ export const mockMapPins: MapPin[] = [
     lng: 79.8540,
     address: 'Bambalapitiya, Colombo 04',
     badge: '100% Barrier-Free Campus',
+    accessibilityFeatures: ['Step-free campus', 'Elevator', 'Tactile paving'],
+    accessibilityRating: 4.9,
     distance: '5.1 km away',
     image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=300'
   }

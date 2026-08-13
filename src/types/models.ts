@@ -93,6 +93,8 @@ export interface MapPin {
   lng: number;
   address: string;
   badge?: string;
+  accessibilityFeatures: string[];
+  accessibilityRating: number;
   distance: string;
   image: string;
 }
