@@ -5,7 +5,6 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   Image,
   TextInput,
@@ -13,6 +12,7 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   mockCurrentUser,
   mockProducts,
@@ -24,7 +24,7 @@ import {
   mockNotifications,
 } from './mock/data';
 
-type MobileTab = 'splash' | 'home' | 'marketplace' | 'services' | 'jobs' | 'map' | 'profile';
+type MobileTab = 'splash' | 'onboarding' | 'home' | 'marketplace' | 'services' | 'jobs' | 'map' | 'profile';
 
 export default function AppMobile() {
   const [activeTab, setActiveTab] = useState<MobileTab>('splash');
@@ -36,11 +36,11 @@ export default function AppMobile() {
   const [voiceQuery, setVoiceQuery] = useState('');
   const [aiResponse, setAiResponse] = useState('');
 
-  // Auto transition from Splash to Home Dashboard after 2.5 seconds
+  // Auto transition from Splash to Onboarding after 2.5 seconds
   useEffect(() => {
     if (activeTab === 'splash') {
       const timer = setTimeout(() => {
-        setActiveTab('home');
+        setActiveTab('onboarding');
       }, 2500);
       return () => clearTimeout(timer);
     }
@@ -68,7 +68,7 @@ export default function AppMobile() {
   const primaryButtonBg = highContrast ? '#ffff00' : '#2563eb';
   const primaryButtonText = highContrast ? '#000000' : '#ffffff';
 
-  // CLEAN WHITE MINIMAL SPLASH SCREEN DISPLAYED FIRST WHEN OPENING EXPO GO APP
+  // 1. CLEAN WHITE MINIMAL SPLASH SCREEN
   if (activeTab === 'splash') {
     return (
       <SafeAreaView style={styles.cleanSplashSafeArea}>
@@ -76,7 +76,7 @@ export default function AppMobile() {
         <TouchableOpacity 
           style={styles.cleanSplashContent}
           activeOpacity={0.95}
-          onPress={() => setActiveTab('home')}
+          onPress={() => setActiveTab('onboarding')}
         >
           {/* Centered Large Access Hub Logo */}
           <View style={styles.cleanSplashLogoWrapper}>
@@ -87,6 +87,54 @@ export default function AppMobile() {
             />
           </View>
         </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  // 2. CLEAN WHITE ONBOARDING SCREEN
+  if (activeTab === 'onboarding') {
+    return (
+      <SafeAreaView style={styles.cleanOnboardingSafeArea}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+
+        {/* Center Onboarding Content */}
+        <View style={styles.onboardingCenterContent}>
+          {/* Onboarding Illustration */}
+          <View style={styles.onboardingImageWrapper}>
+            <Image
+              source={require('./assets/images/Onboarding.png')}
+              style={styles.onboardingImg}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* Title & Description */}
+          <View style={styles.onboardingTextGroup}>
+            <Text style={styles.onboardingCategoryBadge}>
+              ♿ Inclusive Marketplace & Hub
+            </Text>
+            <Text style={styles.onboardingTitle}>
+              Inclusive Local Marketplace
+            </Text>
+            <Text style={styles.onboardingSub}>
+              Empowering Ability Through Inclusive Commerce
+            </Text>
+            <Text style={styles.onboardingDesc}>
+              Empowering persons with disabilities to showcase handcrafted goods, adaptive products, remote jobs, and offer freelance services across Sri Lanka.
+            </Text>
+
+            {/* GET STARTED NOW BUTTON DIRECTLY BELOW PARAGRAPH */}
+            <TouchableOpacity 
+              style={styles.onboardingStartBtnInline}
+              onPress={() => setActiveTab('home')}
+            >
+              <Text style={styles.onboardingStartBtnText}>
+                🚀 Get Started Now
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
       </SafeAreaView>
     );
   }
@@ -982,5 +1030,123 @@ const styles = StyleSheet.create({
   cleanSplashLogoImg: {
     width: '100%',
     height: '100%',
+  },
+  cleanOnboardingSafeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  onboardingTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  onboardingStepBadge: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#0d9488',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ccfbf1',
+  },
+  onboardingSkipBtn: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#64748b',
+  },
+  onboardingCenterContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  onboardingImageWrapper: {
+    width: Dimensions.get('window').width * 0.85,
+    height: 260,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  onboardingImg: {
+    width: '100%',
+    height: '100%',
+  },
+  onboardingTextGroup: {
+    width: '100%',
+    alignItems: 'center',
+    paddingHorizontal: 0,
+  },
+  onboardingCategoryBadge: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#0d9488',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginBottom: 6,
+  },
+  onboardingTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#0f172a',
+    textAlign: 'center',
+  },
+  onboardingSub: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  onboardingDesc: {
+    fontSize: 12,
+    color: '#475569',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 18,
+    paddingHorizontal: 10,
+  },
+  onboardingFooter: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  onboardingStartBtn: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: '#0d9488',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0d9488',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  onboardingStartBtnText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  onboardingStartBtnInline: {
+    width: '82%',
+    alignSelf: 'center',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    backgroundColor: '#0d9488',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0d9488',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    marginTop: 18,
   },
 });

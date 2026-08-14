@@ -88,7 +88,7 @@ export const ServicesScreen: React.FC = () => {
 
               {/* Skills Tags */}
               <div className="flex flex-wrap gap-1.5">
-                {service.skills.map((skill, idx) => (
+                {service.skills.map((skill: string, idx: number) => (
                   <span key={idx} className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                     {skill}
                   </span>
@@ -97,7 +97,7 @@ export const ServicesScreen: React.FC = () => {
 
               {/* Portfolio Preview Images */}
               <div className="flex space-x-2 overflow-x-auto pt-1">
-                {service.portfolioImages.map((img, i) => (
+                {service.portfolioImages.map((img: string, i: number) => (
                   <img key={i} src={img} alt="portfolio" className="w-20 h-16 rounded-xl object-cover shrink-0" />
                 ))}
               </div>

@@ -3,7 +3,7 @@ import { UserRole, DisabilityBadge } from './accessibility';
 export interface UserProfile {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   role: UserRole;
   avatar: string;
   coverImage?: string;
@@ -14,8 +14,11 @@ export interface UserProfile {
   location: string;
   totalEarnings?: number;
   totalOrders?: number;
-  isVerified: boolean;
+  isVerified?: boolean;
+  verified?: boolean;
 }
+
+export type User = UserProfile;
 
 export interface Product {
   id: string;
@@ -54,6 +57,8 @@ export interface Service {
   skills: string[];
 }
 
+export type ServiceItem = Service;
+
 export interface Job {
   id: string;
   title: string;
@@ -61,28 +66,30 @@ export interface Job {
   companyLogo: string;
   salary: string;
   location: string;
-  isRemote: boolean;
+  isRemote?: boolean;
   accessibilityBadges: string[];
   description: string;
-  category: string;
+  category?: string;
   postedDate: string;
   applicantCount: number;
   isSaved?: boolean;
 }
 
+export type JobPosting = Job;
+
 export interface DonationItem {
   id: string;
   title: string;
-  category: 'Wheelchairs' | 'Hearing Aids' | 'Laptops' | 'Medical Equipment' | 'Education Support' | 'Food';
+  category: string;
   targetAmount: number;
   raisedAmount: number;
   requesterName: string;
   requesterAvatar: string;
-  requesterType: 'Individual' | 'NGO';
+  requesterType?: 'Individual' | 'NGO';
   ngoVerified: boolean;
   image: string;
   description: string;
-  urgency: 'High' | 'Medium' | 'Normal';
+  urgency?: 'High' | 'Medium' | 'Normal';
 }
 
 export interface MapPin {
@@ -108,11 +115,11 @@ export interface Message {
   senderAvatar: string;
   text?: string;
   timestamp: string;
+  isMine: boolean;
   isVoice?: boolean;
   voiceDuration?: string;
   isImage?: boolean;
   imageUrl?: string;
-  isMine: boolean;
   status: 'sent' | 'delivered' | 'read';
 }
 
@@ -137,4 +144,9 @@ export interface OrderItem {
   driverName?: string;
   driverPhone?: string;
   driverAvatar?: string;
+}
+
+export interface CartItem {
+  product: Product;
+  quantity: number;
 }
