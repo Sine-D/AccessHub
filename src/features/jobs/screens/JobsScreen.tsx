@@ -84,7 +84,7 @@ export const JobsScreen: React.FC = () => {
 
               {/* Accessibility Friendly Badges */}
               <div className="flex flex-wrap gap-1.5 pt-1">
-                {job.accessibilityBadges.map((badge, i) => (
+                {job.accessibilityBadges.map((badge: string, i: number) => (
                   <span key={i} className="text-[10px] font-bold px-2.5 py-1 rounded-xl bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 flex items-center space-x-1">
                     <ShieldCheck className="w-3 h-3 text-teal-500" />
                     <span>{badge}</span>

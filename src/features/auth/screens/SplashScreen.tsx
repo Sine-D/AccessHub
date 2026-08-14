@@ -11,7 +11,7 @@ export const SplashScreen: React.FC = () => {
     speakText('Welcome to Access Hub');
 
     const timer = setTimeout(() => {
-      setActiveScreen('home');
+      setActiveScreen('onboarding');
     }, 2500);
 
     return () => clearTimeout(timer);
@@ -19,7 +19,7 @@ export const SplashScreen: React.FC = () => {
 
   return (
     <div 
-      onClick={() => setActiveScreen('home')}
+      onClick={() => setActiveScreen('onboarding')}
       className="w-full h-full min-h-[800px] bg-white flex items-center justify-center p-6 relative overflow-hidden select-none cursor-pointer"
     >
       {/* Centered Prominent Large Access Hub Logo */}
