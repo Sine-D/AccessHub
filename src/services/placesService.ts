@@ -1,5 +1,5 @@
-import { mockMapPins } from './mockData';
-import { MapPin } from '../types/models';
+import { mockMapPins } from '../mock/data';
+import { MapPin } from '../core/types/models';
 
 const apiBaseUrl = import.meta.env.VITE_ACCESSIBLE_PLACES_API_URL?.replace(/\/$/, '');
 

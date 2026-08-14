@@ -1,10 +1,9 @@
-import { Product, Service, Job, DonationItem, MapPin, Message, AppNotification, UserProfile } from '../types';
+import { User, Product, ServiceItem, JobPosting, DonationItem, MapPinItem, Message, NotificationItem } from '../core/types';
 
-export const mockCurrentUser: UserProfile = {
+export const mockCurrentUser: User = {
   id: 'u1',
   name: 'Kavindi Perera',
-  email: 'kavindi.p@accesslink.lk',
-  role: 'disabled_seller',
+  role: 'seller',
   avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300',
   coverImage: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&q=80&w=1000',
   bio: 'Artisan craft maker & customized wooden decor specialist. Passionate about empowering disabled entrepreneurs through inclusive trade.',
@@ -14,7 +13,7 @@ export const mockCurrentUser: UserProfile = {
   location: 'Colombo 07, Sri Lanka',
   totalEarnings: 345000,
   totalOrders: 86,
-  isVerified: true,
+  verified: true,
 };
 
 export const mockProducts: Product[] = [
@@ -117,7 +116,7 @@ export const mockProducts: Product[] = [
   }
 ];
 
-export const mockServices: Service[] = [
+export const mockServices: ServiceItem[] = [
   {
     id: 's1',
     title: 'Accessibility UX Audit & Screen Reader Compliance Testing',
@@ -155,7 +154,7 @@ export const mockServices: Service[] = [
   }
 ];
 
-export const mockJobs: Job[] = [
+export const mockJobs: JobPosting[] = [
   {
     id: 'j1',
     title: 'Accessibility Software Engineer (Remote)',
@@ -163,10 +162,8 @@ export const mockJobs: Job[] = [
     companyLogo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=200',
     salary: 'LKR 250,000 - 380,000 / mo',
     location: 'Colombo (100% Remote Available)',
-    isRemote: true,
     accessibilityBadges: ['Screen Reader Friendly Workstation', 'Flexible Working Hours', 'Ergonomic Support Allowance'],
     description: 'We are seeking an engineer passionate about building inclusive software. Work from home with full screen-reader and voice control tooling support.',
-    category: 'Engineering',
     postedDate: '2 days ago',
     applicantCount: 14,
     isSaved: true
@@ -178,10 +175,8 @@ export const mockJobs: Job[] = [
     companyLogo: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&q=80&w=200',
     salary: 'LKR 120,000 - 160,000 / mo',
     location: 'Kandy / Remote',
-    isRemote: true,
     accessibilityBadges: ['Wheelchair Accessible Office', 'Sign Language Interpreter On-Site'],
     description: 'Manage social media channels, create accessible alt-text content, and connect with persons with disabilities across local communities.',
-    category: 'Marketing',
     postedDate: 'Yesterday',
     applicantCount: 22,
     isSaved: false
@@ -197,11 +192,9 @@ export const mockDonations: DonationItem[] = [
     raisedAmount: 320000,
     requesterName: 'Tharindu Jayawardena',
     requesterAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300',
-    requesterType: 'Individual',
     ngoVerified: true,
     image: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&q=80&w=600',
     description: 'Tharindu is a 2nd year IT undergraduate at University of Moratuwa needing a motorized wheelchair to commute across campus independently.',
-    urgency: 'High'
   },
   {
     id: 'd2',
@@ -211,21 +204,19 @@ export const mockDonations: DonationItem[] = [
     raisedAmount: 480000,
     requesterName: 'Sri Lanka Federation for Deaf',
     requesterAvatar: 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&q=80&w=300',
-    requesterType: 'NGO',
     ngoVerified: true,
     image: 'https://images.unsplash.com/photo-1598256989800-fe5f95da9787?auto=format&fit=crop&q=80&w=600',
     description: 'Providing noise-canceling programmable digital hearing aids for five young students in rural schools to attend regular classes.',
-    urgency: 'High'
   }
 ];
 
-export const mockMapPins: MapPin[] = [
+export const mockMapPins: MapPinItem[] = [
   {
     id: 'mp1',
     title: 'Kavindi Crafts Studio',
     type: 'seller',
-    lat: 6.9271,
-    lng: 79.8612,
+    lat: 6.9066,
+    lng: 79.8673,
     address: 'No 45, Flower Road, Colombo 07',
     badge: 'Wheelchair Accessible Entrance & Ramp',
     accessibilityFeatures: ['Step-free entrance', 'Wheelchair ramp', 'Accessible parking'],
@@ -237,8 +228,8 @@ export const mockMapPins: MapPin[] = [
     id: 'mp2',
     title: 'Enable Lanka Foundation Center',
     type: 'ngo',
-    lat: 6.9147,
-    lng: 79.8778,
+    lat: 6.8956,
+    lng: 79.8538,
     address: 'Galle Road, Colombo 03',
     badge: 'Sign Language Staff & Braille Docs',
     accessibilityFeatures: ['Sign-language support', 'Braille documents', 'Accessible restroom'],
@@ -250,8 +241,8 @@ export const mockMapPins: MapPin[] = [
     id: 'mp3',
     title: 'Virtusa Inclusive Innovation Hub',
     type: 'company',
-    lat: 6.8912,
-    lng: 79.8540,
+    lat: 6.8883,
+    lng: 79.8566,
     address: 'Bambalapitiya, Colombo 04',
     badge: '100% Barrier-Free Campus',
     accessibilityFeatures: ['Step-free campus', 'Elevator', 'Tactile paving'],
@@ -287,6 +278,7 @@ export const mockMessages: Message[] = [
     senderId: 'u2',
     senderName: 'Sahan Wickramasinghe',
     senderAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300',
+    text: '🎙️ Voice Message (0:24)',
     isVoice: true,
     voiceDuration: '0:24',
     timestamp: '10:18 AM',
@@ -295,7 +287,7 @@ export const mockMessages: Message[] = [
   }
 ];
 
-export const mockNotifications: AppNotification[] = [
+export const mockNotifications: NotificationItem[] = [
   {
     id: 'n1',
     type: 'order',
