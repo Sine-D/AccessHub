@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -24,10 +24,10 @@ import {
   mockNotifications,
 } from './mock/data';
 
-type MobileTab = 'home' | 'marketplace' | 'services' | 'jobs' | 'map' | 'profile';
+type MobileTab = 'splash' | 'home' | 'marketplace' | 'services' | 'jobs' | 'map' | 'profile';
 
 export default function AppMobile() {
-  const [activeTab, setActiveTab] = useState<MobileTab>('home');
+  const [activeTab, setActiveTab] = useState<MobileTab>('splash');
   const [highContrast, setHighContrast] = useState(false);
   const [fontScale, setFontScale] = useState<'md' | 'lg' | 'xl'>('md');
   const [ttsActive, setTtsActive] = useState(false);
@@ -35,6 +35,16 @@ export default function AppMobile() {
   const [searchQuery, setSearchQuery] = useState('');
   const [voiceQuery, setVoiceQuery] = useState('');
   const [aiResponse, setAiResponse] = useState('');
+
+  // Auto transition from Splash to Home Dashboard after 2.5 seconds
+  useEffect(() => {
+    if (activeTab === 'splash') {
+      const timer = setTimeout(() => {
+        setActiveTab('home');
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab]);
 
   // Font scale multiplier
   const fontSizeMultiplier = fontScale === 'xl' ? 1.3 : fontScale === 'lg' ? 1.15 : 1.0;
@@ -57,6 +67,29 @@ export default function AppMobile() {
   const accentColor = highContrast ? '#ffff00' : '#38bdf8';
   const primaryButtonBg = highContrast ? '#ffff00' : '#2563eb';
   const primaryButtonText = highContrast ? '#000000' : '#ffffff';
+
+  // CLEAN WHITE MINIMAL SPLASH SCREEN DISPLAYED FIRST WHEN OPENING EXPO GO APP
+  if (activeTab === 'splash') {
+    return (
+      <SafeAreaView style={styles.cleanSplashSafeArea}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <TouchableOpacity 
+          style={styles.cleanSplashContent}
+          activeOpacity={0.95}
+          onPress={() => setActiveTab('home')}
+        >
+          {/* Centered Large Access Hub Logo */}
+          <View style={styles.cleanSplashLogoWrapper}>
+            <Image
+              source={require('./assets/images/access_hub_logo.png')}
+              style={styles.cleanSplashLogoImg}
+              resizeMode="contain"
+            />
+          </View>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeBg }]}>
@@ -325,7 +358,7 @@ export default function AppMobile() {
                 </Text>
 
                 <View style={styles.badgeContainer}>
-                  {job.accessibilityBadges.map((b, idx) => (
+                  {job.accessibilityBadges.map((b: string, idx: number) => (
                     <Text key={idx} style={[styles.jobBadge, { color: textColor, backgroundColor: '#334155' }]}>
                       ✓ {b}
                     </Text>
@@ -836,5 +869,118 @@ const styles = StyleSheet.create({
   aiResText: {
     fontWeight: '500',
     lineHeight: 16,
+  },
+  splashContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 12,
+  },
+  splashBadgeRow: {
+    backgroundColor: 'rgba(20, 184, 166, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#0d9488',
+    marginBottom: 20,
+  },
+  splashBadgeText: {
+    color: '#2dd4bf',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  splashLogoCard: {
+    width: 140,
+    height: 140,
+    borderRadius: 28,
+    backgroundColor: '#1e293b',
+    borderWidth: 2,
+    borderColor: '#0d9488',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 12,
+    marginBottom: 20,
+  },
+  splashLogoImg: {
+    width: '100%',
+    height: '100%',
+  },
+  splashBadgeTag: {
+    position: 'absolute',
+    bottom: -10,
+    backgroundColor: '#0d9488',
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  splashTitle: {
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  splashSub: {
+    textAlign: 'center',
+    marginTop: 6,
+    lineHeight: 18,
+    paddingHorizontal: 16,
+  },
+  splashFeatureGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  splashFeatureChip: {
+    width: '48%',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  splashChipText: {
+    fontWeight: 'bold',
+  },
+  splashStartBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  splashStartBtnText: {
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  splashSkipText: {
+    fontWeight: 'bold',
+  },
+  cleanSplashSafeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  cleanSplashContent: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  cleanSplashLogoWrapper: {
+    width: 320,
+    height: 320,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cleanSplashLogoImg: {
+    width: '100%',
+    height: '100%',
   },
 });
