@@ -55,8 +55,8 @@ export const OnboardingScreen: React.FC = () => {
       setCurrentSlide(nextIndex);
       speakText(`${slides[nextIndex].title}. ${slides[nextIndex].description}`);
     } else {
-      speakText('Welcome to AccessHub Dashboard.');
-      setActiveScreen('home');
+      speakText('Welcome to AccessHub Sign Up & Login.');
+      setActiveScreen('auth');
     }
   };
 
