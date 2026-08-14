@@ -24,7 +24,7 @@ import {
   mockNotifications,
 } from './mock/data';
 
-type MobileTab = 'splash' | 'onboarding' | 'home' | 'marketplace' | 'services' | 'jobs' | 'map' | 'profile';
+type MobileTab = 'splash' | 'onboarding' | 'auth' | 'home' | 'marketplace' | 'services' | 'jobs' | 'map' | 'profile';
 
 export default function AppMobile() {
   const [activeTab, setActiveTab] = useState<MobileTab>('splash');
@@ -45,6 +45,12 @@ export default function AppMobile() {
       return () => clearTimeout(timer);
     }
   }, [activeTab]);
+
+  const speakText = (text: string) => {
+    if (ttsActive) {
+      Alert.alert('🔊 Voice Reader', text);
+    }
+  };
 
   // Font scale multiplier
   const fontSizeMultiplier = fontScale === 'xl' ? 1.3 : fontScale === 'lg' ? 1.15 : 1.0;
@@ -123,15 +129,68 @@ export default function AppMobile() {
               Empowering persons with disabilities to showcase handcrafted goods, adaptive products, remote jobs, and offer freelance services across Sri Lanka.
             </Text>
 
-            {/* GET STARTED NOW BUTTON DIRECTLY BELOW PARAGRAPH */}
+            {/* GET STARTED NOW BUTTON -> TRANSITIONS TO AUTH SCREEN */}
             <TouchableOpacity 
               style={styles.onboardingStartBtnInline}
-              onPress={() => setActiveTab('home')}
+              onPress={() => setActiveTab('auth')}
             >
               <Text style={styles.onboardingStartBtnText}>
                 🚀 Get Started Now
               </Text>
             </TouchableOpacity>
+          </View>
+        </View>
+
+      </SafeAreaView>
+    );
+  }
+
+  // 3. CLEAN WHITE AUTH SELECTION SCREEN (signup&login.jpg + Create Account & Log In Buttons)
+  if (activeTab === 'auth') {
+    return (
+      <SafeAreaView style={styles.cleanAuthSafeArea}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+
+        {/* Center Content */}
+        <View style={styles.authCenterContent}>
+          {/* signup_login Image */}
+          <View style={styles.authImageWrapper}>
+            <Image
+              source={require('./assets/images/signup_login.jpg')}
+              style={styles.authImg}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* Title & Subtitle */}
+          <View style={styles.authTextGroup}>
+            <Text style={styles.authTitle}>
+              Join AccessHub Today
+            </Text>
+            <Text style={styles.authDesc}>
+              Sri Lanka's premier 100% barrier-free inclusive marketplace & career community.
+            </Text>
+
+            {/* Identical Beautiful Buttons directly below paragraph */}
+            <View style={styles.authInlineButtonsStack}>
+              <TouchableOpacity 
+                style={styles.authPrimaryBtnInline}
+                onPress={() => setActiveTab('home')}
+              >
+                <Text style={styles.authPrimaryBtnText}>
+                  Create Account
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.authPrimaryBtnInline}
+                onPress={() => setActiveTab('home')}
+              >
+                <Text style={styles.authPrimaryBtnText}>
+                  Log In
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -1148,5 +1207,100 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     marginTop: 18,
+  },
+  cleanAuthSafeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  authTopBadgeWrapper: {
+    alignItems: 'center',
+    paddingTop: 12,
+  },
+  authTopBadgeText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#0d9488',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ccfbf1',
+  },
+  authCenterContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  authImageWrapper: {
+    width: Dimensions.get('window').width * 0.85,
+    height: 250,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  authImg: {
+    width: '100%',
+    height: '100%',
+  },
+  authTextGroup: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  authTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#0f172a',
+    textAlign: 'center',
+  },
+  authDesc: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 6,
+    lineHeight: 18,
+  },
+  authFooter: {
+    paddingHorizontal: 28,
+    paddingBottom: 24,
+    gap: 10,
+  },
+  authPrimaryBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: '#0d9488',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0d9488',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  authPrimaryBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  authInlineButtonsStack: {
+    width: 200,
+    alignSelf: 'center',
+    marginTop: 18,
+    gap: 12,
+  },
+  authPrimaryBtnInline: {
+    width: 200,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#0d9488',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0d9488',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
 });
