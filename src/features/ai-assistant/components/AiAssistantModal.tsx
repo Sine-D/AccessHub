@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useAccessibility } from '../../../core/context/AccessibilityContext';
+import { useAccessibility } from '../../../core/hooks/useAccessibility';
 import { useAppState } from '../../../core/hooks/useAppState';
+import { useSpeechRecognition } from '../../../core/hooks/useSpeechRecognition';
 import { 
   Sparkles, 
   Mic, 
@@ -8,7 +9,10 @@ import {
   ShieldCheck, 
   X, 
   CheckCircle2, 
-  Zap
+  AlertTriangle,
+  Zap,
+  Square,
+  Trash2
 } from 'lucide-react';
 
 export const AiAssistantModal: React.FC = () => {
@@ -16,35 +20,45 @@ export const AiAssistantModal: React.FC = () => {
   const { setActiveScreen } = useAppState();
 
   const [activeTab, setActiveTab] = useState<'voice' | 'camera' | 'fraud'>('voice');
-  const [isListening, setIsListening] = useState(false);
+  const [speechLanguage, setSpeechLanguage] = useState('en-US');
   const [aiResponse, setAiResponse] = useState<string>(
     'Ayubowan! I am AccessLink AI. Ask me anything via voice or scan an item.'
   );
   const [scannedResult, setScannedResult] = useState<string | null>(null);
+  const {
+    error: speechError,
+    isListening,
+    isSupported,
+    resetTranscript,
+    setTranscript,
+    startListening,
+    stopListening,
+    transcript,
+  } = useSpeechRecognition({ language: speechLanguage });
 
   if (!aiModalOpen) return null;
 
   const handleVoiceCommand = (command: string) => {
-    setIsListening(true);
-    speakText(`Listening for command: ${command}`);
+    const normalizedCommand = command.toLowerCase();
+    setAiResponse(`Processing: “${command}”`);
+    speakText(`Processing command: ${command}`);
 
     setTimeout(() => {
-      setIsListening(false);
-      if (command.includes('wheelchair') || command.includes('Marketplace')) {
+      if (normalizedCommand.includes('wheelchair') || normalizedCommand.includes('marketplace')) {
         setAiResponse('Found 4 nearby accessible marketplace items. Navigating to Marketplace...');
         speakText('Found nearby items. Navigating to Marketplace.');
         setTimeout(() => {
           setAiModalOpen(false);
           setActiveScreen('marketplace');
         }, 1500);
-      } else if (command.includes('Job')) {
+      } else if (normalizedCommand.includes('job')) {
         setAiResponse('Filtering 100% remote screen-reader friendly job postings...');
         speakText('Filtering accessible job postings.');
         setTimeout(() => {
           setAiModalOpen(false);
           setActiveScreen('jobs');
         }, 1500);
-      } else if (command.includes('Scan')) {
+      } else if (normalizedCommand.includes('scan')) {
         setActiveTab('camera');
         setAiResponse('AI Vision active. Point camera at product or document.');
       } else {
@@ -52,6 +66,11 @@ export const AiAssistantModal: React.FC = () => {
         speakText(`Processed command ${command}`);
       }
     }, 1200);
+  };
+
+  const closeModal = () => {
+    if (isListening) stopListening();
+    setAiModalOpen(false);
   };
 
   const simulateScan = () => {
@@ -64,7 +83,12 @@ export const AiAssistantModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div
+        aria-labelledby="ai-assistant-title"
+        aria-modal="true"
+        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+        role="dialog"
+      >
         
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 via-teal-600 to-indigo-600 p-4 text-white flex items-center justify-between">
@@ -73,12 +97,13 @@ export const AiAssistantModal: React.FC = () => {
               <Sparkles className="w-5 h-5 text-amber-300" />
             </div>
             <div>
-              <h3 className="font-extrabold text-base leading-tight">AccessLink AI Assistant</h3>
+              <h3 id="ai-assistant-title" className="font-extrabold text-base leading-tight">AccessLink AI Assistant</h3>
               <p className="text-[11px] text-blue-100">Smart Voice & Vision Accessibility Engine</p>
             </div>
           </div>
           <button
-            onClick={() => setAiModalOpen(false)}
+            aria-label="Close AI assistant"
+            onClick={closeModal}
             className="p-1 rounded-full bg-white/10 hover:bg-white/20 transition-all text-white"
           >
             <X className="w-5 h-5" />
@@ -128,15 +153,35 @@ export const AiAssistantModal: React.FC = () => {
           {/* TAB 1: VOICE ASSISTANT */}
           {activeTab === 'voice' && (
             <div className="flex flex-col items-center text-center space-y-4 py-2">
-              
-              {/* Mic Visualizer */}
+
+              <div className="w-full text-left">
+                <label htmlFor="speech-language" className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                  Recognition language
+                </label>
+                <select
+                  id="speech-language"
+                  value={speechLanguage}
+                  onChange={(event) => setSpeechLanguage(event.target.value)}
+                  disabled={isListening}
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                >
+                  <option value="en-US">English</option>
+                  <option value="si-LK">සිංහල (Sinhala)</option>
+                  <option value="ta-LK">தமிழ் (Tamil)</option>
+                </select>
+              </div>
+
+              {/* Accessible microphone controls */}
               <div className="relative">
                 <button
-                  onClick={() => handleVoiceCommand('Show nearby accessible products')}
+                  aria-label={isListening ? 'Microphone is listening' : 'Start voice capture'}
+                  aria-pressed={isListening}
+                  disabled={isListening || !isSupported}
+                  onClick={startListening}
                   className={`w-20 h-20 rounded-full flex items-center justify-center shadow-xl transition-all ${
                     isListening 
                       ? 'bg-red-500 text-white animate-pulse ring-8 ring-red-200 dark:ring-red-950' 
-                      : 'bg-gradient-to-tr from-blue-600 to-teal-500 text-white hover:scale-105'
+                      : 'bg-gradient-to-tr from-blue-600 to-teal-500 text-white hover:scale-105 disabled:cursor-not-allowed disabled:from-slate-500 disabled:to-slate-600'
                   }`}
                 >
                   <Mic className="w-9 h-9" />
@@ -146,6 +191,69 @@ export const AiAssistantModal: React.FC = () => {
                     Listening...
                   </span>
                 )}
+              </div>
+
+              {isListening && (
+                <button
+                  onClick={stopListening}
+                  className="min-h-11 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-extrabold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <Square aria-hidden="true" className="h-4 w-4 fill-current" />
+                    Stop listening
+                  </span>
+                </button>
+              )}
+
+              <p aria-live="polite" className="sr-only" role="status">
+                {isListening ? 'Voice capture started. Speak now.' : 'Voice capture stopped.'}
+              </p>
+
+              {!isSupported && (
+                <div className="w-full rounded-xl border border-amber-300 bg-amber-50 p-3 text-left text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200" role="alert">
+                  Voice recognition is not supported in this browser. Use current Chrome or Edge, or type your query below.
+                </div>
+              )}
+
+              {speechError && (
+                <div className="w-full rounded-xl border border-red-300 bg-red-50 p-3 text-left text-xs text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200" role="alert">
+                  <span className="flex items-start gap-2">
+                    <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+                    {speechError}
+                  </span>
+                </div>
+              )}
+
+              <div className="w-full text-left">
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="voice-transcript" className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                    Voice search transcript
+                  </label>
+                  <button
+                    aria-label="Clear voice transcript"
+                    disabled={!transcript}
+                    onClick={resetTranscript}
+                    className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-xs font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800 dark:hover:text-white"
+                  >
+                    <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+                    Clear
+                  </button>
+                </div>
+                <textarea
+                  id="voice-transcript"
+                  value={transcript}
+                  onChange={(event) => setTranscript(event.target.value)}
+                  placeholder="Your speech appears here. You can also type or correct the text."
+                  rows={3}
+                  className="mt-1 w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+                <button
+                  disabled={!transcript.trim() || isListening}
+                  onClick={() => handleVoiceCommand(transcript.trim())}
+                  className="mt-2 min-h-11 w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-extrabold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                >
+                  Use transcript
+                </button>
               </div>
 
               {/* AI Response Card */}
@@ -168,7 +276,7 @@ export const AiAssistantModal: React.FC = () => {
                   ].map((cmd, idx) => (
                     <button
                       key={idx}
-                      onClick={() => handleVoiceCommand(cmd)}
+                      onClick={() => setTranscript(cmd)}
                       className="w-full text-left text-xs bg-slate-100 dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-slate-700 p-2.5 rounded-xl text-slate-700 dark:text-slate-200 flex items-center justify-between font-medium transition-all"
                     >
                       <span>🗣️ "{cmd}"</span>

@@ -1,152 +1,307 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  APIProvider,
+  Map as GoogleMap,
+  Marker,
+  useMap,
+} from '@vis.gl/react-google-maps';
+import {
+  AlertTriangle,
+  LoaderCircle,
+  MapPinned,
+  MessageSquare,
+  Navigation,
+  RefreshCw,
+  ShieldCheck,
+  Star,
+} from 'lucide-react';
 import { useAppState } from '../../../core/hooks/useAppState';
 import { useAccessibility } from '../../../core/hooks/useAccessibility';
-import { mockMapPins } from '../../../mock/data';
 import { TopHeader } from '../../../core/navigation/TopHeader';
 import { BottomNav } from '../../../core/navigation/BottomNav';
-import { 
-  MapPin, 
-  Navigation, 
-  ShieldCheck, 
-  MessageSquare 
-} from 'lucide-react';
+import { getAccessiblePlaces } from '../../../services/placesService';
+import { MapPin } from '../../../core/types/models';
+
+interface MapCameraControllerProps {
+  selectedPlace: MapPin;
+}
+
+const MapCameraController: React.FC<MapCameraControllerProps> = ({ selectedPlace }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+    map.panTo({ lat: selectedPlace.lat, lng: selectedPlace.lng });
+    if ((map.getZoom() ?? 0) < 14) map.setZoom(14);
+  }, [map, selectedPlace]);
+
+  return null;
+};
+
+interface AccessiblePlacesMapProps {
+  places: MapPin[];
+  selectedPlace: MapPin;
+  onSelect: (place: MapPin) => void;
+}
+
+const AccessiblePlacesMap: React.FC<AccessiblePlacesMapProps> = ({
+  places,
+  selectedPlace,
+  onSelect,
+}) => (
+  <GoogleMap
+    className="h-full w-full"
+    defaultCenter={{ lat: selectedPlace.lat, lng: selectedPlace.lng }}
+    defaultZoom={13}
+    disableDefaultUI
+    gestureHandling="cooperative"
+    reuseMaps
+    zoomControl
+  >
+    <MapCameraController selectedPlace={selectedPlace} />
+    {places.map((place) => (
+      <Marker
+        key={place.id}
+        clickable
+        label={selectedPlace.id === place.id ? '✓' : undefined}
+        onClick={() => onSelect(place)}
+        position={{ lat: place.lat, lng: place.lng }}
+        title={`${place.title}. ${place.badge ?? 'Accessibility information available'}`}
+        zIndex={selectedPlace.id === place.id ? 10 : 1}
+      />
+    ))}
+  </GoogleMap>
+);
 
 export const MapScreen: React.FC = () => {
   const { setActiveScreen } = useAppState();
-  const { speakText } = useAccessibility();
-  const [selectedPin, setSelectedPin] = useState(mockMapPins[0]);
-  const [filterType, setFilterType] = useState<'all' | 'seller' | 'ngo' | 'company'>('all');
+  const { settings, speakText } = useAccessibility();
+  const [places, setPlaces] = useState<MapPin[]>([]);
+  const [selectedPlace, setSelectedPlace] = useState<MapPin | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [placesError, setPlacesError] = useState<string | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const listItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
-  const filteredPins = mockMapPins.filter(p => filterType === 'all' || p.type === filterType);
+  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim();
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let isCurrentRequest = true;
+    setIsLoading(true);
+    setPlacesError(null);
+
+    getAccessiblePlaces(controller.signal)
+      .then((loadedPlaces) => {
+        if (!isCurrentRequest) return;
+        setPlaces(loadedPlaces);
+        setSelectedPlace((current) =>
+          current && loadedPlaces.some((place) => place.id === current.id)
+            ? current
+            : loadedPlaces[0] ?? null,
+        );
+      })
+      .catch((error: unknown) => {
+        if (!isCurrentRequest) return;
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setPlacesError(error instanceof Error ? error.message : 'Accessible places could not be loaded.');
+      })
+      .finally(() => {
+        if (isCurrentRequest) setIsLoading(false);
+      });
+
+    return () => {
+      isCurrentRequest = false;
+      controller.abort();
+    };
+  }, [reloadKey]);
+
+  const selectPlace = (place: MapPin, moveFocusToList = false) => {
+    setSelectedPlace(place);
+
+    if (settings.screenReader) {
+      speakText(`${place.title}. ${place.badge ?? 'Accessibility information is available.'}`);
+    }
+
+    if (moveFocusToList) {
+      window.requestAnimationFrame(() => listItemRefs.current[place.id]?.focus());
+    }
+  };
 
   return (
-    <div className="w-full h-full min-h-[800px] bg-slate-900 text-white flex flex-col justify-between overflow-hidden relative">
-      
-      <TopHeader title="Accessible Local Maps 🗺️" />
+    <div className="relative flex h-full min-h-[800px] w-full flex-col overflow-hidden bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-white">
+      <TopHeader title="Accessible Places Directory" />
 
-      {/* Simulated Interactive Map Canvas */}
-      <div className="relative flex-1 bg-slate-950 overflow-hidden flex items-center justify-center">
-        
-        {/* Map Grid Pattern background */}
-        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px]"></div>
-        
-        {/* Simulated Map Route Line */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none">
-          <path 
-            d="M 100 250 Q 200 180 300 350" 
-            fill="none" 
-            stroke="#2563EB" 
-            strokeWidth="4" 
-            strokeDasharray="6 6"
-            className="animate-pulse"
-          />
-        </svg>
+      <main className="flex-1 space-y-4 overflow-y-auto px-4 pb-5 pt-4">
+        <div>
+          <h1 id="map-directory-heading" className="text-xl font-extrabold text-slate-950 dark:text-white">
+            Accessible places near Colombo
+          </h1>
+          <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+            Select a map marker or use the keyboard-friendly list to review verified accessibility features.
+          </p>
+        </div>
 
-        {/* Floating Map Pins */}
-        {filteredPins.map((pin, index) => {
-          const isSelected = selectedPin.id === pin.id;
-          const positions = [
-            { top: '30%', left: '25%' },
-            { top: '55%', left: '60%' },
-            { top: '40%', left: '75%' },
-          ];
-          const pos = positions[index % positions.length];
+        {isLoading && (
+          <div className="flex min-h-64 items-center justify-center rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" role="status">
+            <span className="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-300">
+              <LoaderCircle aria-hidden="true" className="h-5 w-5 animate-spin text-blue-600" />
+              Loading accessible places…
+            </span>
+          </div>
+        )}
 
-          return (
-            <button
-              key={pin.id}
-              onClick={() => {
-                setSelectedPin(pin);
-                speakText(`Selected map pin ${pin.title}. ${pin.badge}`);
-              }}
-              style={{ top: pos.top, left: pos.left }}
-              className={`absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300 group z-20 ${
-                isSelected ? 'scale-125' : 'hover:scale-110'
-              }`}
-            >
-              <div className="relative flex flex-col items-center">
-                <div className={`p-2.5 rounded-full shadow-2xl flex items-center justify-center border-2 border-white ${
-                  pin.type === 'seller' ? 'bg-blue-600' : pin.type === 'ngo' ? 'bg-teal-500' : 'bg-amber-500'
-                }`}>
-                  <MapPin className="w-5 h-5 text-white" />
-                </div>
-                
-                {/* Pin Label Banner */}
-                <div className="mt-1 px-2.5 py-1 rounded-full bg-slate-900/90 text-[10px] font-extrabold whitespace-nowrap border border-slate-700 shadow-md">
-                  {pin.title}
-                </div>
+        {!isLoading && placesError && (
+          <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100" role="alert">
+            <div className="flex items-start gap-2">
+              <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
+              <div>
+                <h2 className="text-sm font-extrabold">Places could not be loaded</h2>
+                <p className="mt-1 text-xs">{placesError}</p>
+                <button
+                  onClick={() => setReloadKey((value) => value + 1)}
+                  className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-700 px-4 py-2 text-xs font-extrabold text-white hover:bg-red-800"
+                >
+                  <RefreshCw aria-hidden="true" className="h-4 w-4" />
+                  Try again
+                </button>
               </div>
-            </button>
-          );
-        })}
-
-        {/* Filter Overlay Controls */}
-        <div className="absolute top-4 left-4 right-4 z-30 flex items-center space-x-1.5 overflow-x-auto bg-slate-900/80 backdrop-blur-md p-1.5 rounded-2xl border border-slate-800">
-          {(['all', 'seller', 'ngo', 'company'] as const).map((type) => (
-            <button
-              key={type}
-              onClick={() => setFilterType(type)}
-              className={`px-3 py-1.5 rounded-xl text-[10px] font-extrabold capitalize transition-all ${
-                filterType === type 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-
-        {/* Accessible Route Badge */}
-        <div className="absolute top-16 left-4 z-30 bg-teal-500 text-slate-950 px-3 py-1 rounded-full text-[10px] font-extrabold flex items-center space-x-1 shadow-md">
-          <Navigation className="w-3 h-3 fill-slate-950" />
-          <span>Wheelchair Accessible Route Active</span>
-        </div>
-
-      </div>
-
-      {/* Bottom Sheet Details Drawer */}
-      <div className="bg-slate-900 border-t border-slate-800 p-4 space-y-3 z-40 rounded-t-3xl shadow-2xl">
-        <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-1"></div>
-        
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-3">
-            <img src={selectedPin.image} alt={selectedPin.title} className="w-12 h-12 rounded-2xl object-cover" />
-            <div>
-              <h3 className="font-extrabold text-sm text-white">{selectedPin.title}</h3>
-              <span className="text-[11px] text-slate-400 block">{selectedPin.address}</span>
             </div>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
-            {selectedPin.distance}
-          </span>
-        </div>
+        )}
 
-        <div className="p-2.5 rounded-xl bg-teal-950/60 border border-teal-800 text-teal-300 text-xs font-bold flex items-center space-x-2">
-          <ShieldCheck className="w-4 h-4 text-teal-400 shrink-0" />
-          <span>♿ {selectedPin.badge}</span>
-        </div>
+        {!isLoading && !placesError && selectedPlace && (
+          <>
+            <section aria-label="Interactive accessible places map" className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-200 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              {googleMapsApiKey ? (
+                <div className="h-64 w-full">
+                  <APIProvider
+                    apiKey={googleMapsApiKey}
+                    onError={() => setMapError('Google Maps could not load. Check the API key restrictions and internet connection.')}
+                  >
+                    <AccessiblePlacesMap
+                      onSelect={(place) => selectPlace(place, true)}
+                      places={places}
+                      selectedPlace={selectedPlace}
+                    />
+                  </APIProvider>
+                </div>
+              ) : (
+                <div className="flex h-64 flex-col items-center justify-center px-6 text-center">
+                  <MapPinned aria-hidden="true" className="h-10 w-10 text-blue-600" />
+                  <h2 className="mt-3 text-sm font-extrabold text-slate-900 dark:text-white">Map setup required</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                    Add your restricted Google Maps browser key to <code className="font-bold">.env.local</code>. The accessible list below remains fully usable without the visual map.
+                  </p>
+                </div>
+              )}
+            </section>
 
-        <div className="flex items-center space-x-2 pt-1">
-          <button
-            onClick={() => setActiveScreen('chat')}
-            className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-200 font-extrabold text-xs flex items-center justify-center space-x-1 hover:bg-slate-700"
-          >
-            <MessageSquare className="w-4 h-4 text-blue-400" />
-            <span>Chat</span>
-          </button>
-          <button
-            onClick={() => speakText(`Starting turn by turn accessible navigation to ${selectedPin.title}`)}
-            className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center justify-center space-x-1 shadow-md"
-          >
-            <Navigation className="w-4 h-4" />
-            <span>Start Navigation</span>
-          </button>
-        </div>
-      </div>
+            {mapError && (
+              <p className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100" role="alert">
+                {mapError} Use the accessible list below instead.
+              </p>
+            )}
+
+            <p aria-live="polite" className="sr-only" role="status">
+              Selected {selectedPlace.title}. {selectedPlace.badge}
+            </p>
+
+            <section aria-labelledby="places-list-heading">
+              <div className="mb-2 flex items-end justify-between gap-3">
+                <div>
+                  <h2 id="places-list-heading" className="text-base font-extrabold text-slate-950 dark:text-white">
+                    Accessible places list
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{places.length} places available</p>
+                </div>
+                <span className="rounded-full bg-teal-100 px-2.5 py-1 text-[10px] font-extrabold text-teal-800 dark:bg-teal-950 dark:text-teal-300">
+                  Keyboard accessible
+                </span>
+              </div>
+
+              <div className="space-y-2" role="list">
+                {places.map((place) => {
+                  const isSelected = selectedPlace.id === place.id;
+
+                  return (
+                    <div key={place.id} role="listitem">
+                      <button
+                        ref={(element) => { listItemRefs.current[place.id] = element; }}
+                        aria-pressed={isSelected}
+                        onClick={() => selectPlace(place)}
+                        className={`w-full rounded-2xl border p-3 text-left transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950 ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50 shadow-sm dark:bg-blue-950/40'
+                            : 'border-slate-200 bg-white hover:border-blue-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700'
+                        }`}
+                      >
+                        <span className="flex items-start gap-3">
+                          <img className="h-14 w-14 shrink-0 rounded-xl object-cover" src={place.image} alt="" />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-start justify-between gap-2">
+                              <span className="font-extrabold text-sm text-slate-950 dark:text-white">{place.title}</span>
+                              <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+                                <Star aria-hidden="true" className="h-3.5 w-3.5 fill-current" />
+                                {place.accessibilityRating.toFixed(1)}
+                              </span>
+                            </span>
+                            <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">{place.address}</span>
+                            <span className="mt-2 flex flex-wrap gap-1">
+                              {place.accessibilityFeatures.map((feature) => (
+                                <span key={feature} className="rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-bold text-teal-800 dark:bg-teal-950 dark:text-teal-300">
+                                  {feature}
+                                </span>
+                              ))}
+                            </span>
+                          </span>
+                        </span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section aria-label={`Actions for ${selectedPlace.title}`} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-extrabold text-slate-950 dark:text-white">{selectedPlace.title}</h2>
+                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{selectedPlace.distance}</p>
+                </div>
+                <span className="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                  {selectedPlace.type}
+                </span>
+              </div>
+
+              <div className="mt-3 flex items-start gap-2 rounded-xl border border-teal-200 bg-teal-50 p-2.5 text-xs font-bold text-teal-900 dark:border-teal-800 dark:bg-teal-950/50 dark:text-teal-200">
+                <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{selectedPlace.badge}</span>
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => setActiveScreen('chat')}
+                  className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-slate-200 px-3 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                >
+                  <MessageSquare aria-hidden="true" className="h-4 w-4 text-blue-600" />
+                  Ask a question
+                </button>
+                <button
+                  onClick={() => speakText(`Starting accessible navigation to ${selectedPlace.title}`)}
+                  className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-extrabold text-white hover:bg-blue-700"
+                >
+                  <Navigation aria-hidden="true" className="h-4 w-4" />
+                  Navigate
+                </button>
+              </div>
+            </section>
+          </>
+        )}
+      </main>
 
       <BottomNav />
-
     </div>
   );
 };

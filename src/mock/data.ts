@@ -215,8 +215,12 @@ export const mockMapPins: MapPinItem[] = [
     id: 'mp1',
     title: 'Kavindi Crafts Studio',
     type: 'seller',
+    lat: 6.9066,
+    lng: 79.8673,
     address: 'No 45, Flower Road, Colombo 07',
     badge: 'Wheelchair Accessible Entrance & Ramp',
+    accessibilityFeatures: ['Step-free entrance', 'Wheelchair ramp', 'Accessible parking'],
+    accessibilityRating: 4.8,
     distance: '2.4 km away',
     image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=300'
   },
@@ -224,8 +228,12 @@ export const mockMapPins: MapPinItem[] = [
     id: 'mp2',
     title: 'Enable Lanka Foundation Center',
     type: 'ngo',
+    lat: 6.8956,
+    lng: 79.8538,
     address: 'Galle Road, Colombo 03',
     badge: 'Sign Language Staff & Braille Docs',
+    accessibilityFeatures: ['Sign-language support', 'Braille documents', 'Accessible restroom'],
+    accessibilityRating: 4.6,
     distance: '3.8 km away',
     image: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&q=80&w=300'
   },
@@ -233,8 +241,12 @@ export const mockMapPins: MapPinItem[] = [
     id: 'mp3',
     title: 'Virtusa Inclusive Innovation Hub',
     type: 'company',
+    lat: 6.8883,
+    lng: 79.8566,
     address: 'Bambalapitiya, Colombo 04',
     badge: '100% Barrier-Free Campus',
+    accessibilityFeatures: ['Step-free campus', 'Elevator', 'Tactile paving'],
+    accessibilityRating: 4.9,
     distance: '5.1 km away',
     image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=300'
   }
