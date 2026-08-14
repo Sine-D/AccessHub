@@ -1,10 +1,10 @@
 import React from 'react';
-import { AccessibilityProvider } from './context/AccessibilityContext';
-import { AppStateProvider } from './context/AppStateContext';
-import { DeviceFrame } from './components/layout/DeviceFrame';
-import { AppNavigator } from './navigation/AppNavigator';
-import { AiAssistantModal } from './components/ai/AiAssistantModal';
-import { SellProductModal } from './components/modals/SellProductModal';
+import { AccessibilityProvider } from './core/context/AccessibilityContext';
+import { AppStateProvider } from './core/context/AppStateContext';
+import { DeviceFrame } from './core/components/layout/DeviceFrame';
+import { AppNavigator } from './core/navigation/AppNavigator';
+import { AiAssistantModal } from './features/ai-assistant';
+import { SellProductModal } from './features/marketplace';
 
 export const App: React.FC = () => {
   return (
