@@ -256,7 +256,7 @@ export const AccessibleCheckoutModal: React.FC<AccessibleCheckoutModalProps> = (
                   {paymentMethod === 'new_card' && (
                     <div className="px-4 pb-5 pt-2 space-y-4">
                       <div>
-                        <label htmlFor="cc-name" className="block text-sm font-bold text-slate-900 dark:text-white mb-2">Name on Card</label>
+                        <label htmlFor="cc-name" className="block text-sm font-bold text-slate-900 dark:text-white mb-2">Cardholder Name</label>
                         <input 
                           id="cc-name" 
                           type="text" 
@@ -272,6 +272,35 @@ export const AccessibleCheckoutModal: React.FC<AccessibleCheckoutModalProps> = (
                           className="w-full min-h-[52px] px-4 rounded-xl border-2 border-slate-400 dark:border-slate-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 font-medium focus:outline-none focus:ring-4 focus:ring-blue-500" 
                           placeholder="0000 0000 0000 0000" 
                         />
+                      </div>
+                      <div className="flex space-x-4">
+                        <div className="flex-1">
+                          <label htmlFor="cc-exp" className="block text-sm font-bold text-slate-900 dark:text-white mb-2">Expiry Date (MM/YY)</label>
+                          <input 
+                            id="cc-exp" 
+                            type="text" 
+                            className="w-full min-h-[52px] px-4 rounded-xl border-2 border-slate-400 dark:border-slate-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 font-medium focus:outline-none focus:ring-4 focus:ring-blue-500" 
+                            placeholder="MM/YY" 
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label htmlFor="cc-cvc" className="block text-sm font-bold text-slate-900 dark:text-white mb-2">CVC/CVV</label>
+                          <input 
+                            id="cc-cvc" 
+                            type="text" 
+                            className="w-full min-h-[52px] px-4 rounded-xl border-2 border-slate-400 dark:border-slate-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 font-medium focus:outline-none focus:ring-4 focus:ring-blue-500" 
+                            placeholder="123" 
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center pt-2">
+                        <input 
+                          id="cc-save" 
+                          type="checkbox" 
+                          defaultChecked
+                          className="w-5 h-5 text-blue-600 bg-white border-2 border-slate-400 rounded focus:ring-blue-500 dark:focus:ring-blue-500 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-500" 
+                        />
+                        <label htmlFor="cc-save" className="ml-3 text-sm font-bold text-slate-900 dark:text-white">Save this card for future orders</label>
                       </div>
                     </div>
                   )}
@@ -290,7 +319,7 @@ export const AccessibleCheckoutModal: React.FC<AccessibleCheckoutModalProps> = (
                   onClick={handleConfirmOrder}
                   className="w-full sm:flex-1 min-h-[52px] rounded-2xl bg-blue-700 text-white font-black text-lg focus:outline-none focus:ring-4 focus:ring-blue-500 hover:bg-blue-800 transition-colors shadow-lg"
                 >
-                  CONFIRM & PAY
+                  {paymentMethod === 'new_card' ? `PAY WITH NEW CARD (LKR ${formattedTotal})` : `CONFIRM ORDER (LKR ${formattedTotal})`}
                 </button>
               </div>
             </div>

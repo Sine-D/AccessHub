@@ -34,7 +34,7 @@ export interface MobileCheckoutModalProps {
 }
 
 type CheckoutState = 'review' | 'processing' | 'success';
-type PaymentMethod = 'saved_card' | 'cod';
+type PaymentMethod = 'saved_card' | 'cod' | 'new_card';
 
 export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
   visible,
@@ -59,6 +59,7 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('saved_card');
   const [address, setAddress] = useState('42 Access Way, Colombo 03');
   const [isListening, setIsListening] = useState(false);
+  const [saveCard, setSaveCard] = useState(true);
 
   const startVoiceTyping = () => {
     if (Platform.OS !== 'web') {
@@ -293,6 +294,79 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
                     </View>
                     <Text style={[dynamicText(14), { color: textColor, fontWeight: 'bold' }]}>Cash on Delivery</Text>
                   </TouchableOpacity>
+                  {/* Option C: New Card */}
+                  <View style={[
+                    styles.paymentOption,
+                    { borderColor: paymentMethod === 'new_card' ? accentColor : subTextColor, backgroundColor: cardBg, flexDirection: 'column', alignItems: 'stretch' }
+                  ]}>
+                    <TouchableOpacity
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: paymentMethod === 'new_card' }}
+                      style={{ flexDirection: 'row', alignItems: 'center' }}
+                      onPress={() => setPaymentMethod('new_card')}
+                    >
+                      <View style={[styles.radioOuter, { borderColor: paymentMethod === 'new_card' ? accentColor : subTextColor }]}>
+                        {paymentMethod === 'new_card' && <View style={[styles.radioInner, { backgroundColor: accentColor }]} />}
+                      </View>
+                      <Text style={[dynamicText(14), { color: textColor, fontWeight: 'bold' }]}>+ Add / Use New Card</Text>
+                    </TouchableOpacity>
+
+                    {paymentMethod === 'new_card' && (
+                      <View style={{ marginTop: 16 }}>
+                        <Text style={[dynamicText(12), { color: textColor, fontWeight: 'bold', marginBottom: 8 }]}>Cardholder Name</Text>
+                        <TextInput
+                          placeholder="e.g. Jane Doe"
+                          placeholderTextColor={subTextColor}
+                          style={[styles.input, dynamicText(14), { color: textColor, backgroundColor: themeBg, borderColor: subTextColor }]}
+                          accessibilityLabel="Cardholder Name"
+                        />
+                        
+                        <Text style={[dynamicText(12), { color: textColor, fontWeight: 'bold', marginBottom: 8, marginTop: 12 }]}>Card Number</Text>
+                        <TextInput
+                          placeholder="0000 0000 0000 0000"
+                          placeholderTextColor={subTextColor}
+                          keyboardType="numeric"
+                          style={[styles.input, dynamicText(14), { color: textColor, backgroundColor: themeBg, borderColor: subTextColor }]}
+                          accessibilityLabel="Card Number"
+                        />
+
+                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[dynamicText(12), { color: textColor, fontWeight: 'bold', marginBottom: 8 }]}>Expiry Date (MM/YY)</Text>
+                            <TextInput
+                              placeholder="MM/YY"
+                              placeholderTextColor={subTextColor}
+                              style={[styles.input, dynamicText(14), { color: textColor, backgroundColor: themeBg, borderColor: subTextColor }]}
+                              accessibilityLabel="Expiry Date"
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[dynamicText(12), { color: textColor, fontWeight: 'bold', marginBottom: 8 }]}>CVC/CVV</Text>
+                            <TextInput
+                              placeholder="123"
+                              placeholderTextColor={subTextColor}
+                              keyboardType="numeric"
+                              secureTextEntry
+                              style={[styles.input, dynamicText(14), { color: textColor, backgroundColor: themeBg, borderColor: subTextColor }]}
+                              accessibilityLabel="CVC CVV"
+                            />
+                          </View>
+                        </View>
+
+                        <TouchableOpacity 
+                          style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, paddingVertical: 4 }}
+                          onPress={() => setSaveCard(!saveCard)}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: saveCard }}
+                        >
+                          <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: saveCard ? accentColor : subTextColor, backgroundColor: saveCard ? accentColor : 'transparent', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                            {saveCard && <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>✓</Text>}
+                          </View>
+                          <Text style={[dynamicText(12), { color: textColor, fontWeight: 'bold' }]}>Save this card for future orders</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
                 </View>
 
                 {/* Confirm Button */}
@@ -301,7 +375,9 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
                   style={[styles.orangeBtn, { marginTop: 24 }]}
                   onPress={handleConfirmClick}
                 >
-                  <Text style={[styles.orangeBtnText, dynamicText(14)]}>CONFIRM ORDER</Text>
+                  <Text style={[styles.orangeBtnText, dynamicText(14)]}>
+                    {paymentMethod === 'new_card' ? `PAY WITH NEW CARD (LKR ${formattedTotal})` : `CONFIRM ORDER (LKR ${formattedTotal})`}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -407,6 +483,13 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6
+  },
+  input: {
+    borderWidth: 2,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 52
   },
   orangeBtn: {
     backgroundColor: '#f97316',
