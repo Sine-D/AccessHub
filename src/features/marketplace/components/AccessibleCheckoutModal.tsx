@@ -17,7 +17,35 @@ export const AccessibleCheckoutModal: React.FC<AccessibleCheckoutModalProps> = (
 }) => {
   const [checkoutState, setCheckoutState] = useState<CheckoutState>('review');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('saved_card');
+  const [address, setAddress] = useState('42 Access Way, Colombo 03');
+  const [isListening, setIsListening] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+
+  const startVoiceTyping = () => {
+    // @ts-ignore
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice recognition is not supported in this browser.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = (e: any) => {
+      console.error('Speech recognition error', e.error);
+      setIsListening(false);
+    };
+    recognition.onresult = (e: any) => {
+      const transcript = e.results[0][0].transcript;
+      setAddress(transcript);
+    };
+
+    recognition.start();
+  };
 
   // Computed values
   const price = product?.price || 0;
@@ -139,10 +167,27 @@ export const AccessibleCheckoutModal: React.FC<AccessibleCheckoutModalProps> = (
 
               {/* Delivery Address */}
               <div className="space-y-2">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Delivery Address</h3>
-                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border-2 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white font-medium">
-                  42 Access Way, Colombo 03
+                <div className="flex justify-between items-center mb-1">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Delivery Address</h3>
+                  <button 
+                    onClick={startVoiceTyping} 
+                    className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      isListening ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 animate-pulse' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                    }`}
+                    aria-label={isListening ? "Listening for address..." : "Start voice typing for delivery address"}
+                    aria-pressed={isListening}
+                  >
+                    <span>🎤</span>
+                    <span>{isListening ? 'Listening...' : 'Voice Type'}</span>
+                  </button>
                 </div>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 px-4 py-4 min-h-[52px] rounded-2xl border-2 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-4 focus:ring-blue-500"
+                  aria-label="Delivery Address"
+                />
               </div>
 
               {/* Payment Method */}

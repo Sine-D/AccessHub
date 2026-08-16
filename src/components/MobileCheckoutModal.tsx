@@ -8,7 +8,9 @@ import {
   ActivityIndicator,
   AccessibilityInfo,
   ScrollView,
-  Alert
+  Alert,
+  TextInput,
+  Platform
 } from 'react-native';
 
 export interface MobileCheckoutModalProps {
@@ -55,6 +57,40 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
 }) => {
   const [checkoutState, setCheckoutState] = useState<CheckoutState>('review');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('saved_card');
+  const [address, setAddress] = useState('42 Access Way, Colombo 03');
+  const [isListening, setIsListening] = useState(false);
+
+  const startVoiceTyping = () => {
+    if (Platform.OS !== 'web') {
+      Alert.alert('Not Supported', 'Voice typing is currently only supported on the web version.');
+      return;
+    }
+    
+    // @ts-ignore
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      Alert.alert('Not Supported', 'Voice recognition is not supported in this browser.');
+      return;
+    }
+    
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = (e: any) => {
+      console.error('Speech recognition error', e.error);
+      setIsListening(false);
+    };
+    recognition.onresult = (e: any) => {
+      const transcript = e.results[0][0].transcript;
+      setAddress(transcript);
+    };
+
+    recognition.start();
+  };
 
   const price = product?.price || 0;
   const tax = price * 0.1;
@@ -186,10 +222,35 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
 
                 {/* Delivery Address */}
                 <View style={styles.section}>
-                  <Text style={[styles.sectionTitle, dynamicText(12), { color: subTextColor }]}>Delivery Address</Text>
-                  <View style={[styles.infoBox, { backgroundColor: cardBg, borderColor: subTextColor }]}>
-                    <Text style={[dynamicText(14), { color: textColor, fontWeight: '500' }]}>42 Access Way, Colombo 03</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <Text style={[styles.sectionTitle, dynamicText(12), { color: subTextColor, marginBottom: 0 }]}>Delivery Address</Text>
+                    <TouchableOpacity 
+                      onPress={startVoiceTyping}
+                      style={{ 
+                        flexDirection: 'row', 
+                        alignItems: 'center', 
+                        backgroundColor: isListening ? 'rgba(239, 68, 68, 0.2)' : 'rgba(148, 163, 184, 0.2)',
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        borderRadius: 12
+                      }}
+                      accessibilityLabel="Voice Type Address"
+                    >
+                      <Text style={{ fontSize: 12, marginRight: 4 }}>🎤</Text>
+                      <Text style={[dynamicText(10), { 
+                        color: isListening ? '#ef4444' : subTextColor,
+                        fontWeight: 'bold' 
+                      }]}>
+                        {isListening ? 'Listening...' : 'Voice Type'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
+                  <TextInput
+                    value={address}
+                    onChangeText={setAddress}
+                    style={[styles.infoBox, dynamicText(14), { backgroundColor: cardBg, borderColor: subTextColor, color: textColor, fontWeight: '500' }]}
+                    accessibilityLabel="Delivery Address Input"
+                  />
                 </View>
 
                 {/* Payment Method */}
