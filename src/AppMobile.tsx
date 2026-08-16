@@ -7,7 +7,6 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   Image,
   TextInput,
@@ -15,6 +14,7 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   mockCurrentUser,
   mockProducts,
@@ -26,10 +26,10 @@ import {
   mockNotifications,
 } from './mock/data';
 
-type MobileTab = 'home' | 'marketplace' | 'services' | 'jobs' | 'map' | 'profile';
+type MobileTab = 'splash' | 'onboarding' | 'auth' | 'home' | 'marketplace' | 'services' | 'jobs' | 'map' | 'profile';
 
 export default function AppMobile() {
-  const [activeTab, setActiveTab] = useState<MobileTab>('home');
+  const [activeTab, setActiveTab] = useState<MobileTab>('splash');
   const [highContrast, setHighContrast] = useState(false);
   const [fontScale, setFontScale] = useState<'md' | 'lg' | 'xl'>('md');
   const [ttsActive, setTtsActive] = useState(false);
@@ -37,6 +37,22 @@ export default function AppMobile() {
   const [searchQuery, setSearchQuery] = useState('');
   const [voiceQuery, setVoiceQuery] = useState('');
   const [aiResponse, setAiResponse] = useState('');
+
+  // Auto transition from Splash to Onboarding after 2.5 seconds
+  useEffect(() => {
+    if (activeTab === 'splash') {
+      const timer = setTimeout(() => {
+        setActiveTab('onboarding');
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab]);
+
+  const speakText = (text: string) => {
+    if (ttsActive) {
+      Alert.alert('🔊 Voice Reader', text);
+    }
+  };
 
   // Font scale multiplier
   const fontSizeMultiplier = fontScale === 'xl' ? 1.3 : fontScale === 'lg' ? 1.15 : 1.0;
@@ -332,7 +348,7 @@ export default function AppMobile() {
                 </Text>
 
                 <View style={styles.badgeContainer}>
-                  {job.accessibilityBadges.map((b, idx) => (
+                  {job.accessibilityBadges.map((b: string, idx: number) => (
                     <Text key={idx} style={[styles.jobBadge, { color: textColor, backgroundColor: '#334155' }]}>
                       ✓ {b}
                     </Text>
@@ -874,5 +890,331 @@ const styles = StyleSheet.create({
   aiResText: {
     fontWeight: '500',
     lineHeight: 16,
+  },
+  splashContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 12,
+  },
+  splashBadgeRow: {
+    backgroundColor: 'rgba(20, 184, 166, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#0d9488',
+    marginBottom: 20,
+  },
+  splashBadgeText: {
+    color: '#2dd4bf',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  splashLogoCard: {
+    width: 140,
+    height: 140,
+    borderRadius: 28,
+    backgroundColor: '#1e293b',
+    borderWidth: 2,
+    borderColor: '#0d9488',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 12,
+    marginBottom: 20,
+  },
+  splashLogoImg: {
+    width: '100%',
+    height: '100%',
+  },
+  splashBadgeTag: {
+    position: 'absolute',
+    bottom: -10,
+    backgroundColor: '#0d9488',
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  splashTitle: {
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  splashSub: {
+    textAlign: 'center',
+    marginTop: 6,
+    lineHeight: 18,
+    paddingHorizontal: 16,
+  },
+  splashFeatureGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  splashFeatureChip: {
+    width: '48%',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  splashChipText: {
+    fontWeight: 'bold',
+  },
+  splashStartBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  splashStartBtnText: {
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  splashSkipText: {
+    fontWeight: 'bold',
+  },
+  cleanSplashSafeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  cleanSplashContent: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  cleanSplashLogoWrapper: {
+    width: 320,
+    height: 320,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cleanSplashLogoImg: {
+    width: '100%',
+    height: '100%',
+  },
+  cleanOnboardingSafeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  onboardingTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  onboardingStepBadge: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#0d9488',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ccfbf1',
+  },
+  onboardingSkipBtn: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#64748b',
+  },
+  onboardingCenterContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  onboardingImageWrapper: {
+    width: Dimensions.get('window').width * 0.85,
+    height: 260,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  onboardingImg: {
+    width: '100%',
+    height: '100%',
+  },
+  onboardingTextGroup: {
+    width: '100%',
+    alignItems: 'center',
+    paddingHorizontal: 0,
+  },
+  onboardingCategoryBadge: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#0d9488',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginBottom: 6,
+  },
+  onboardingTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#0f172a',
+    textAlign: 'center',
+  },
+  onboardingSub: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  onboardingDesc: {
+    fontSize: 12,
+    color: '#475569',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 18,
+    paddingHorizontal: 10,
+  },
+  onboardingFooter: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  onboardingStartBtn: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: '#0d9488',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0d9488',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  onboardingStartBtnText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  onboardingStartBtnInline: {
+    width: '82%',
+    alignSelf: 'center',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    backgroundColor: '#0d9488',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0d9488',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    marginTop: 18,
+  },
+  cleanAuthSafeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  authTopBadgeWrapper: {
+    alignItems: 'center',
+    paddingTop: 12,
+  },
+  authTopBadgeText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#0d9488',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ccfbf1',
+  },
+  authCenterContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  authImageWrapper: {
+    width: Dimensions.get('window').width * 0.85,
+    height: 250,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  authImg: {
+    width: '100%',
+    height: '100%',
+  },
+  authTextGroup: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  authTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#0f172a',
+    textAlign: 'center',
+  },
+  authDesc: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 6,
+    lineHeight: 18,
+  },
+  authFooter: {
+    paddingHorizontal: 28,
+    paddingBottom: 24,
+    gap: 10,
+  },
+  authPrimaryBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: '#0d9488',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0d9488',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  authPrimaryBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  authInlineButtonsStack: {
+    width: 200,
+    alignSelf: 'center',
+    marginTop: 18,
+    gap: 12,
+  },
+  authPrimaryBtnInline: {
+    width: 200,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#0d9488',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0d9488',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
 });
