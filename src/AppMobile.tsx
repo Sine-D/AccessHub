@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ReviewForm } from './components/reviews/ReviewForm';
+import { MobileCheckoutModal } from './components/MobileCheckoutModal';
 import { addReview } from './mock/reviews';
 import {
   StyleSheet,
@@ -14,7 +15,7 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   mockCurrentUser,
   mockProducts,
@@ -37,6 +38,9 @@ export default function AppMobile() {
   const [searchQuery, setSearchQuery] = useState('');
   const [voiceQuery, setVoiceQuery] = useState('');
   const [aiResponse, setAiResponse] = useState('');
+
+  const [checkoutProduct, setCheckoutProduct] = useState<any>(null);
+  const [isCheckoutModalVisible, setCheckoutModalVisible] = useState(false);
 
   // Auto transition from Splash to Onboarding after 2.5 seconds
   useEffect(() => {
@@ -80,10 +84,11 @@ export default function AppMobile() {
 
 
 
-  
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: themeBg }]}>
-      <StatusBar barStyle="light-content" backgroundColor={themeBg} />
+    <SafeAreaProvider>
+      <SafeAreaView style={[styles.container, { backgroundColor: themeBg }]}>
+        <StatusBar barStyle="light-content" backgroundColor={themeBg} />
 
       {/* Top Header */}
       <View style={[styles.header, { backgroundColor: highContrast ? '#000' : '#1e293b' }]}>
@@ -272,7 +277,10 @@ export default function AppMobile() {
                   </Text>
                   <TouchableOpacity
                     style={[styles.buyBtn, { backgroundColor: primaryButtonBg }]}
-                    onPress={() => Alert.alert('Cart Updated', `${item.title} added to your order!`)}
+                    onPress={() => {
+                      setCheckoutProduct(item);
+                      setCheckoutModalVisible(true);
+                    }}
                   >
                     <Text style={[styles.buyBtnText, { color: primaryButtonText }]}>Order Now</Text>
                   </TouchableOpacity>
@@ -367,60 +375,60 @@ export default function AppMobile() {
         )}
 
         {activeTab === 'map' && (
-  <View>
-    <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
-      🗺️ Accessible Map Locations
-    </Text>
+          <View>
+            <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
+              🗺️ Accessible Map Locations
+            </Text>
 
-    {mockMapPins.map((pin) => (
-      <View key={pin.id} style={[styles.mapCard, { backgroundColor: cardBg }]}>
-        <Image source={{ uri: pin.image }} style={styles.mapImg} />
-        <View style={{ padding: 12 }}>
-          <Text style={[styles.mapPinTitle, dynamicText(15), { color: textColor }]}>
-            {pin.title}
-          </Text>
-          <Text style={[styles.mapAddress, dynamicText(11), { color: subTextColor, marginTop: 2 }]}>
-            📍 {pin.address} ({pin.distance})
-          </Text>
-          <Text style={[styles.badgeTag, { color: accentColor, marginTop: 6 }]}>
-            ♿ {pin.badge}
-          </Text>
-          <TouchableOpacity
-            onPress={() => setReviewModalLocationId(pin.id)}
-            accessibilityRole="button"
-            accessibilityLabel={`Write a review for ${pin.title}`}
-            style={{ marginTop: 10 }}
-          >
-            <Text style={{ color: accentColor, fontWeight: '600' }}>Write a Review</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    ))}
+            {mockMapPins.map((pin) => (
+              <View key={pin.id} style={[styles.mapCard, { backgroundColor: cardBg }]}>
+                <Image source={{ uri: pin.image }} style={styles.mapImg} />
+                <View style={{ padding: 12 }}>
+                  <Text style={[styles.mapPinTitle, dynamicText(15), { color: textColor }]}>
+                    {pin.title}
+                  </Text>
+                  <Text style={[styles.mapAddress, dynamicText(11), { color: subTextColor, marginTop: 2 }]}>
+                    📍 {pin.address} ({pin.distance})
+                  </Text>
+                  <Text style={[styles.badgeTag, { color: accentColor, marginTop: 6 }]}>
+                    ♿ {pin.badge}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setReviewModalLocationId(pin.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Write a review for ${pin.title}`}
+                    style={{ marginTop: 10 }}
+                  >
+                    <Text style={{ color: accentColor, fontWeight: '600' }}>Write a Review</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
 
-    <Modal
-      visible={reviewModalLocationId !== null}
-      animationType="slide"
-      transparent
-      onRequestClose={() => setReviewModalLocationId(null)}
-    >
-      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-        <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
-          {reviewModalLocationId && (
-            <ReviewForm
-              locationId={reviewModalLocationId}
-              onSubmit={(data) => {
-                const newReview = addReview(data);
-                console.log('New review stored:', newReview);
-                setReviewModalLocationId(null);
-                Alert.alert('Thank you!', 'Your accessibility review was submitted.');
-              }}
-            />
-          )}
-        </View>
-      </View>
-    </Modal>
-  </View>
-)}
+            <Modal
+              visible={reviewModalLocationId !== null}
+              animationType="slide"
+              transparent
+              onRequestClose={() => setReviewModalLocationId(null)}
+            >
+              <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                  {reviewModalLocationId && (
+                    <ReviewForm
+                      locationId={reviewModalLocationId}
+                      onSubmit={(data) => {
+                        const newReview = addReview(data);
+                        console.log('New review stored:', newReview);
+                        setReviewModalLocationId(null);
+                        Alert.alert('Thank you!', 'Your accessibility review was submitted.');
+                      }}
+                    />
+                  )}
+                </View>
+              </View>
+            </Modal>
+          </View>
+        )}
 
         {activeTab === 'profile' && (
           <View>
@@ -511,14 +519,14 @@ export default function AppMobile() {
               {tab === 'home'
                 ? '🏠'
                 : tab === 'marketplace'
-                ? '🛒'
-                : tab === 'services'
-                ? '🤝'
-                : tab === 'jobs'
-                ? '💼'
-                : tab === 'map'
-                ? '🗺️'
-                : '👤'}
+                  ? '🛒'
+                  : tab === 'services'
+                    ? '🤝'
+                    : tab === 'jobs'
+                      ? '💼'
+                      : tab === 'map'
+                        ? '🗺️'
+                        : '👤'}
             </Text>
             <Text
               style={[
@@ -534,7 +542,28 @@ export default function AppMobile() {
           </TouchableOpacity>
         ))}
       </View>
-    </SafeAreaView>
+
+      <MobileCheckoutModal
+        visible={isCheckoutModalVisible}
+        onClose={() => setCheckoutModalVisible(false)}
+        product={checkoutProduct}
+        themeBg={themeBg}
+        cardBg={cardBg}
+        textColor={textColor}
+        subTextColor={subTextColor}
+        accentColor={accentColor}
+        primaryButtonBg={primaryButtonBg}
+        primaryButtonText={primaryButtonText}
+        speakText={speakText}
+        highContrast={highContrast}
+        setHighContrast={setHighContrast}
+        ttsActive={ttsActive}
+        setTtsActive={setTtsActive}
+        fontScale={fontScale}
+        setFontScale={setFontScale}
+      />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 

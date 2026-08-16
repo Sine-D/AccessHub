@@ -10,8 +10,10 @@ import {
   Star, 
   Heart, 
   MapPin, 
-  SlidersHorizontal 
+  SlidersHorizontal,
+  ShoppingCart
 } from 'lucide-react';
+import { AccessibleCheckoutModal } from '../components/AccessibleCheckoutModal';
 
 export const MarketplaceScreen: React.FC = () => {
   const { setSelectedProduct, setActiveScreen, wishlist, toggleWishlist } = useAppState();
@@ -20,6 +22,9 @@ export const MarketplaceScreen: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [sortBy, setSortBy] = useState<'nearby' | 'rating' | 'price'>('nearby');
   const [search, setSearch] = useState('');
+  
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [checkoutProduct, setCheckoutProduct] = useState<any>(null);
 
   const categories = ['All', 'Crafts & Decor', 'Home Goods', 'Food & Organic', 'Apparel & Adaptive'];
 
@@ -140,6 +145,18 @@ export const MarketplaceScreen: React.FC = () => {
                     <span>{product.sellerRating}</span>
                   </div>
                 </div>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCheckoutProduct(product);
+                    setIsCheckoutOpen(true);
+                  }}
+                  className="w-full mt-2 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors flex items-center justify-center space-x-1"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5" />
+                  <span>Order Now</span>
+                </button>
               </div>
 
             </div>
@@ -150,6 +167,11 @@ export const MarketplaceScreen: React.FC = () => {
 
       <BottomNav />
 
+      <AccessibleCheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        product={checkoutProduct}
+      />
     </div>
   );
 };
