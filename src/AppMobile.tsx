@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { ReviewForm } from './components/reviews/ReviewForm';
+import { addReview } from './mock/reviews';
 import {
   StyleSheet,
   Text,
@@ -66,6 +68,8 @@ export default function AppMobile() {
     );
   };
 
+  const [reviewModalLocationId, setReviewModalLocationId] = useState<string | null>(null);
+
   const themeBg = highContrast ? '#000000' : '#0f172a';
   const cardBg = highContrast ? '#111111' : '#1e293b';
   const textColor = highContrast ? '#ffff00' : '#f8fafc';
@@ -74,130 +78,9 @@ export default function AppMobile() {
   const primaryButtonBg = highContrast ? '#ffff00' : '#2563eb';
   const primaryButtonText = highContrast ? '#000000' : '#ffffff';
 
-  // 1. CLEAN WHITE MINIMAL SPLASH SCREEN
-  if (activeTab === 'splash') {
-    return (
-      <SafeAreaView style={styles.cleanSplashSafeArea}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <TouchableOpacity 
-          style={styles.cleanSplashContent}
-          activeOpacity={0.95}
-          onPress={() => setActiveTab('onboarding')}
-        >
-          {/* Centered Large Access Hub Logo */}
-          <View style={styles.cleanSplashLogoWrapper}>
-            <Image
-              source={require('./assets/images/access_hub_logo.png')}
-              style={styles.cleanSplashLogoImg}
-              resizeMode="contain"
-            />
-          </View>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
 
-  // 2. CLEAN WHITE ONBOARDING SCREEN
-  if (activeTab === 'onboarding') {
-    return (
-      <SafeAreaView style={styles.cleanOnboardingSafeArea}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-        {/* Center Onboarding Content */}
-        <View style={styles.onboardingCenterContent}>
-          {/* Onboarding Illustration */}
-          <View style={styles.onboardingImageWrapper}>
-            <Image
-              source={require('./assets/images/Onboarding.png')}
-              style={styles.onboardingImg}
-              resizeMode="contain"
-            />
-          </View>
-
-          {/* Title & Description */}
-          <View style={styles.onboardingTextGroup}>
-            <Text style={styles.onboardingCategoryBadge}>
-              ♿ Inclusive Marketplace & Hub
-            </Text>
-            <Text style={styles.onboardingTitle}>
-              Inclusive Local Marketplace
-            </Text>
-            <Text style={styles.onboardingSub}>
-              Empowering Ability Through Inclusive Commerce
-            </Text>
-            <Text style={styles.onboardingDesc}>
-              Empowering persons with disabilities to showcase handcrafted goods, adaptive products, remote jobs, and offer freelance services across Sri Lanka.
-            </Text>
-
-            {/* GET STARTED NOW BUTTON -> TRANSITIONS TO AUTH SCREEN */}
-            <TouchableOpacity 
-              style={styles.onboardingStartBtnInline}
-              onPress={() => setActiveTab('auth')}
-            >
-              <Text style={styles.onboardingStartBtnText}>
-                🚀 Get Started Now
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-      </SafeAreaView>
-    );
-  }
-
-  // 3. CLEAN WHITE AUTH SELECTION SCREEN (signup&login.jpg + Create Account & Log In Buttons)
-  if (activeTab === 'auth') {
-    return (
-      <SafeAreaView style={styles.cleanAuthSafeArea}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
-        {/* Center Content */}
-        <View style={styles.authCenterContent}>
-          {/* signup_login Image */}
-          <View style={styles.authImageWrapper}>
-            <Image
-              source={require('./assets/images/signup_login.jpg')}
-              style={styles.authImg}
-              resizeMode="contain"
-            />
-          </View>
-
-          {/* Title & Subtitle */}
-          <View style={styles.authTextGroup}>
-            <Text style={styles.authTitle}>
-              Join AccessHub Today
-            </Text>
-            <Text style={styles.authDesc}>
-              Sri Lanka's premier 100% barrier-free inclusive marketplace & career community.
-            </Text>
-
-            {/* Identical Beautiful Buttons directly below paragraph */}
-            <View style={styles.authInlineButtonsStack}>
-              <TouchableOpacity 
-                style={styles.authPrimaryBtnInline}
-                onPress={() => setActiveTab('home')}
-              >
-                <Text style={styles.authPrimaryBtnText}>
-                  Create Account
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.authPrimaryBtnInline}
-                onPress={() => setActiveTab('home')}
-              >
-                <Text style={styles.authPrimaryBtnText}>
-                  Log In
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-      </SafeAreaView>
-    );
-  }
-
+  
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeBg }]}>
       <StatusBar barStyle="light-content" backgroundColor={themeBg} />
@@ -484,29 +367,60 @@ export default function AppMobile() {
         )}
 
         {activeTab === 'map' && (
-          <View>
-            <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
-              🗺️ Accessible Map Locations
-            </Text>
+  <View>
+    <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
+      🗺️ Accessible Map Locations
+    </Text>
 
-            {mockMapPins.map((pin) => (
-              <View key={pin.id} style={[styles.mapCard, { backgroundColor: cardBg }]}>
-                <Image source={{ uri: pin.image }} style={styles.mapImg} />
-                <View style={{ padding: 12 }}>
-                  <Text style={[styles.mapPinTitle, dynamicText(15), { color: textColor }]}>
-                    {pin.title}
-                  </Text>
-                  <Text style={[styles.mapAddress, dynamicText(11), { color: subTextColor, marginTop: 2 }]}>
-                    📍 {pin.address} ({pin.distance})
-                  </Text>
-                  <Text style={[styles.badgeTag, { color: accentColor, marginTop: 6 }]}>
-                    ♿ {pin.badge}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
+    {mockMapPins.map((pin) => (
+      <View key={pin.id} style={[styles.mapCard, { backgroundColor: cardBg }]}>
+        <Image source={{ uri: pin.image }} style={styles.mapImg} />
+        <View style={{ padding: 12 }}>
+          <Text style={[styles.mapPinTitle, dynamicText(15), { color: textColor }]}>
+            {pin.title}
+          </Text>
+          <Text style={[styles.mapAddress, dynamicText(11), { color: subTextColor, marginTop: 2 }]}>
+            📍 {pin.address} ({pin.distance})
+          </Text>
+          <Text style={[styles.badgeTag, { color: accentColor, marginTop: 6 }]}>
+            ♿ {pin.badge}
+          </Text>
+          <TouchableOpacity
+            onPress={() => setReviewModalLocationId(pin.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Write a review for ${pin.title}`}
+            style={{ marginTop: 10 }}
+          >
+            <Text style={{ color: accentColor, fontWeight: '600' }}>Write a Review</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    ))}
+
+    <Modal
+      visible={reviewModalLocationId !== null}
+      animationType="slide"
+      transparent
+      onRequestClose={() => setReviewModalLocationId(null)}
+    >
+      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+          {reviewModalLocationId && (
+            <ReviewForm
+              locationId={reviewModalLocationId}
+              onSubmit={(data) => {
+                const newReview = addReview(data);
+                console.log('New review stored:', newReview);
+                setReviewModalLocationId(null);
+                Alert.alert('Thank you!', 'Your accessibility review was submitted.');
+              }}
+            />
+          )}
+        </View>
+      </View>
+    </Modal>
+  </View>
+)}
 
         {activeTab === 'profile' && (
           <View>
