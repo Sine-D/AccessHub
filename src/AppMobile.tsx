@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { ReviewForm } from './components/reviews/ReviewForm';
+import { addReview } from './mock/reviews';
 import {
   StyleSheet,
   Text,
@@ -50,6 +52,8 @@ export default function AppMobile() {
     );
   };
 
+  const [reviewModalLocationId, setReviewModalLocationId] = useState<string | null>(null);
+
   const themeBg = highContrast ? '#000000' : '#0f172a';
   const cardBg = highContrast ? '#111111' : '#1e293b';
   const textColor = highContrast ? '#ffff00' : '#f8fafc';
@@ -58,6 +62,9 @@ export default function AppMobile() {
   const primaryButtonBg = highContrast ? '#ffff00' : '#2563eb';
   const primaryButtonText = highContrast ? '#000000' : '#ffffff';
 
+
+
+  
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeBg }]}>
       <StatusBar barStyle="light-content" backgroundColor={themeBg} />
@@ -344,29 +351,60 @@ export default function AppMobile() {
         )}
 
         {activeTab === 'map' && (
-          <View>
-            <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
-              🗺️ Accessible Map Locations
-            </Text>
+  <View>
+    <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
+      🗺️ Accessible Map Locations
+    </Text>
 
-            {mockMapPins.map((pin) => (
-              <View key={pin.id} style={[styles.mapCard, { backgroundColor: cardBg }]}>
-                <Image source={{ uri: pin.image }} style={styles.mapImg} />
-                <View style={{ padding: 12 }}>
-                  <Text style={[styles.mapPinTitle, dynamicText(15), { color: textColor }]}>
-                    {pin.title}
-                  </Text>
-                  <Text style={[styles.mapAddress, dynamicText(11), { color: subTextColor, marginTop: 2 }]}>
-                    📍 {pin.address} ({pin.distance})
-                  </Text>
-                  <Text style={[styles.badgeTag, { color: accentColor, marginTop: 6 }]}>
-                    ♿ {pin.badge}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
+    {mockMapPins.map((pin) => (
+      <View key={pin.id} style={[styles.mapCard, { backgroundColor: cardBg }]}>
+        <Image source={{ uri: pin.image }} style={styles.mapImg} />
+        <View style={{ padding: 12 }}>
+          <Text style={[styles.mapPinTitle, dynamicText(15), { color: textColor }]}>
+            {pin.title}
+          </Text>
+          <Text style={[styles.mapAddress, dynamicText(11), { color: subTextColor, marginTop: 2 }]}>
+            📍 {pin.address} ({pin.distance})
+          </Text>
+          <Text style={[styles.badgeTag, { color: accentColor, marginTop: 6 }]}>
+            ♿ {pin.badge}
+          </Text>
+          <TouchableOpacity
+            onPress={() => setReviewModalLocationId(pin.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Write a review for ${pin.title}`}
+            style={{ marginTop: 10 }}
+          >
+            <Text style={{ color: accentColor, fontWeight: '600' }}>Write a Review</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    ))}
+
+    <Modal
+      visible={reviewModalLocationId !== null}
+      animationType="slide"
+      transparent
+      onRequestClose={() => setReviewModalLocationId(null)}
+    >
+      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+          {reviewModalLocationId && (
+            <ReviewForm
+              locationId={reviewModalLocationId}
+              onSubmit={(data) => {
+                const newReview = addReview(data);
+                console.log('New review stored:', newReview);
+                setReviewModalLocationId(null);
+                Alert.alert('Thank you!', 'Your accessibility review was submitted.');
+              }}
+            />
+          )}
+        </View>
+      </View>
+    </Modal>
+  </View>
+)}
 
         {activeTab === 'profile' && (
           <View>
