@@ -3,9 +3,10 @@ export interface Review {
   locationId: string;
   userId: string;
   userName: string;
-  rating: number;       // 1–5 stars
+  rating: number;
   comment: string;
-  createdAt: string;    // ISO date string
+  photoUri: string | null;   // new — AC-80
+  createdAt: string;
 }
 
 export interface AccessibleLocation {

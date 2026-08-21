@@ -8,14 +8,16 @@ export const addReview = (data: {
   locationId: string;
   rating: number;
   comment: string;
+  photoUri: string | null;
 }): Review => {
   const review: Review = {
     id: `r${mockReviews.length + 1}-${Date.now()}`,
     locationId: data.locationId,
-    userId: 'u1',           // placeholder — see note below
+    userId: 'u1', // placeholder — see note below
     userName: 'Current User', // placeholder — see note below
     rating: data.rating,
     comment: data.comment,
+    photoUri: data.photoUri,
     createdAt: new Date().toISOString(),
   };
 

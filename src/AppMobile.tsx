@@ -418,7 +418,7 @@ export default function AppMobile() {
                       locationId={reviewModalLocationId}
                       onSubmit={(data) => {
                         const newReview = addReview(data);
-                        console.log('New review stored:', newReview);
+                        console.log('Stored review with photo:', newReview);
                         setReviewModalLocationId(null);
                         Alert.alert('Thank you!', 'Your accessibility review was submitted.');
                       }}
