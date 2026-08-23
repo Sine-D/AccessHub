@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ReviewForm } from './components/reviews/ReviewForm';
 import { MobileCheckoutModal } from './components/MobileCheckoutModal';
 import { addReview } from './mock/reviews';
@@ -43,9 +43,92 @@ export default function AppMobile() {
 
   const [checkoutProduct, setCheckoutProduct] = useState<any>(null);
   const [isCheckoutModalVisible, setCheckoutModalVisible] = useState(false);
-  
+
   const [dbJobs, setDbJobs] = useState<JobPosting[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
+
+  const [jobsSearchQuery, setJobsSearchQuery] = useState('');
+  const [jobsCategoryDropdown, setJobsCategoryDropdown] = useState('All Jobs');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [activeFilters, setActiveFilters] = useState({
+    wheelchair: false,
+    deaf: false,
+    blind: false,
+  });
+
+  const dynamicJobCategories = useMemo(() => {
+    const categories = new Set(dbJobs.map(job => job.title).filter(Boolean));
+    return ['All Jobs', ...Array.from(categories)] as string[];
+  }, [dbJobs]);
+
+  const filteredJobs = useMemo(() => {
+    let result = [...dbJobs];
+
+    if (jobsSearchQuery.trim()) {
+      const query = jobsSearchQuery.toLowerCase();
+      result = result.filter(job =>
+        job.title.toLowerCase().includes(query)
+      );
+    }
+
+    if (jobsCategoryDropdown !== 'All Jobs') {
+      result = result.filter(job => 
+        job.title && job.title.trim().toLowerCase() === jobsCategoryDropdown.trim().toLowerCase()
+      );
+    }
+
+    const w = activeFilters.wheelchair;
+    const d = activeFilters.deaf;
+    const b = activeFilters.blind;
+
+    if (w && d && b) {
+      result = result.filter(job => job.eligible_for_wheelchair && job.eligible_for_deaf && job.eligible_for_blind);
+    } else if (w && d) {
+      result = result.filter(job => job.eligible_for_wheelchair && job.eligible_for_deaf && !job.eligible_for_blind);
+    } else if (w && b) {
+      result = result.filter(job => job.eligible_for_wheelchair && !job.eligible_for_deaf && job.eligible_for_blind);
+    } else if (d && b) {
+      result = result.filter(job => !job.eligible_for_wheelchair && job.eligible_for_deaf && job.eligible_for_blind);
+    } else if (w) {
+      result = result.filter(job => job.eligible_for_wheelchair);
+      result.sort((jobA, jobB) => {
+        const getScore = (job: any) => {
+          if (!job.eligible_for_deaf && !job.eligible_for_blind) return 1;
+          if (job.eligible_for_deaf && !job.eligible_for_blind) return 2;
+          if (!job.eligible_for_deaf && job.eligible_for_blind) return 3;
+          if (job.eligible_for_deaf && job.eligible_for_blind) return 4;
+          return 5;
+        };
+        return getScore(jobA) - getScore(jobB);
+      });
+    } else if (d) {
+      result = result.filter(job => job.eligible_for_deaf);
+      result.sort((jobA, jobB) => {
+        const getScore = (job: any) => {
+          if (!job.eligible_for_wheelchair && !job.eligible_for_blind) return 1;
+          if (job.eligible_for_wheelchair && !job.eligible_for_blind) return 2;
+          if (!job.eligible_for_wheelchair && job.eligible_for_blind) return 3;
+          if (job.eligible_for_wheelchair && job.eligible_for_blind) return 4;
+          return 5;
+        };
+        return getScore(jobA) - getScore(jobB);
+      });
+    } else if (b) {
+      result = result.filter(job => job.eligible_for_blind);
+      result.sort((jobA, jobB) => {
+        const getScore = (job: any) => {
+          if (!job.eligible_for_wheelchair && !job.eligible_for_deaf) return 1;
+          if (job.eligible_for_wheelchair && !job.eligible_for_deaf) return 2;
+          if (!job.eligible_for_wheelchair && job.eligible_for_deaf) return 3;
+          if (job.eligible_for_wheelchair && job.eligible_for_deaf) return 4;
+          return 5;
+        };
+        return getScore(jobA) - getScore(jobB);
+      });
+    }
+
+    return result;
+  }, [dbJobs, jobsSearchQuery, jobsCategoryDropdown, activeFilters]);
 
   useEffect(() => {
     if (activeTab === 'jobs') {
@@ -58,7 +141,7 @@ export default function AppMobile() {
             console.error('Supabase fetch error:', error);
             throw error;
           }
-          
+
           console.log('Fetched data:', data);
           if (data && data.length > 0) {
             const formattedJobs = data.map((job: any) => ({
@@ -139,505 +222,557 @@ export default function AppMobile() {
       <SafeAreaView style={[styles.container, { backgroundColor: themeBg }]}>
         <StatusBar barStyle="light-content" backgroundColor={themeBg} />
 
-      {/* Top Header */}
-      <View style={[styles.header, { backgroundColor: highContrast ? '#000' : '#1e293b' }]}>
-        <View style={styles.brandRow}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoText}>A</Text>
+        {/* Top Header */}
+        <View style={[styles.header, { backgroundColor: highContrast ? '#000' : '#1e293b' }]}>
+          <View style={styles.brandRow}>
+            <View style={styles.logoBadge}>
+              <Text style={styles.logoText}>A</Text>
+            </View>
+            <View>
+              <Text style={[styles.brandTitle, dynamicText(18), { color: textColor }]}>AccessLink</Text>
+              <Text style={[styles.brandSub, dynamicText(10), { color: subTextColor }]}>
+                Inclusive Mobile Ecosystem
+              </Text>
+            </View>
           </View>
-          <View>
-            <Text style={[styles.brandTitle, dynamicText(18), { color: textColor }]}>AccessLink</Text>
-            <Text style={[styles.brandSub, dynamicText(10), { color: subTextColor }]}>
-              Inclusive Mobile Ecosystem
-            </Text>
+
+          <TouchableOpacity
+            style={[styles.aiButton, { backgroundColor: highContrast ? '#ffff00' : '#0d9488' }]}
+            onPress={() => setAiModalVisible(true)}
+          >
+            <Text style={[styles.aiButtonText, { color: highContrast ? '#000' : '#fff' }]}>✨ AI Hub</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Accessibility Control Toolbar */}
+        <View style={[styles.a11yBar, { backgroundColor: highContrast ? '#222' : '#334155' }]}>
+          <TouchableOpacity
+            style={[styles.a11yChip, ttsActive && styles.a11yChipActive]}
+            onPress={() => {
+              setTtsActive(!ttsActive);
+              Alert.alert(
+                'Screen Reader Simulator',
+                !ttsActive ? 'TTS Activated. Tap elements to read aloud.' : 'TTS Deactivated.'
+              );
+            }}
+          >
+            <Text style={styles.a11yChipText}>🔊 {ttsActive ? 'TTS ON' : 'TTS'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.a11yChip, highContrast && styles.a11yChipActive]}
+            onPress={() => setHighContrast(!highContrast)}
+          >
+            <Text style={styles.a11yChipText}>👁️ {highContrast ? 'Contrast ON' : 'Contrast'}</Text>
+          </TouchableOpacity>
+
+          <View style={styles.scaleGroup}>
+            {(['md', 'lg', 'xl'] as const).map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={[styles.scaleBtn, fontScale === s && styles.scaleBtnActive]}
+                onPress={() => setFontScale(s)}
+              >
+                <Text style={styles.scaleBtnText}>{s.toUpperCase()}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
-        <TouchableOpacity
-          style={[styles.aiButton, { backgroundColor: highContrast ? '#ffff00' : '#0d9488' }]}
-          onPress={() => setAiModalVisible(true)}
-        >
-          <Text style={[styles.aiButtonText, { color: highContrast ? '#000' : '#fff' }]}>✨ AI Hub</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Main Content Area */}
+        <ScrollView style={styles.contentScroll} contentContainerStyle={styles.scrollContent}>
+          {activeTab === 'home' && (
+            <View>
+              {/* Hero Welcome Banner */}
+              <View style={[styles.heroCard, { backgroundColor: cardBg }]}>
+                <Text style={[styles.heroBadge, { color: accentColor }]}>WELCOME BACK 👋</Text>
+                <Text style={[styles.heroTitle, dynamicText(20), { color: textColor }]}>
+                  {mockCurrentUser.name}
+                </Text>
+                <Text style={[styles.heroSub, dynamicText(12), { color: subTextColor }]}>
+                  Empowering disabled entrepreneurs and barrier-free digital commerce across Sri Lanka.
+                </Text>
 
-      {/* Accessibility Control Toolbar */}
-      <View style={[styles.a11yBar, { backgroundColor: highContrast ? '#222' : '#334155' }]}>
-        <TouchableOpacity
-          style={[styles.a11yChip, ttsActive && styles.a11yChipActive]}
-          onPress={() => {
-            setTtsActive(!ttsActive);
-            Alert.alert(
-              'Screen Reader Simulator',
-              !ttsActive ? 'TTS Activated. Tap elements to read aloud.' : 'TTS Deactivated.'
-            );
-          }}
-        >
-          <Text style={styles.a11yChipText}>🔊 {ttsActive ? 'TTS ON' : 'TTS'}</Text>
-        </TouchableOpacity>
+                <View style={styles.statsRow}>
+                  <View style={styles.statBox}>
+                    <Text style={[styles.statValue, { color: accentColor }]}>
+                      LKR {(((mockCurrentUser.totalEarnings ?? 0)) / 1000).toFixed(0)}k
+                    </Text>
+                    <Text style={[styles.statLabel, { color: subTextColor }]}>Earnings</Text>
+                  </View>
 
-        <TouchableOpacity
-          style={[styles.a11yChip, highContrast && styles.a11yChipActive]}
-          onPress={() => setHighContrast(!highContrast)}
-        >
-          <Text style={styles.a11yChipText}>👁️ {highContrast ? 'Contrast ON' : 'Contrast'}</Text>
-        </TouchableOpacity>
+                  <View style={styles.statBox}>
+                    <Text style={[styles.statValue, { color: accentColor }]}>
+                      {mockCurrentUser.totalOrders ?? 0}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: subTextColor }]}>Orders</Text>
+                  </View>
 
-        <View style={styles.scaleGroup}>
-          {(['md', 'lg', 'xl'] as const).map((s) => (
+                  <View style={styles.statBox}>
+                    <Text style={[styles.statValue, { color: accentColor }]}>⭐ {mockCurrentUser.rating}</Text>
+                    <Text style={[styles.statLabel, { color: subTextColor }]}>Rating</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Quick Actions Grid */}
+              <Text style={[styles.sectionTitle, dynamicText(16), { color: textColor }]}>
+                🚀 Inclusive Suite
+              </Text>
+
+              <View style={styles.quickGrid}>
+                <TouchableOpacity
+                  style={[styles.quickCard, { backgroundColor: cardBg }]}
+                  onPress={() => setActiveTab('marketplace')}
+                >
+                  <Text style={styles.quickIcon}>🛒</Text>
+                  <Text style={[styles.quickText, dynamicText(12), { color: textColor }]}>Marketplace</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.quickCard, { backgroundColor: cardBg }]}
+                  onPress={() => setActiveTab('services')}
+                >
+                  <Text style={styles.quickIcon}>🤝</Text>
+                  <Text style={[styles.quickText, dynamicText(12), { color: textColor }]}>Services</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.quickCard, { backgroundColor: cardBg }]}
+                  onPress={() => setActiveTab('jobs')}
+                >
+                  <Text style={styles.quickIcon}>💼</Text>
+                  <Text style={[styles.quickText, dynamicText(12), { color: textColor }]}>Jobs</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.quickCard, { backgroundColor: cardBg }]}
+                  onPress={() => setActiveTab('map')}
+                >
+                  <Text style={styles.quickIcon}>🗺️</Text>
+                  <Text style={[styles.quickText, dynamicText(12), { color: textColor }]}>Map Pins</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Featured Assistive Products */}
+              <Text style={[styles.sectionTitle, dynamicText(16), { color: textColor }]}>
+                ✨ Featured Assistive Tech
+              </Text>
+
+              {mockProducts.slice(0, 2).map((item) => (
+                <View key={item.id} style={[styles.productCard, { backgroundColor: cardBg }]}>
+                  <Image source={{ uri: item.image }} style={styles.productImg} />
+                  <View style={styles.productBody}>
+                    <Text style={[styles.badgeTag, { color: accentColor }]}>♿ {item.disabilityBadge}</Text>
+                    <Text style={[styles.productTitle, dynamicText(14), { color: textColor }]}>
+                      {item.title}
+                    </Text>
+                    <Text style={[styles.productPrice, dynamicText(15), { color: accentColor }]}>
+                      LKR {item.price.toLocaleString()}
+                    </Text>
+                    <Text style={[styles.sellerName, dynamicText(11), { color: subTextColor }]}>
+                      By {item.sellerName}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {activeTab === 'marketplace' && (
+            <View>
+              <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
+                🛒 Assistive Marketplace
+              </Text>
+
+              <TextInput
+                style={[styles.searchInput, { backgroundColor: cardBg, color: textColor }]}
+                placeholder="Search adaptive items, Braille clocks..."
+                placeholderTextColor={subTextColor}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+
+              {mockProducts.map((item) => (
+                <View key={item.id} style={[styles.productCard, { backgroundColor: cardBg }]}>
+                  <Image source={{ uri: item.image }} style={styles.productImg} />
+                  <View style={styles.productBody}>
+                    <Text style={[styles.badgeTag, { color: accentColor }]}>♿ {item.disabilityBadge}</Text>
+                    <Text style={[styles.productTitle, dynamicText(14), { color: textColor }]}>
+                      {item.title}
+                    </Text>
+                    <Text style={[styles.productPrice, dynamicText(15), { color: accentColor }]}>
+                      LKR {item.price.toLocaleString()}
+                    </Text>
+                    <Text style={[styles.sellerName, dynamicText(11), { color: subTextColor }]}>
+                      Seller: {item.sellerName} (⭐ {item.sellerRating})
+                    </Text>
+                    <TouchableOpacity
+                      style={[styles.buyBtn, { backgroundColor: primaryButtonBg }]}
+                      onPress={() => {
+                        setCheckoutProduct(item);
+                        setCheckoutModalVisible(true);
+                      }}
+                    >
+                      <Text style={[styles.buyBtnText, { color: primaryButtonText }]}>Order Now</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {activeTab === 'services' && (
+            <View>
+              <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
+                🤝 Inclusive Services
+              </Text>
+
+              {mockServices.map((srv) => (
+                <View key={srv.id} style={[styles.serviceCard, { backgroundColor: cardBg }]}>
+                  <View style={styles.rowAlign}>
+                    <Image source={{ uri: srv.providerAvatar }} style={styles.avatarMini} />
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={[styles.providerName, dynamicText(14), { color: textColor }]}>
+                        {srv.providerName}
+                      </Text>
+                      <Text style={[styles.badgeTag, { color: accentColor }]}>♿ {srv.disabilityBadge}</Text>
+                    </View>
+                  </View>
+
+                  <Text style={[styles.serviceTitle, dynamicText(13), { color: textColor, marginTop: 8 }]}>
+                    {srv.title}
+                  </Text>
+
+                  <Text style={[styles.serviceRate, dynamicText(14), { color: accentColor, marginTop: 4 }]}>
+                    LKR {srv.hourlyRate.toLocaleString()} / hour
+                  </Text>
+
+                  <Text style={[styles.serviceDesc, dynamicText(11), { color: subTextColor, marginTop: 6 }]}>
+                    {srv.description}
+                  </Text>
+
+                  <TouchableOpacity
+                    style={[styles.buyBtn, { backgroundColor: primaryButtonBg, marginTop: 10 }]}
+                    onPress={() => Alert.alert('Booked', `Service request sent to ${srv.providerName}!`)}
+                  >
+                    <Text style={[styles.buyBtnText, { color: primaryButtonText }]}>Book Provider</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {activeTab === 'jobs' && (
+            <View>
+              <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
+                💼 Disability-Confident Jobs
+              </Text>
+
+              {/* Search and Dropdown */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, marginTop: 8 }}>
+                <TextInput
+                  style={[styles.searchInput, { flex: 1, backgroundColor: cardBg, color: textColor, marginBottom: 0 }]}
+                  placeholder="Search jobs by title or category..."
+                  placeholderTextColor={subTextColor}
+                  value={jobsSearchQuery}
+                  onChangeText={setJobsSearchQuery}
+                />
+
+                <TouchableOpacity
+                  style={{ marginLeft: 8, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: cardBg, borderRadius: 10, borderWidth: 1, borderColor: '#334155' }}
+                  onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                >
+                  <Text style={{ color: textColor, fontSize: 13 }}>{jobsCategoryDropdown} ▼</Text>
+                </TouchableOpacity>
+              </View>
+
+              {showCategoryDropdown && (
+                <View style={{ backgroundColor: cardBg, borderRadius: 8, padding: 8, marginBottom: 12 }}>
+                  {['All Jobs', 'Handcraft Items', 'Computer Designing', 'Software Development', 'Marketing', 'Data Administration', 'Customer Service', 'Design & Arts'].map(cat => (
+                    <TouchableOpacity key={cat} onPress={() => { setJobsCategoryDropdown(cat); setShowCategoryDropdown(false); }} style={{ paddingVertical: 8, paddingHorizontal: 10 }}>
+                      <Text style={{ color: jobsCategoryDropdown === cat ? accentColor : textColor }}>{cat}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              {/* Filter Bubbles */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                <TouchableOpacity
+                  style={[{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 }, activeFilters.wheelchair ? { backgroundColor: '#3b82f6', borderColor: '#3b82f6' } : { borderColor: '#334155', backgroundColor: cardBg }]}
+                  onPress={() => setActiveFilters(prev => ({ ...prev, wheelchair: !prev.wheelchair }))}
+                >
+                  <Text style={{ color: activeFilters.wheelchair ? '#fff' : textColor, fontSize: 12, fontWeight: 'bold' }}>♿ Wheelchair Persons</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 }, activeFilters.deaf ? { backgroundColor: '#a855f7', borderColor: '#a855f7' } : { borderColor: '#334155', backgroundColor: cardBg }]}
+                  onPress={() => setActiveFilters(prev => ({ ...prev, deaf: !prev.deaf }))}
+                >
+                  <Text style={{ color: activeFilters.deaf ? '#fff' : textColor, fontSize: 12, fontWeight: 'bold' }}>🦻 Deaf Persons</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 }, activeFilters.blind ? { backgroundColor: '#f59e0b', borderColor: '#f59e0b' } : { borderColor: '#334155', backgroundColor: cardBg }]}
+                  onPress={() => setActiveFilters(prev => ({ ...prev, blind: !prev.blind }))}
+                >
+                  <Text style={{ color: activeFilters.blind ? '#fff' : textColor, fontSize: 12, fontWeight: 'bold' }}>🦯 Blind Persons</Text>
+                </TouchableOpacity>
+              </View>
+
+              {loadingJobs ? (
+                <Text style={{ color: subTextColor, textAlign: 'center', marginTop: 20 }}>Loading inclusive jobs...</Text>
+              ) : filteredJobs.length === 0 ? (
+                <Text style={{ color: subTextColor, textAlign: 'center', marginTop: 20 }}>No inclusive jobs found for these filters.</Text>
+              ) : filteredJobs.map((job) => (
+                <View key={job.id} style={[styles.jobCard, { backgroundColor: cardBg }]}>
+                  <View style={styles.rowAlign}>
+                    <Image source={{ uri: job.companyLogo }} style={styles.avatarMini} />
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={[styles.jobTitle, dynamicText(14), { color: textColor }]}>
+                        {job.title}
+                      </Text>
+                      <Text style={[styles.companyName, dynamicText(12), { color: subTextColor }]}>
+                        {job.company} • {job.location}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={[styles.salaryText, dynamicText(13), { color: accentColor, marginTop: 8 }]}>
+                    {job.salary}
+                  </Text>
+
+                  <View style={[styles.badgeContainer, { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 8 }]}>
+                    {job.accessibilityBadges.map((b: string, idx: number) => (
+                      <Text key={`b-${idx}`} style={[styles.jobBadge, { color: textColor, backgroundColor: '#334155', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: 10 }]}>
+                        ✓ {b}
+                      </Text>
+                    ))}
+                    {job.eligible_for_wheelchair && (
+                      <Text style={{ color: '#fff', backgroundColor: '#3b82f6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: 10, fontWeight: 'bold' }}>
+                        ♿ Wheelchair Accessible
+                      </Text>
+                    )}
+                    {job.eligible_for_deaf && (
+                      <Text style={{ color: '#fff', backgroundColor: '#a855f7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: 10, fontWeight: 'bold' }}>
+                        🦻 Deaf Friendly
+                      </Text>
+                    )}
+                    {job.eligible_for_blind && (
+                      <Text style={{ color: '#fff', backgroundColor: '#f59e0b', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: 10, fontWeight: 'bold' }}>
+                        🦯 Blind Friendly
+                      </Text>
+                    )}
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.buyBtn, { backgroundColor: primaryButtonBg, marginTop: 10 }]}
+                    onPress={async () => {
+                      try {
+                        const { data: userData } = await supabase.auth.getUser();
+                        if (userData?.user) {
+                          await supabase.from('job_applications').insert([{ job_id: job.id, user_id: userData.user.id }]);
+                        }
+                      } catch (err) { console.error(err); }
+                      Alert.alert('Applied!', `Application submitted for ${job.title}`)
+                    }}
+                  >
+                    <Text style={[styles.buyBtnText, { color: primaryButtonText }]}>Apply Now</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {activeTab === 'map' && (
+            <View>
+              <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
+                🗺️ Accessible Map Locations
+              </Text>
+
+              {mockMapPins.map((pin) => (
+                <View key={pin.id} style={[styles.mapCard, { backgroundColor: cardBg }]}>
+                  <Image source={{ uri: pin.image }} style={styles.mapImg} />
+                  <View style={{ padding: 12 }}>
+                    <Text style={[styles.mapPinTitle, dynamicText(15), { color: textColor }]}>
+                      {pin.title}
+                    </Text>
+                    <Text style={[styles.mapAddress, dynamicText(11), { color: subTextColor, marginTop: 2 }]}>
+                      📍 {pin.address} ({pin.distance})
+                    </Text>
+                    <Text style={[styles.badgeTag, { color: accentColor, marginTop: 6 }]}>
+                      ♿ {pin.badge}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setReviewModalLocationId(pin.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Write a review for ${pin.title}`}
+                      style={{ marginTop: 10 }}
+                    >
+                      <Text style={{ color: accentColor, fontWeight: '600' }}>Write a Review</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+
+              <Modal
+                visible={reviewModalLocationId !== null}
+                animationType="slide"
+                transparent
+                onRequestClose={() => setReviewModalLocationId(null)}
+              >
+                <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                  <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                    {reviewModalLocationId && (
+                      <ReviewForm
+                        locationId={reviewModalLocationId}
+                        onSubmit={(data) => {
+                          const newReview = addReview(data);
+                          console.log('New review stored:', newReview);
+                          setReviewModalLocationId(null);
+                          Alert.alert('Thank you!', 'Your accessibility review was submitted.');
+                        }}
+                      />
+                    )}
+                  </View>
+                </View>
+              </Modal>
+            </View>
+          )}
+
+          {activeTab === 'profile' && (
+            <View>
+              <View style={[styles.profileCard, { backgroundColor: cardBg }]}>
+                <Image source={{ uri: mockCurrentUser.avatar }} style={styles.profileAvatar} />
+                <Text style={[styles.profileName, dynamicText(18), { color: textColor, marginTop: 8 }]}>
+                  {mockCurrentUser.name}
+                </Text>
+                <Text style={[styles.badgeTag, { color: accentColor, marginTop: 4 }]}>
+                  ♿ {mockCurrentUser.disabilityBadge}
+                </Text>
+                <Text style={[styles.profileBio, dynamicText(11), { color: subTextColor, marginTop: 8 }]}>
+                  {mockCurrentUser.bio}
+                </Text>
+              </View>
+
+              <Text style={[styles.sectionTitle, dynamicText(16), { color: textColor, marginTop: 16 }]}>
+                🔔 Recent Notifications
+              </Text>
+
+              {mockNotifications.map((n) => (
+                <View key={n.id} style={[styles.notifCard, { backgroundColor: cardBg }]}>
+                  <Text style={[styles.notifTitle, dynamicText(13), { color: textColor }]}>{n.title}</Text>
+                  <Text style={[styles.notifDesc, dynamicText(11), { color: subTextColor, marginTop: 2 }]}>
+                    {n.description}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+
+        {/* AI Voice Hub Modal */}
+        <Modal visible={aiModalVisible} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: cardBg }]}>
+              <Text style={[styles.modalTitle, dynamicText(16), { color: textColor }]}>
+                🤖 AccessLink AI Voice Hub
+              </Text>
+              <Text style={[styles.modalSub, dynamicText(11), { color: subTextColor, marginTop: 4 }]}>
+                Speak or type accessibility commands (e.g. "Find ramp entrance near me").
+              </Text>
+
+              <TextInput
+                style={[styles.modalInput, { backgroundColor: themeBg, color: textColor }]}
+                placeholder="Ask AI Voice Assistant..."
+                placeholderTextColor={subTextColor}
+                value={voiceQuery}
+                onChangeText={setVoiceQuery}
+              />
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                <TouchableOpacity
+                  style={[styles.modalAskBtn, { backgroundColor: primaryButtonBg, flex: 1, marginRight: 8 }]}
+                  onPress={handleAiAsk}
+                >
+                  <Text style={[styles.buyBtnText, { color: primaryButtonText }]}>Submit Question</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalAskBtn, { backgroundColor: '#e11d48', width: 80 }]}
+                  onPress={() => setAiModalVisible(false)}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', textAlign: 'center' }}>Close</Text>
+                </TouchableOpacity>
+              </View>
+
+              {aiResponse ? (
+                <View style={styles.aiResBox}>
+                  <Text style={[styles.aiResText, dynamicText(12), { color: accentColor }]}>
+                    {aiResponse}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        </Modal>
+
+        {/* Bottom Tab Bar */}
+        <View style={[styles.tabBar, { backgroundColor: highContrast ? '#000' : '#1e293b' }]}>
+          {(['home', 'marketplace', 'services', 'jobs', 'map', 'profile'] as const).map((tab) => (
             <TouchableOpacity
-              key={s}
-              style={[styles.scaleBtn, fontScale === s && styles.scaleBtnActive]}
-              onPress={() => setFontScale(s)}
+              key={tab}
+              style={styles.tabItem}
+              onPress={() => setActiveTab(tab)}
             >
-              <Text style={styles.scaleBtnText}>{s.toUpperCase()}</Text>
+              <Text style={styles.tabIcon}>
+                {tab === 'home'
+                  ? '🏠'
+                  : tab === 'marketplace'
+                    ? '🛒'
+                    : tab === 'services'
+                      ? '🤝'
+                      : tab === 'jobs'
+                        ? '💼'
+                        : tab === 'map'
+                          ? '🗺️'
+                          : '👤'}
+              </Text>
+              <Text
+                style={[
+                  styles.tabLabel,
+                  {
+                    color: activeTab === tab ? accentColor : subTextColor,
+                    fontWeight: activeTab === tab ? 'bold' : 'normal',
+                  },
+                ]}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
-      </View>
 
-      {/* Main Content Area */}
-      <ScrollView style={styles.contentScroll} contentContainerStyle={styles.scrollContent}>
-        {activeTab === 'home' && (
-          <View>
-            {/* Hero Welcome Banner */}
-            <View style={[styles.heroCard, { backgroundColor: cardBg }]}>
-              <Text style={[styles.heroBadge, { color: accentColor }]}>WELCOME BACK 👋</Text>
-              <Text style={[styles.heroTitle, dynamicText(20), { color: textColor }]}>
-                {mockCurrentUser.name}
-              </Text>
-              <Text style={[styles.heroSub, dynamicText(12), { color: subTextColor }]}>
-                Empowering disabled entrepreneurs and barrier-free digital commerce across Sri Lanka.
-              </Text>
-
-              <View style={styles.statsRow}>
-                <View style={styles.statBox}>
-                  <Text style={[styles.statValue, { color: accentColor }]}>
-                    LKR {(((mockCurrentUser.totalEarnings ?? 0)) / 1000).toFixed(0)}k
-                  </Text>
-                  <Text style={[styles.statLabel, { color: subTextColor }]}>Earnings</Text>
-                </View>
-
-                <View style={styles.statBox}>
-                  <Text style={[styles.statValue, { color: accentColor }]}>
-                    {mockCurrentUser.totalOrders ?? 0}
-                  </Text>
-                  <Text style={[styles.statLabel, { color: subTextColor }]}>Orders</Text>
-                </View>
-
-                <View style={styles.statBox}>
-                  <Text style={[styles.statValue, { color: accentColor }]}>⭐ {mockCurrentUser.rating}</Text>
-                  <Text style={[styles.statLabel, { color: subTextColor }]}>Rating</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Quick Actions Grid */}
-            <Text style={[styles.sectionTitle, dynamicText(16), { color: textColor }]}>
-              🚀 Inclusive Suite
-            </Text>
-
-            <View style={styles.quickGrid}>
-              <TouchableOpacity
-                style={[styles.quickCard, { backgroundColor: cardBg }]}
-                onPress={() => setActiveTab('marketplace')}
-              >
-                <Text style={styles.quickIcon}>🛒</Text>
-                <Text style={[styles.quickText, dynamicText(12), { color: textColor }]}>Marketplace</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.quickCard, { backgroundColor: cardBg }]}
-                onPress={() => setActiveTab('services')}
-              >
-                <Text style={styles.quickIcon}>🤝</Text>
-                <Text style={[styles.quickText, dynamicText(12), { color: textColor }]}>Services</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.quickCard, { backgroundColor: cardBg }]}
-                onPress={() => setActiveTab('jobs')}
-              >
-                <Text style={styles.quickIcon}>💼</Text>
-                <Text style={[styles.quickText, dynamicText(12), { color: textColor }]}>Jobs</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.quickCard, { backgroundColor: cardBg }]}
-                onPress={() => setActiveTab('map')}
-              >
-                <Text style={styles.quickIcon}>🗺️</Text>
-                <Text style={[styles.quickText, dynamicText(12), { color: textColor }]}>Map Pins</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Featured Assistive Products */}
-            <Text style={[styles.sectionTitle, dynamicText(16), { color: textColor }]}>
-              ✨ Featured Assistive Tech
-            </Text>
-
-            {mockProducts.slice(0, 2).map((item) => (
-              <View key={item.id} style={[styles.productCard, { backgroundColor: cardBg }]}>
-                <Image source={{ uri: item.image }} style={styles.productImg} />
-                <View style={styles.productBody}>
-                  <Text style={[styles.badgeTag, { color: accentColor }]}>♿ {item.disabilityBadge}</Text>
-                  <Text style={[styles.productTitle, dynamicText(14), { color: textColor }]}>
-                    {item.title}
-                  </Text>
-                  <Text style={[styles.productPrice, dynamicText(15), { color: accentColor }]}>
-                    LKR {item.price.toLocaleString()}
-                  </Text>
-                  <Text style={[styles.sellerName, dynamicText(11), { color: subTextColor }]}>
-                    By {item.sellerName}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {activeTab === 'marketplace' && (
-          <View>
-            <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
-              🛒 Assistive Marketplace
-            </Text>
-
-            <TextInput
-              style={[styles.searchInput, { backgroundColor: cardBg, color: textColor }]}
-              placeholder="Search adaptive items, Braille clocks..."
-              placeholderTextColor={subTextColor}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-
-            {mockProducts.map((item) => (
-              <View key={item.id} style={[styles.productCard, { backgroundColor: cardBg }]}>
-                <Image source={{ uri: item.image }} style={styles.productImg} />
-                <View style={styles.productBody}>
-                  <Text style={[styles.badgeTag, { color: accentColor }]}>♿ {item.disabilityBadge}</Text>
-                  <Text style={[styles.productTitle, dynamicText(14), { color: textColor }]}>
-                    {item.title}
-                  </Text>
-                  <Text style={[styles.productPrice, dynamicText(15), { color: accentColor }]}>
-                    LKR {item.price.toLocaleString()}
-                  </Text>
-                  <Text style={[styles.sellerName, dynamicText(11), { color: subTextColor }]}>
-                    Seller: {item.sellerName} (⭐ {item.sellerRating})
-                  </Text>
-                  <TouchableOpacity
-                    style={[styles.buyBtn, { backgroundColor: primaryButtonBg }]}
-                    onPress={() => {
-                      setCheckoutProduct(item);
-                      setCheckoutModalVisible(true);
-                    }}
-                  >
-                    <Text style={[styles.buyBtnText, { color: primaryButtonText }]}>Order Now</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {activeTab === 'services' && (
-          <View>
-            <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
-              🤝 Inclusive Services
-            </Text>
-
-            {mockServices.map((srv) => (
-              <View key={srv.id} style={[styles.serviceCard, { backgroundColor: cardBg }]}>
-                <View style={styles.rowAlign}>
-                  <Image source={{ uri: srv.providerAvatar }} style={styles.avatarMini} />
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={[styles.providerName, dynamicText(14), { color: textColor }]}>
-                      {srv.providerName}
-                    </Text>
-                    <Text style={[styles.badgeTag, { color: accentColor }]}>♿ {srv.disabilityBadge}</Text>
-                  </View>
-                </View>
-
-                <Text style={[styles.serviceTitle, dynamicText(13), { color: textColor, marginTop: 8 }]}>
-                  {srv.title}
-                </Text>
-
-                <Text style={[styles.serviceRate, dynamicText(14), { color: accentColor, marginTop: 4 }]}>
-                  LKR {srv.hourlyRate.toLocaleString()} / hour
-                </Text>
-
-                <Text style={[styles.serviceDesc, dynamicText(11), { color: subTextColor, marginTop: 6 }]}>
-                  {srv.description}
-                </Text>
-
-                <TouchableOpacity
-                  style={[styles.buyBtn, { backgroundColor: primaryButtonBg, marginTop: 10 }]}
-                  onPress={() => Alert.alert('Booked', `Service request sent to ${srv.providerName}!`)}
-                >
-                  <Text style={[styles.buyBtnText, { color: primaryButtonText }]}>Book Provider</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {activeTab === 'jobs' && (
-          <View>
-            <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
-              💼 Disability-Confident Jobs
-            </Text>
-
-            {loadingJobs ? (
-              <Text style={{ color: subTextColor, textAlign: 'center', marginTop: 20 }}>Loading inclusive jobs...</Text>
-            ) : dbJobs.length === 0 ? (
-              <Text style={{ color: subTextColor, textAlign: 'center', marginTop: 20 }}>No inclusive jobs found. Check back later!</Text>
-            ) : dbJobs.map((job) => (
-              <View key={job.id} style={[styles.jobCard, { backgroundColor: cardBg }]}>
-                <View style={styles.rowAlign}>
-                  <Image source={{ uri: job.companyLogo }} style={styles.avatarMini} />
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={[styles.jobTitle, dynamicText(14), { color: textColor }]}>
-                      {job.title}
-                    </Text>
-                    <Text style={[styles.companyName, dynamicText(12), { color: subTextColor }]}>
-                      {job.company} • {job.location}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={[styles.salaryText, dynamicText(13), { color: accentColor, marginTop: 8 }]}>
-                  {job.salary}
-                </Text>
-
-                <View style={[styles.badgeContainer, { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 8 }]}>
-                  {job.accessibilityBadges.map((b: string, idx: number) => (
-                    <Text key={`b-${idx}`} style={[styles.jobBadge, { color: textColor, backgroundColor: '#334155', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: 10 }]}>
-                      ✓ {b}
-                    </Text>
-                  ))}
-                  {job.eligible_for_wheelchair && (
-                    <Text style={{ color: '#fff', backgroundColor: '#3b82f6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: 10, fontWeight: 'bold' }}>
-                      ♿ Wheelchair Accessible
-                    </Text>
-                  )}
-                  {job.eligible_for_deaf && (
-                    <Text style={{ color: '#fff', backgroundColor: '#a855f7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: 10, fontWeight: 'bold' }}>
-                      🦻 Deaf Friendly
-                    </Text>
-                  )}
-                  {job.eligible_for_blind && (
-                    <Text style={{ color: '#fff', backgroundColor: '#f59e0b', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: 10, fontWeight: 'bold' }}>
-                      🦯 Blind Friendly
-                    </Text>
-                  )}
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.buyBtn, { backgroundColor: primaryButtonBg, marginTop: 10 }]}
-                  onPress={async () => {
-                    try {
-                      const { data: userData } = await supabase.auth.getUser();
-                      if (userData?.user) {
-                        await supabase.from('job_applications').insert([{ job_id: job.id, user_id: userData.user.id }]);
-                      }
-                    } catch (err) { console.error(err); }
-                    Alert.alert('Applied!', `Application submitted for ${job.title}`)
-                  }}
-                >
-                  <Text style={[styles.buyBtnText, { color: primaryButtonText }]}>Apply Now</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {activeTab === 'map' && (
-          <View>
-            <Text style={[styles.sectionTitle, dynamicText(18), { color: textColor }]}>
-              🗺️ Accessible Map Locations
-            </Text>
-
-            {mockMapPins.map((pin) => (
-              <View key={pin.id} style={[styles.mapCard, { backgroundColor: cardBg }]}>
-                <Image source={{ uri: pin.image }} style={styles.mapImg} />
-                <View style={{ padding: 12 }}>
-                  <Text style={[styles.mapPinTitle, dynamicText(15), { color: textColor }]}>
-                    {pin.title}
-                  </Text>
-                  <Text style={[styles.mapAddress, dynamicText(11), { color: subTextColor, marginTop: 2 }]}>
-                    📍 {pin.address} ({pin.distance})
-                  </Text>
-                  <Text style={[styles.badgeTag, { color: accentColor, marginTop: 6 }]}>
-                    ♿ {pin.badge}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setReviewModalLocationId(pin.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Write a review for ${pin.title}`}
-                    style={{ marginTop: 10 }}
-                  >
-                    <Text style={{ color: accentColor, fontWeight: '600' }}>Write a Review</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-
-            <Modal
-              visible={reviewModalLocationId !== null}
-              animationType="slide"
-              transparent
-              onRequestClose={() => setReviewModalLocationId(null)}
-            >
-              <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
-                  {reviewModalLocationId && (
-                    <ReviewForm
-                      locationId={reviewModalLocationId}
-                      onSubmit={(data) => {
-                        const newReview = addReview(data);
-                        console.log('New review stored:', newReview);
-                        setReviewModalLocationId(null);
-                        Alert.alert('Thank you!', 'Your accessibility review was submitted.');
-                      }}
-                    />
-                  )}
-                </View>
-              </View>
-            </Modal>
-          </View>
-        )}
-
-        {activeTab === 'profile' && (
-          <View>
-            <View style={[styles.profileCard, { backgroundColor: cardBg }]}>
-              <Image source={{ uri: mockCurrentUser.avatar }} style={styles.profileAvatar} />
-              <Text style={[styles.profileName, dynamicText(18), { color: textColor, marginTop: 8 }]}>
-                {mockCurrentUser.name}
-              </Text>
-              <Text style={[styles.badgeTag, { color: accentColor, marginTop: 4 }]}>
-                ♿ {mockCurrentUser.disabilityBadge}
-              </Text>
-              <Text style={[styles.profileBio, dynamicText(11), { color: subTextColor, marginTop: 8 }]}>
-                {mockCurrentUser.bio}
-              </Text>
-            </View>
-
-            <Text style={[styles.sectionTitle, dynamicText(16), { color: textColor, marginTop: 16 }]}>
-              🔔 Recent Notifications
-            </Text>
-
-            {mockNotifications.map((n) => (
-              <View key={n.id} style={[styles.notifCard, { backgroundColor: cardBg }]}>
-                <Text style={[styles.notifTitle, dynamicText(13), { color: textColor }]}>{n.title}</Text>
-                <Text style={[styles.notifDesc, dynamicText(11), { color: subTextColor, marginTop: 2 }]}>
-                  {n.description}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
-
-      {/* AI Voice Hub Modal */}
-      <Modal visible={aiModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: cardBg }]}>
-            <Text style={[styles.modalTitle, dynamicText(16), { color: textColor }]}>
-              🤖 AccessLink AI Voice Hub
-            </Text>
-            <Text style={[styles.modalSub, dynamicText(11), { color: subTextColor, marginTop: 4 }]}>
-              Speak or type accessibility commands (e.g. "Find ramp entrance near me").
-            </Text>
-
-            <TextInput
-              style={[styles.modalInput, { backgroundColor: themeBg, color: textColor }]}
-              placeholder="Ask AI Voice Assistant..."
-              placeholderTextColor={subTextColor}
-              value={voiceQuery}
-              onChangeText={setVoiceQuery}
-            />
-
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-              <TouchableOpacity
-                style={[styles.modalAskBtn, { backgroundColor: primaryButtonBg, flex: 1, marginRight: 8 }]}
-                onPress={handleAiAsk}
-              >
-                <Text style={[styles.buyBtnText, { color: primaryButtonText }]}>Submit Question</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalAskBtn, { backgroundColor: '#e11d48', width: 80 }]}
-                onPress={() => setAiModalVisible(false)}
-              >
-                <Text style={{ color: '#fff', fontWeight: 'bold', textAlign: 'center' }}>Close</Text>
-              </TouchableOpacity>
-            </View>
-
-            {aiResponse ? (
-              <View style={styles.aiResBox}>
-                <Text style={[styles.aiResText, dynamicText(12), { color: accentColor }]}>
-                  {aiResponse}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        </View>
-      </Modal>
-
-      {/* Bottom Tab Bar */}
-      <View style={[styles.tabBar, { backgroundColor: highContrast ? '#000' : '#1e293b' }]}>
-        {(['home', 'marketplace', 'services', 'jobs', 'map', 'profile'] as const).map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={styles.tabItem}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={styles.tabIcon}>
-              {tab === 'home'
-                ? '🏠'
-                : tab === 'marketplace'
-                  ? '🛒'
-                  : tab === 'services'
-                    ? '🤝'
-                    : tab === 'jobs'
-                      ? '💼'
-                      : tab === 'map'
-                        ? '🗺️'
-                        : '👤'}
-            </Text>
-            <Text
-              style={[
-                styles.tabLabel,
-                {
-                  color: activeTab === tab ? accentColor : subTextColor,
-                  fontWeight: activeTab === tab ? 'bold' : 'normal',
-                },
-              ]}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <MobileCheckoutModal
-        visible={isCheckoutModalVisible}
-        onClose={() => setCheckoutModalVisible(false)}
-        product={checkoutProduct}
-        themeBg={themeBg}
-        cardBg={cardBg}
-        textColor={textColor}
-        subTextColor={subTextColor}
-        accentColor={accentColor}
-        primaryButtonBg={primaryButtonBg}
-        primaryButtonText={primaryButtonText}
-        speakText={speakText}
-        highContrast={highContrast}
-        setHighContrast={setHighContrast}
-        ttsActive={ttsActive}
-        setTtsActive={setTtsActive}
-        fontScale={fontScale}
-        setFontScale={setFontScale}
-      />
+        <MobileCheckoutModal
+          visible={isCheckoutModalVisible}
+          onClose={() => setCheckoutModalVisible(false)}
+          product={checkoutProduct}
+          themeBg={themeBg}
+          cardBg={cardBg}
+          textColor={textColor}
+          subTextColor={subTextColor}
+          accentColor={accentColor}
+          primaryButtonBg={primaryButtonBg}
+          primaryButtonText={primaryButtonText}
+          speakText={speakText}
+          highContrast={highContrast}
+          setHighContrast={setHighContrast}
+          ttsActive={ttsActive}
+          setTtsActive={setTtsActive}
+          fontScale={fontScale}
+          setFontScale={setFontScale}
+        />
       </SafeAreaView>
     </SafeAreaProvider>
   );
