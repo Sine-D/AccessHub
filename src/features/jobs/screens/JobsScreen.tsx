@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../../core/supabase';
+import { JobPosting } from '../../../core/types';
 import { useAccessibility } from '../../../core/hooks/useAccessibility';
-import { mockJobs } from '../../../mock/data';
 import { TopHeader } from '../../../core/navigation/TopHeader';
 import { BottomNav } from '../../../core/navigation/BottomNav';
 import { 
@@ -9,16 +10,74 @@ import {
   Bookmark, 
   CheckCircle2, 
   ShieldCheck, 
-  Building2 
+  Building2,
+  Ear,
+  Eye,
+  Accessibility
 } from 'lucide-react';
 
 export const JobsScreen: React.FC = () => {
   const { speakText } = useAccessibility();
+  const [jobs, setJobs] = useState<JobPosting[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [appliedJob, setAppliedJob] = useState<string | null>(null);
 
-  const handleApply = (jobTitle: string) => {
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const { data, error } = await supabase.from('jobs').select('*');
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          const formattedJobs: JobPosting[] = data.map((job: any) => ({
+            id: job.id,
+            title: job.title,
+            company: 'Partner Company', 
+            companyLogo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=200',
+            salary: 'Negotiable',
+            location: 'Sri Lanka / Remote',
+            accessibilityBadges: [job.category],
+            eligible_for_wheelchair: job.eligible_for_wheelchair,
+            eligible_for_deaf: job.eligible_for_deaf,
+            eligible_for_blind: job.eligible_for_blind,
+            description: `Job category: ${job.category}.`,
+            postedDate: new Date(job.created_at).toLocaleDateString(),
+            applicantCount: 0
+          }));
+          setJobs(formattedJobs);
+        } else {
+          setJobs([]);
+        }
+      } catch (err) {
+        console.error('Error fetching jobs:', err);
+        setJobs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJobs();
+  }, []);
+
+  const handleApply = async (jobId: string, jobTitle: string) => {
     setAppliedJob(jobTitle);
+    
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user) {
+        await supabase.from('job_applications').insert([
+          {
+            job_id: jobId,
+            user_id: userData.user.id,
+            status: 'PENDING'
+          }
+        ]);
+      }
+    } catch (err) {
+      console.error('Application error:', err);
+    }
+
     speakText(`Application submitted for ${jobTitle}. Company recruiter has received your accessible profile.`);
     setTimeout(() => setAppliedJob(null), 2500);
   };
@@ -55,7 +114,15 @@ export const JobsScreen: React.FC = () => {
 
         {/* Job List */}
         <div className="space-y-3">
-          {mockJobs.map((job) => (
+          {loading ? (
+            <div className="text-center py-10 text-slate-500">Loading inclusive jobs...</div>
+          ) : jobs.length === 0 ? (
+            <div className="text-center py-10 text-slate-500 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <Building2 className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+              <p className="text-sm font-semibold">No inclusive jobs found.</p>
+              <p className="text-xs mt-1">Please check back later for new opportunities.</p>
+            </div>
+          ) : jobs.map((job) => (
             <div 
               key={job.id}
               className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 shadow-xs hover:border-blue-500 transition-all"
@@ -90,6 +157,24 @@ export const JobsScreen: React.FC = () => {
                     <span>{badge}</span>
                   </span>
                 ))}
+                {job.eligible_for_wheelchair && (
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center space-x-1">
+                    <Accessibility className="w-3 h-3 text-blue-500" />
+                    <span>Wheelchair Accessible</span>
+                  </span>
+                )}
+                {job.eligible_for_deaf && (
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 flex items-center space-x-1">
+                    <Ear className="w-3 h-3 text-purple-500" />
+                    <span>Deaf Friendly</span>
+                  </span>
+                )}
+                {job.eligible_for_blind && (
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center space-x-1">
+                    <Eye className="w-3 h-3 text-amber-500" />
+                    <span>Blind Friendly</span>
+                  </span>
+                )}
               </div>
 
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -100,7 +185,7 @@ export const JobsScreen: React.FC = () => {
               <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
                 <span className="text-[11px] text-slate-400 font-medium">Posted {job.postedDate} • {job.applicantCount} applicants</span>
                 <button
-                  onClick={() => handleApply(job.title)}
+                  onClick={() => handleApply(job.id, job.title)}
                   className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition-all"
                 >
                   1-Tap Apply

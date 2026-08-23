@@ -26,6 +26,8 @@ import {
   mockMessages,
   mockNotifications,
 } from './mock/data';
+import { supabase } from './core/supabase';
+import { JobPosting } from './core/types';
 
 type MobileTab = 'splash' | 'onboarding' | 'auth' | 'home' | 'marketplace' | 'services' | 'jobs' | 'map' | 'profile';
 
@@ -41,6 +43,53 @@ export default function AppMobile() {
 
   const [checkoutProduct, setCheckoutProduct] = useState<any>(null);
   const [isCheckoutModalVisible, setCheckoutModalVisible] = useState(false);
+  
+  const [dbJobs, setDbJobs] = useState<JobPosting[]>([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'jobs') {
+      const fetchJobs = async () => {
+        setLoadingJobs(true);
+        try {
+          console.log('Fetching from Supabase URL:', supabase.supabaseUrl);
+          const { data, error } = await supabase.from('jobs').select('*');
+          if (error) {
+            console.error('Supabase fetch error:', error);
+            throw error;
+          }
+          
+          console.log('Fetched data:', data);
+          if (data && data.length > 0) {
+            const formattedJobs = data.map((job: any) => ({
+              id: job.id,
+              title: job.title,
+              company: 'Partner Company',
+              companyLogo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=200',
+              salary: 'Negotiable',
+              location: 'Sri Lanka / Remote',
+              accessibilityBadges: [job.category],
+              eligible_for_wheelchair: job.eligible_for_wheelchair,
+              eligible_for_deaf: job.eligible_for_deaf,
+              eligible_for_blind: job.eligible_for_blind,
+              description: `Job category: ${job.category}.`,
+              postedDate: new Date(job.created_at).toLocaleDateString(),
+              applicantCount: 0
+            }));
+            setDbJobs(formattedJobs);
+          } else {
+            setDbJobs([]);
+          }
+        } catch (err) {
+          console.error('Fetch Jobs Error:', err);
+          setDbJobs([]);
+        } finally {
+          setLoadingJobs(false);
+        }
+      };
+      fetchJobs();
+    }
+  }, [activeTab]);
 
   // Auto transition from Splash to Onboarding after 2.5 seconds
   useEffect(() => {
@@ -337,7 +386,11 @@ export default function AppMobile() {
               💼 Disability-Confident Jobs
             </Text>
 
-            {mockJobs.map((job) => (
+            {loadingJobs ? (
+              <Text style={{ color: subTextColor, textAlign: 'center', marginTop: 20 }}>Loading inclusive jobs...</Text>
+            ) : dbJobs.length === 0 ? (
+              <Text style={{ color: subTextColor, textAlign: 'center', marginTop: 20 }}>No inclusive jobs found. Check back later!</Text>
+            ) : dbJobs.map((job) => (
               <View key={job.id} style={[styles.jobCard, { backgroundColor: cardBg }]}>
                 <View style={styles.rowAlign}>
                   <Image source={{ uri: job.companyLogo }} style={styles.avatarMini} />
@@ -355,17 +408,40 @@ export default function AppMobile() {
                   {job.salary}
                 </Text>
 
-                <View style={styles.badgeContainer}>
+                <View style={[styles.badgeContainer, { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 8 }]}>
                   {job.accessibilityBadges.map((b: string, idx: number) => (
-                    <Text key={idx} style={[styles.jobBadge, { color: textColor, backgroundColor: '#334155' }]}>
+                    <Text key={`b-${idx}`} style={[styles.jobBadge, { color: textColor, backgroundColor: '#334155', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: 10 }]}>
                       ✓ {b}
                     </Text>
                   ))}
+                  {job.eligible_for_wheelchair && (
+                    <Text style={{ color: '#fff', backgroundColor: '#3b82f6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: 10, fontWeight: 'bold' }}>
+                      ♿ Wheelchair Accessible
+                    </Text>
+                  )}
+                  {job.eligible_for_deaf && (
+                    <Text style={{ color: '#fff', backgroundColor: '#a855f7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: 10, fontWeight: 'bold' }}>
+                      🦻 Deaf Friendly
+                    </Text>
+                  )}
+                  {job.eligible_for_blind && (
+                    <Text style={{ color: '#fff', backgroundColor: '#f59e0b', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: 10, fontWeight: 'bold' }}>
+                      🦯 Blind Friendly
+                    </Text>
+                  )}
                 </View>
 
                 <TouchableOpacity
                   style={[styles.buyBtn, { backgroundColor: primaryButtonBg, marginTop: 10 }]}
-                  onPress={() => Alert.alert('Applied!', `Application submitted for ${job.title}`)}
+                  onPress={async () => {
+                    try {
+                      const { data: userData } = await supabase.auth.getUser();
+                      if (userData?.user) {
+                        await supabase.from('job_applications').insert([{ job_id: job.id, user_id: userData.user.id }]);
+                      }
+                    } catch (err) { console.error(err); }
+                    Alert.alert('Applied!', `Application submitted for ${job.title}`)
+                  }}
                 >
                   <Text style={[styles.buyBtnText, { color: primaryButtonText }]}>Apply Now</Text>
                 </TouchableOpacity>
