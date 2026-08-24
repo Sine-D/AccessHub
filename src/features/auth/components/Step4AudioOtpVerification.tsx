@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useAccessibilityStore } from '../store/useAccessibilityStore';
 import { AccessibleInput } from '../../../components/common/accessible/AccessibleInput';
 import { AccessibleButton } from '../../../components/common/accessible/AccessibleButton';
-import { signUpWithEmail } from '../../../services/authService';
+import { initiateEmailSignUp, verifyEmailOtp, resendSignUpOtp } from '../../../services/authService';
 
 export interface Step4Props {
   onComplete: () => void;
@@ -19,34 +19,81 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
     announceText,
   } = useAccessibilityStore();
 
-  const [generatedOtp, setGeneratedOtp] = useState<string>('849201');
   const [loading, setLoading] = useState<boolean>(false);
+  const [sendingEmail, setSendingEmail] = useState<boolean>(true);
+  const [resending, setResending] = useState<boolean>(false);
+  const [countdown, setCountdown] = useState<number>(30);
   const [error, setError] = useState<string>('');
 
   const titleFontSize = Math.round(22 * fontScale);
   const subtitleFontSize = Math.round(13 * fontScale);
-  const codeFontSize = Math.round(24 * fontScale);
 
+  // Send real Supabase confirmation OTP when Step 4 mounts
   useEffect(() => {
-    // Generate a simulated 6-digit verification OTP code on mount
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(code);
-    updateFormData({ otpCode: code });
+    let timer: any;
+    const sendOtp = async () => {
+      setSendingEmail(true);
+      setError('');
+      announceText(`Sending 6-digit verification code to ${formData.email}...`);
 
-    announceText(
-      `Step 4: Verification. A 6-digit verification code has been sent to ${formData.email}. Use the Audio Playback button if you need audio assistance.`
-    );
+      const result = await initiateEmailSignUp(formData);
+      setSendingEmail(false);
+
+      if (!result.success) {
+        setError(result.error || 'Could not send verification email. Please check your internet.');
+        Alert.alert('⚠️ Notice', result.error || 'Failed to send OTP code.');
+      } else {
+        announceText(
+          `A 6-digit verification code was sent to ${formData.email}. Please check your inbox and spam folder.`
+        );
+      }
+    };
+
+    sendOtp();
+
+    // Start 30s resend countdown timer
+    timer = setInterval(() => {
+      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
   }, []);
 
   const handleAudioPlayback = () => {
-    // Speak OTP code digit by digit for visual impairment (e.g. "8 . 4 . 9 . 2 . 0 . 1")
-    const spacedDigits = generatedOtp.split('').join(' . ');
-    announceText(`Your 6-digit verification code is: ${spacedDigits}`);
+    announceText(
+      `Audio Verification: A 6-digit OTP code has been sent to your email address ${formData.email}. Please check your email inbox and enter the 6 digits in the code box below.`
+    );
+  };
+
+  const handleResend = async () => {
+    if (countdown > 0 || resending) return;
+    setResending(true);
+    setError('');
+    announceText('Resending verification code...');
+
+    try {
+      const result = await resendSignUpOtp(formData.email);
+      if (result.success) {
+        setCountdown(30);
+        Alert.alert('📬 Code Resent', `A new 6-digit code was sent to ${formData.email}`);
+        announceText('New verification code sent successfully.');
+      } else {
+        setError(result.error || 'Failed to resend OTP.');
+        Alert.alert('❌ Resend Failed', result.error || 'Please wait a moment before trying again.');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to resend code.');
+    } finally {
+      setResending(false);
+    }
   };
 
   const handleVerify = async () => {
-    if (!formData.otpCode || formData.otpCode.trim() !== generatedOtp) {
-      const err = 'Invalid verification code. Please enter the correct 6-digit OTP code.';
+    const code = (formData.otpCode || '').trim();
+    if (!code || code.length < 6) {
+      const err = 'Please enter the 6-digit verification code sent to your email.';
       setError(err);
       announceText(err);
       return;
@@ -54,25 +101,24 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
 
     setLoading(true);
     setError('');
-    announceText('Creating your AccessHub account...');
+    announceText('Verifying your OTP code and activating account...');
 
     try {
-      // ── Real Supabase Sign-Up ─────────────────────────────────────────────
-      const result = await signUpWithEmail(formData);
+      // ── Real Supabase Email OTP Verification ─────────────────────────────
+      const result = await verifyEmailOtp(formData.email, code, formData);
 
       if (!result.success) {
-        // Show the real error (e.g. "User already registered", "Password too short", etc.)
-        setError(result.error || 'Registration failed.');
-        announceText(`Registration error: ${result.error}`);
-        Alert.alert('❌ Registration Failed', result.error || 'Please try again.');
-        return; // Do NOT proceed to onComplete
+        setError(result.error || 'Invalid verification code.');
+        announceText(`Verification error: ${result.error}`);
+        Alert.alert('❌ Verification Failed', result.error || 'Invalid code. Please try again.');
+        return;
       }
 
       // ── Success ───────────────────────────────────────────────────────────
-      announceText(`Account created successfully for ${formData.fullName}! Welcome to AccessHub.`);
+      announceText(`Account created and verified successfully for ${formData.fullName}! Welcome to AccessHub.`);
       Alert.alert(
         '🎉 Account Activated!',
-        `Welcome to AccessHub, ${formData.fullName}!\n\nCheck your email (${formData.email}) to confirm your account.`
+        `Welcome to AccessHub, ${formData.fullName || 'User'}! Your email is verified.`
       );
       onComplete();
 
@@ -93,12 +139,22 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
           STEP 4 OF 4
         </Text>
         <Text style={[styles.title, { fontSize: titleFontSize, color: highContrast ? '#ffffff' : '#0f172a' }]}>
-          🔒 Email & Audio Verification
+          🔒 Email Verification
         </Text>
         <Text style={[styles.subtitle, { fontSize: subtitleFontSize, color: highContrast ? '#cccccc' : '#64748b' }]}>
           A 6-digit OTP verification code was sent to <Text style={styles.emailHighlight}>{formData.email}</Text>.
         </Text>
       </View>
+
+      {/* Sending Indicator */}
+      {sendingEmail && (
+        <View style={styles.sendingRow}>
+          <ActivityIndicator size="small" color={highContrast ? '#ffff00' : '#0d9488'} />
+          <Text style={[styles.sendingText, { color: highContrast ? '#ffff00' : '#0d9488' }]}>
+            Sending OTP code to your email...
+          </Text>
+        </View>
+      )}
 
       {/* Audio Assistance Card */}
       <View style={[styles.audioBox, { borderColor: highContrast ? '#ffff00' : '#0d9488' }]}>
@@ -106,25 +162,17 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
           🔊 Audio Assistance Mode
         </Text>
         <Text style={styles.audioDesc}>
-          Press the button below to listen to your 6-digit code read aloud digit-by-digit.
+          Press the button below for spoken instructions on verifying your code.
         </Text>
 
         <AccessibleButton
-          title="🔊 Play Code Aloud"
+          title="🔊 Play Instructions Aloud"
           variant="outline"
           onPress={handleAudioPlayback}
-          accessibilityLabel="Play 6-digit OTP code aloud"
-          accessibilityHint="Speaks the verification code digit by digit using voice synthesis"
+          accessibilityLabel="Play verification instructions aloud"
+          accessibilityHint="Speaks instructions on how to enter your email verification code"
           style={styles.audioBtn}
         />
-      </View>
-
-      {/* Simulated Code Banner */}
-      <View style={[styles.demoBanner, { backgroundColor: highContrast ? '#222222' : '#f1f5f9' }]}>
-        <Text style={styles.demoLabel}>VERIFICATION CODE (SIMULATED):</Text>
-        <Text style={[styles.demoCode, { fontSize: codeFontSize, color: highContrast ? '#ffff00' : '#0d9488' }]}>
-          {generatedOtp}
-        </Text>
       </View>
 
       {/* 6-Digit OTP Code Input */}
@@ -134,11 +182,38 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
         keyboardType="number-pad"
         maxLength={6}
         value={formData.otpCode}
-        onChangeText={(otpCode) => updateFormData({ otpCode })}
+        onChangeText={(otpCode) => {
+          setError('');
+          updateFormData({ otpCode });
+        }}
         error={error}
         accessibilityLabel="6 digit verification code input"
-        accessibilityHint="Type or paste the 6 digit OTP sent to your email"
+        accessibilityHint="Type the 6 digit OTP sent to your email"
       />
+
+      {/* Resend Code Option */}
+      <View style={styles.resendContainer}>
+        <Text style={styles.resendText}>Didn't receive the email code?</Text>
+        <TouchableOpacity
+          onPress={handleResend}
+          disabled={countdown > 0 || resending}
+          accessibilityRole="button"
+          accessibilityLabel="Resend verification code"
+        >
+          <Text
+            style={[
+              styles.resendBtnText,
+              { color: countdown > 0 ? '#94a3b8' : (highContrast ? '#ffff00' : '#0d9488') },
+            ]}
+          >
+            {resending
+              ? 'Sending...'
+              : countdown > 0
+              ? `Resend Code in ${countdown}s`
+              : 'Resend Code'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Navigation & Submission */}
       <View style={styles.btnRow}>
@@ -152,7 +227,7 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
         <AccessibleButton
           title={loading ? 'Activating...' : 'Verify & Activate 🚀'}
           variant="primary"
-          disabled={loading}
+          disabled={loading || sendingEmail}
           onPress={handleVerify}
           accessibilityLabel="Verify code and activate AccessHub account"
           style={styles.halfBtn}
@@ -194,6 +269,17 @@ const styles = StyleSheet.create({
   emailHighlight: {
     fontWeight: 'bold',
   },
+  sendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    marginBottom: 8,
+  },
+  sendingText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   audioBox: {
     padding: 16,
     borderRadius: 18,
@@ -215,27 +301,27 @@ const styles = StyleSheet.create({
   audioBtn: {
     minHeight: 48,
   },
-  demoBanner: {
-    padding: 14,
-    borderRadius: 14,
+  resendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 8,
+    gap: 6,
+    marginTop: 10,
+    marginBottom: 6,
   },
-  demoLabel: {
-    fontSize: 11,
-    fontWeight: '800',
+  resendText: {
+    fontSize: 13,
     color: '#64748b',
-    letterSpacing: 1,
   },
-  demoCode: {
-    fontWeight: '900',
-    letterSpacing: 6,
-    marginTop: 4,
+  resendBtnText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
   },
   btnRow: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 24,
+    marginTop: 20,
   },
   halfBtn: {
     flex: 1,

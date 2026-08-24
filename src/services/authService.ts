@@ -22,15 +22,13 @@ export interface AuthResult {
   userId?: string;
 }
 
-// ─── Email / Password Sign-Up ─────────────────────────────────────────────────
+// ─── Email / Password Sign-Up with OTP Verification ──────────────────────────
 
 /**
- * Creates a new Supabase Auth user with email + password,
- * then inserts an extended record into `public.users`.
+ * Initiates Supabase Auth sign-up and sends a real 6-digit confirmation OTP to the user's email.
  */
-export async function signUpWithEmail(formData: RegistrationFormData): Promise<AuthResult> {
+export async function initiateEmailSignUp(formData: RegistrationFormData): Promise<AuthResult> {
   try {
-    // 1. Create the auth user
     const { data, error: signUpError } = await (supabase.auth as any).signUp({
       email: formData.email.trim().toLowerCase(),
       password: formData.password,
@@ -47,22 +45,86 @@ export async function signUpWithEmail(formData: RegistrationFormData): Promise<A
     }
 
     const userId = data?.user?.id;
-    if (!userId) {
-      return { success: false, error: 'Account creation failed. Please try again.' };
+    return { success: true, userId };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to send verification email.' };
+  }
+}
+
+/**
+ * Verifies the 6-digit OTP code entered by the user.
+ * On success, activates the session and inserts user details into `public.users`.
+ */
+export async function verifyEmailOtp(
+  email: string,
+  token: string,
+  formData: RegistrationFormData
+): Promise<AuthResult> {
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanToken = token.trim();
+
+    // 1. Try 'signup' verification type
+    let { data, error } = await (supabase.auth as any).verifyOtp({
+      email: cleanEmail,
+      token: cleanToken,
+      type: 'signup',
+    });
+
+    // 2. Fallback to 'email' type if 'signup' type is not accepted
+    if (error) {
+      const fallback = await (supabase.auth as any).verifyOtp({
+        email: cleanEmail,
+        token: cleanToken,
+        type: 'email',
+      });
+      if (!fallback.error) {
+        data = fallback.data;
+        error = null;
+      }
     }
 
-    // 2. Insert record into public.users
-    const userResult = await upsertUser(userId, formData);
-    if (!userResult.success) {
-      // Non-fatal: user table insert failed but auth user exists
-      console.warn('User table insert warning:', userResult.error);
+    if (error) {
+      return { success: false, error: error.message || 'Invalid verification code.' };
+    }
+
+    const userId = data?.user?.id || data?.session?.user?.id;
+    if (userId) {
+      // 3. Upsert user into public.users table with hashed password
+      const userResult = await upsertUser(userId, formData);
+      if (!userResult.success) {
+        console.warn('User table insert warning:', userResult.error);
+      }
     }
 
     return { success: true, userId };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'An unexpected error occurred.' };
+    return { success: false, error: err?.message || 'Verification failed. Please try again.' };
   }
 }
+
+/**
+ * Resends the 6-digit OTP confirmation code to the user's email.
+ */
+export async function resendSignUpOtp(email: string): Promise<AuthResult> {
+  try {
+    const { error } = await (supabase.auth as any).resend({
+      type: 'signup',
+      email: email.trim().toLowerCase(),
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Could not resend OTP code.' };
+  }
+}
+
+/** Legacy alias */
+export const signUpWithEmail = initiateEmailSignUp;
 
 // ─── Google OAuth ─────────────────────────────────────────────────────────────
 
