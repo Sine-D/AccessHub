@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ReviewForm } from './components/reviews/ReviewForm';
 import { MobileCheckoutModal } from './components/MobileCheckoutModal';
 import { addReview, getReviewsForLocation } from './mock/reviews';
@@ -32,6 +32,8 @@ import {
   mockMessages,
   mockNotifications,
 } from './mock/data';
+import { supabase } from './core/supabase';
+import { JobPosting } from './core/types';
 
 type MobileTab =
   | 'splash'
