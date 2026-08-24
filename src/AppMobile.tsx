@@ -761,9 +761,8 @@ export default function AppMobile() {
 />
                   )}
                 </View>
-              ))}
-            </View>
-          )}
+              </View>
+            </Modal>
 
           {/* MAP */}
           {activeTab === 'map' && (
