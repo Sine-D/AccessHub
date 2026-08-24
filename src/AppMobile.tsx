@@ -67,8 +67,9 @@ export default function AppMobile() {
   const [dbJobs, setDbJobs] = useState<JobPosting[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [jobSearch, setJobSearch] = useState('');
-  const [jobCategory, setJobCategory] = useState('All');
-  const [jobFilter, setJobFilter] = useState<string | null>(null);
+  const [jobCategory, setJobCategory] = useState('All Jobs');
+  const [jobFilter, setJobFilter] = useState({ wheelchair: false, deaf: false, blind: false });
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'jobs') {
@@ -108,17 +109,35 @@ export default function AppMobile() {
   }, [activeTab]);
 
   const filteredJobs = useMemo(() => {
-    return dbJobs.filter((job) => {
-      const matchesSearch = job.title.toLowerCase().includes(jobSearch.toLowerCase()) || job.company.toLowerCase().includes(jobSearch.toLowerCase());
-      const matchesCategory = jobCategory === 'All' || job.accessibilityBadges.includes(jobCategory);
+    let result = dbJobs.filter((job) => {
+      const matchText = (job.title + ' ' + (job.category || '')).toLowerCase();
+      const matchesSearch = matchText.includes(jobSearch.toLowerCase());
+      const matchesCategory = jobCategory === 'All Jobs' || job.accessibilityBadges.includes(jobCategory) || job.category === jobCategory;
       
       let matchesFilter = true;
-      if (jobFilter === 'Wheelchair') matchesFilter = !!job.eligible_for_wheelchair;
-      if (jobFilter === 'Deaf') matchesFilter = !!job.eligible_for_deaf;
-      if (jobFilter === 'Blind') matchesFilter = !!job.eligible_for_blind;
+      if (jobFilter.wheelchair && !job.eligible_for_wheelchair) matchesFilter = false;
+      if (jobFilter.deaf && !job.eligible_for_deaf) matchesFilter = false;
+      if (jobFilter.blind && !job.eligible_for_blind) matchesFilter = false;
       
       return matchesSearch && matchesCategory && matchesFilter;
     });
+
+    const onlyWheelchair = jobFilter.wheelchair && !jobFilter.deaf && !jobFilter.blind;
+    
+    if (onlyWheelchair) {
+      result.sort((a, b) => {
+        const getPriority = (job: any) => {
+          if (!job.eligible_for_deaf && !job.eligible_for_blind) return 1;
+          if (job.eligible_for_deaf && !job.eligible_for_blind) return 2;
+          if (!job.eligible_for_deaf && job.eligible_for_blind) return 3;
+          if (job.eligible_for_deaf && job.eligible_for_blind) return 4;
+          return 5;
+        };
+        return getPriority(a) - getPriority(b);
+      });
+    }
+
+    return result;
   }, [dbJobs, jobSearch, jobCategory, jobFilter]);
 
   // Auto transition from Splash to Onboarding after 2.5 seconds
@@ -807,64 +826,72 @@ export default function AppMobile() {
                 💼 Disability-Confident Jobs
               </Text>
 
-              {/* SEARCH BAR */}
-              <TextInput
-                style={[
-                  styles.searchInput,
-                  { backgroundColor: cardBg, color: textColor, marginBottom: 12 },
-                ]}
-                placeholder="Search remote jobs..."
-                placeholderTextColor={subTextColor}
-                value={jobSearch}
-                onChangeText={setJobSearch}
-              />
+              {/* SEARCH BAR AND DROPDOWN */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <TextInput
+                  style={[
+                    styles.searchInput,
+                    { flex: 1, backgroundColor: cardBg, color: textColor, marginBottom: 0 },
+                  ]}
+                  placeholder="Search remote jobs..."
+                  placeholderTextColor={subTextColor}
+                  value={jobSearch}
+                  onChangeText={setJobSearch}
+                />
+                
+                <TouchableOpacity 
+                  style={{ marginLeft: 8, paddingHorizontal: 12, paddingVertical: 12, backgroundColor: cardBg, borderRadius: 8, justifyContent: 'center', borderWidth: 1, borderColor: '#334155' }}
+                  onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                >
+                  <Text style={{ color: textColor, fontWeight: 'bold' }}>{jobCategory} ▼</Text>
+                </TouchableOpacity>
+              </View>
 
-              {/* CATEGORY DROPDOWN & FILTER BUBBLES */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-                {['All', 'Handcraft Items', 'Computer Designing', 'Software', 'Marketing', 'Support'].map(cat => (
-                  <TouchableOpacity
-                    key={cat}
-                    onPress={() => setJobCategory(cat)}
-                    style={{
-                      paddingHorizontal: 16,
-                      paddingVertical: 8,
-                      borderRadius: 20,
-                      backgroundColor: jobCategory === cat ? accentColor : cardBg,
-                      marginRight: 8,
-                    }}
-                  >
-                    <Text style={{ color: jobCategory === cat ? '#fff' : textColor, fontWeight: 'bold' }}>
-                      {cat}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              {showCategoryDropdown && (
+                <View style={{ backgroundColor: cardBg, borderRadius: 8, marginBottom: 12, padding: 8, borderWidth: 1, borderColor: '#334155' }}>
+                  {['All Jobs', 'Handcraft Items', 'Computer Designing', 'Software', 'Marketing', 'Support'].map(cat => (
+                    <TouchableOpacity
+                      key={cat}
+                      onPress={() => {
+                        setJobCategory(cat);
+                        setShowCategoryDropdown(false);
+                      }}
+                      style={{ paddingVertical: 10, borderBottomWidth: cat !== 'Support' ? 1 : 0, borderBottomColor: '#1e293b' }}
+                    >
+                      <Text style={{ color: jobCategory === cat ? accentColor : textColor }}>{cat}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
 
+              {/* FILTER BUBBLES */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
                  {[
-                   { label: 'All Needs', value: null },
-                   { label: 'Wheelchair', value: 'Wheelchair' },
-                   { label: 'Deaf Friendly', value: 'Deaf' },
-                   { label: 'Blind Friendly', value: 'Blind' }
-                 ].map(f => (
-                   <TouchableOpacity
-                     key={f.label}
-                     onPress={() => setJobFilter(f.value)}
-                     style={{
-                       paddingHorizontal: 12,
-                       paddingVertical: 6,
-                       borderRadius: 16,
-                       borderWidth: 1,
-                       borderColor: jobFilter === f.value ? accentColor : subTextColor,
-                       backgroundColor: jobFilter === f.value ? accentColor : 'transparent',
-                       marginRight: 8,
-                     }}
-                   >
-                     <Text style={{ color: jobFilter === f.value ? '#fff' : subTextColor, fontSize: 12 }}>
-                       {f.label}
-                     </Text>
-                   </TouchableOpacity>
-                 ))}
+                   { label: 'Wheelchair Persons', key: 'wheelchair' },
+                   { label: 'Deaf Persons', key: 'deaf' },
+                   { label: 'Blind Persons', key: 'blind' }
+                 ].map(f => {
+                   const isActive = jobFilter[f.key as keyof typeof jobFilter];
+                   return (
+                     <TouchableOpacity
+                       key={f.label}
+                       onPress={() => setJobFilter(prev => ({ ...prev, [f.key]: !prev[f.key as keyof typeof prev] }))}
+                       style={{
+                         paddingHorizontal: 12,
+                         paddingVertical: 6,
+                         borderRadius: 16,
+                         borderWidth: 1,
+                         borderColor: isActive ? accentColor : subTextColor,
+                         backgroundColor: isActive ? accentColor : 'transparent',
+                         marginRight: 8,
+                       }}
+                     >
+                       <Text style={{ color: isActive ? '#fff' : subTextColor, fontSize: 12 }}>
+                         {f.label}
+                       </Text>
+                     </TouchableOpacity>
+                   );
+                 })}
               </ScrollView>
 
               {loadingJobs ? (
