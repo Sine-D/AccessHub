@@ -91,8 +91,24 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
 
       {error && <Text style={styles.error}>{error}</Text>}
 
+      <PhotoPicker
+        value={photoUri}
+        onChange={setPhotoUri}
+      />
+
+      {photoUri && (
+        <Image
+          source={{ uri: photoUri }}
+          style={styles.photoPreview}
+          accessibilityLabel="Preview of selected accessibility photo"
+        />
+      )}
+
       <Pressable
-        style={[styles.button, submitting && styles.buttonDisabled]}
+        style={[
+          styles.button,
+          submitting && styles.buttonDisabled,
+        ]}
         onPress={handleSubmit}
         disabled={submitting}
         accessibilityRole="button"
