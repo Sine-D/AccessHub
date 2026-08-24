@@ -89,10 +89,18 @@ export const Step2Credentials: React.FC = () => {
 
     try {
       if (supabase && supabase.auth) {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-        });
-        if (error) throw error;
+        const auth = supabase.auth as any;
+        if (typeof auth.signInWithOAuth === 'function') {
+          const { error } = await auth.signInWithOAuth({
+            provider: 'google',
+          });
+          if (error) throw error;
+        } else if (typeof auth.signIn === 'function') {
+          const { error } = await auth.signIn({
+            provider: 'google',
+          });
+          if (error) throw error;
+        }
       }
     } catch (err: any) {
       console.log('Google Auth fallback simulation active:', err?.message || err);
@@ -138,7 +146,8 @@ export const Step2Credentials: React.FC = () => {
 
       {/* Google OAuth Button */}
       <AccessibleButton
-        title={googleLoading ? 'Connecting Google...' : '🌐 Continue with Google'}
+        title={googleLoading ? 'Connecting Google...' : 'Continue with Google'}
+        icon={<Text style={{ fontWeight: '900', fontSize: 20, color: '#4285F4' }}>G</Text>}
         variant="secondary"
         disabled={googleLoading}
         onPress={handleGoogleSignIn}
