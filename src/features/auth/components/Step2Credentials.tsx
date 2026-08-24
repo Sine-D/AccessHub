@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useAccessibilityStore } from '../store/useAccessibilityStore';
 import { AccessibleInput } from '../../../components/common/accessible/AccessibleInput';
 import { AccessibleButton } from '../../../components/common/accessible/AccessibleButton';
 import { supabase } from '../../../services/supabaseClient';
+
+const googleLogoImage = require('../../../../public/images/google.jpg');
 
 export const Step2Credentials: React.FC = () => {
   const {
@@ -145,16 +147,36 @@ export const Step2Credentials: React.FC = () => {
       </View>
 
       {/* Google OAuth Button */}
-      <AccessibleButton
-        title={googleLoading ? 'Connecting Google...' : 'Continue with Google'}
-        icon={<Text style={{ fontWeight: '900', fontSize: 20, color: '#4285F4' }}>G</Text>}
-        variant="secondary"
+      <TouchableOpacity
+        activeOpacity={0.85}
         disabled={googleLoading}
         onPress={handleGoogleSignIn}
+        accessibilityRole="button"
         accessibilityLabel="Sign in or register using Google Account"
         accessibilityHint="Autofills your name and email using verified Google OAuth"
-        style={styles.googleBtn}
-      />
+        accessibilityState={{ disabled: googleLoading }}
+        style={[
+          styles.googleBtn,
+          {
+            borderColor: highContrast ? '#ffff00' : '#dadce0',
+            borderWidth: highContrast ? 2 : 1,
+            opacity: googleLoading ? 0.7 : 1,
+          },
+        ]}
+      >
+        {googleLoading ? (
+          <ActivityIndicator size="small" color="#1a73e8" style={{ marginRight: 10 }} />
+        ) : (
+          <Image
+            source={googleLogoImage}
+            style={styles.googleLogoImg}
+            resizeMode="contain"
+          />
+        )}
+        <Text style={[styles.googleBtnText, { color: highContrast ? '#000000' : '#1a73e8' }]}>
+          {googleLoading ? 'Connecting Google...' : 'Continue with Google'}
+        </Text>
+      </TouchableOpacity>
 
       {/* Divider */}
       <View style={styles.dividerRow}>
@@ -278,8 +300,32 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   googleBtn: {
-    backgroundColor: '#0f172a',
-    marginVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: '#dadce0',
+    borderWidth: 1,
+    borderRadius: 10,
+    marginVertical: 10,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    minHeight: 50,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  googleLogoImg: {
+    width: 24,
+    height: 24,
+    marginRight: 12,
+  },
+  googleBtnText: {
+    color: '#1a73e8',
+    fontSize: 16,
+    fontWeight: '600',
   },
   dividerRow: {
     flexDirection: 'row',
