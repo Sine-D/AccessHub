@@ -32,6 +32,8 @@ import {
   mockMessages,
   mockNotifications,
 } from './mock/data';
+import { saveRating } from './services/ratingsService';
+import { CreateAccountScreen } from './features/auth';
 import { supabase } from './core/supabase';
 import { JobPosting } from './core/types';
 
@@ -39,6 +41,7 @@ type MobileTab =
   | 'splash'
   | 'onboarding'
   | 'auth'
+  | 'register'
   | 'home'
   | 'marketplace'
   | 'services'
@@ -82,7 +85,7 @@ export default function AppMobile() {
             const formattedJobs: JobPosting[] = data.map((job: any) => ({
               id: job.id,
               title: job.title,
-              company: job.company || 'Partner Company', 
+              company: job.company || 'Partner Company',
               companyLogo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=200',
               salary: job.salary || 'Negotiable',
               location: job.location || 'Sri Lanka / Remote',
@@ -113,17 +116,17 @@ export default function AppMobile() {
       const matchText = (job.title + ' ' + (job.category || '')).toLowerCase();
       const matchesSearch = matchText.includes(jobSearch.toLowerCase());
       const matchesCategory = jobCategory === 'All Jobs' || job.accessibilityBadges.includes(jobCategory) || job.category === jobCategory;
-      
+
       let matchesFilter = true;
       if (jobFilter.wheelchair && !job.eligible_for_wheelchair) matchesFilter = false;
       if (jobFilter.deaf && !job.eligible_for_deaf) matchesFilter = false;
       if (jobFilter.blind && !job.eligible_for_blind) matchesFilter = false;
-      
+
       return matchesSearch && matchesCategory && matchesFilter;
     });
 
     const onlyWheelchair = jobFilter.wheelchair && !jobFilter.deaf && !jobFilter.blind;
-    
+
     if (onlyWheelchair) {
       result.sort((a, b) => {
         const getPriority = (job: any) => {
@@ -180,6 +183,165 @@ export default function AppMobile() {
   const accentColor = highContrast ? '#ffff00' : '#38bdf8';
   const primaryButtonBg = highContrast ? '#ffff00' : '#2563eb';
   const primaryButtonText = highContrast ? '#000000' : '#ffffff';
+
+  if (activeTab === 'splash') {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
+          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+          <TouchableOpacity
+            activeOpacity={0.95}
+            onPress={() => setActiveTab('onboarding')}
+            style={{
+              flex: 1,
+              backgroundColor: '#ffffff',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: 24,
+            }}
+          >
+            <Image
+              source={require('./assets/images/access_hub_logo.png')}
+              style={{ width: 320, height: 320, resizeMode: 'contain' }}
+            />
+          </TouchableOpacity>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (activeTab === 'onboarding') {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
+          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: '#ffffff',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingHorizontal: 24,
+              paddingVertical: 40,
+            }}
+          >
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+              <Image
+                source={require('./assets/images/Onboarding.png')}
+                style={{ width: 280, height: 280, resizeMode: 'contain', marginBottom: 24 }}
+              />
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#0d9488', backgroundColor: '#ccfbf1', paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20, marginBottom: 12 }}>
+                DISABLED SELLERS & CREATORS
+              </Text>
+              <Text style={{ fontSize: 24, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 8 }}>
+                Inclusive Local Marketplace
+              </Text>
+              <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center', lineHeight: 20, maxWidth: 300 }}>
+                Empowering persons with disabilities to showcase handcrafted goods, adaptive products, and offer freelance professional services across Sri Lanka.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#0d9488',
+                paddingVertical: 16,
+                borderRadius: 20,
+                width: '90%',
+                alignItems: 'center',
+                shadowColor: '#0d9488',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 4,
+              }}
+              onPress={() => setActiveTab('auth')}
+            >
+              <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16 }}>
+                🚀 Get Started Now
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (activeTab === 'auth') {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
+          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 40 }}>
+            <View style={{ width: '100%', alignItems: 'center' }}>
+              <Image
+                source={require('./assets/images/signup_login.jpg')}
+                style={{ width: 280, height: 260, resizeMode: 'contain', marginBottom: 20 }}
+              />
+              <Text style={{ fontSize: 24, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 8 }}>
+                Welcome to AccessHub
+              </Text>
+              <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center', lineHeight: 20, marginBottom: 24, maxWidth: 300 }}>
+                Sign up or log in to explore accessible products, jobs, and services.
+              </Text>
+
+              {/* Create Account Button */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#0d9488',
+                  paddingVertical: 16,
+                  borderRadius: 20,
+                  width: '90%',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                  shadowColor: '#0d9488',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }}
+                onPress={() => setActiveTab('register')}
+              >
+                <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16 }}>
+                  Create Account
+                </Text>
+              </TouchableOpacity>
+
+              {/* Log In Button */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#0f172a',
+                  paddingVertical: 16,
+                  borderRadius: 20,
+                  width: '90%',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                  shadowColor: '#0f172a',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 8,
+                  elevation: 3,
+                }}
+                onPress={() => setActiveTab('home')}
+              >
+                <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16 }}>
+                  Log In
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (activeTab === 'register') {
+    return (
+      <CreateAccountScreen
+        onCancel={() => setActiveTab('auth')}
+        onSuccess={() => setActiveTab('home')}
+      />
+    );
+  }
 
   return (
     <SafeAreaProvider>
@@ -813,6 +975,7 @@ export default function AppMobile() {
             </View>
           )}
 
+
           {/* JOBS */}
           {activeTab === 'jobs' && (
             <View>
@@ -838,8 +1001,8 @@ export default function AppMobile() {
                   value={jobSearch}
                   onChangeText={setJobSearch}
                 />
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={{ marginLeft: 8, paddingHorizontal: 12, paddingVertical: 12, backgroundColor: cardBg, borderRadius: 8, justifyContent: 'center', borderWidth: 1, borderColor: '#334155' }}
                   onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
                 >
@@ -866,32 +1029,32 @@ export default function AppMobile() {
 
               {/* FILTER BUBBLES */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-                 {[
-                   { label: 'Wheelchair Persons', key: 'wheelchair' },
-                   { label: 'Deaf Persons', key: 'deaf' },
-                   { label: 'Blind Persons', key: 'blind' }
-                 ].map(f => {
-                   const isActive = jobFilter[f.key as keyof typeof jobFilter];
-                   return (
-                     <TouchableOpacity
-                       key={f.label}
-                       onPress={() => setJobFilter(prev => ({ ...prev, [f.key]: !prev[f.key as keyof typeof prev] }))}
-                       style={{
-                         paddingHorizontal: 12,
-                         paddingVertical: 6,
-                         borderRadius: 16,
-                         borderWidth: 1,
-                         borderColor: isActive ? accentColor : subTextColor,
-                         backgroundColor: isActive ? accentColor : 'transparent',
-                         marginRight: 8,
-                       }}
-                     >
-                       <Text style={{ color: isActive ? '#fff' : subTextColor, fontSize: 12 }}>
-                         {f.label}
-                       </Text>
-                     </TouchableOpacity>
-                   );
-                 })}
+                {[
+                  { label: 'Wheelchair Persons', key: 'wheelchair' },
+                  { label: 'Deaf Persons', key: 'deaf' },
+                  { label: 'Blind Persons', key: 'blind' }
+                ].map(f => {
+                  const isActive = jobFilter[f.key as keyof typeof jobFilter];
+                  return (
+                    <TouchableOpacity
+                      key={f.label}
+                      onPress={() => setJobFilter(prev => ({ ...prev, [f.key]: !prev[f.key as keyof typeof prev] }))}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: isActive ? accentColor : subTextColor,
+                        backgroundColor: isActive ? accentColor : 'transparent',
+                        marginRight: 8,
+                      }}
+                    >
+                      <Text style={{ color: isActive ? '#fff' : subTextColor, fontSize: 12 }}>
+                        {f.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
 
               {loadingJobs ? (
@@ -900,116 +1063,143 @@ export default function AppMobile() {
                 <Text style={{ color: subTextColor, textAlign: 'center', marginTop: 20 }}>No jobs found.</Text>
               ) : (
                 filteredJobs.map((job) => (
-                <View
-                  key={job.id}
-                  style={[
-                    styles.jobCard,
-                    { backgroundColor: cardBg },
-                  ]}
-                >
-                  <View style={styles.rowAlign}>
-                    <Image
-                      source={{ uri: job.companyLogo }}
-                      style={styles.avatarMini}
-                    />
-
-                    <View
-                      style={{
-                        flex: 1,
-                        marginLeft: 10,
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.jobTitle,
-                          dynamicText(14),
-                          { color: textColor },
-                        ]}
-                      >
-                        {job.title}
-                      </Text>
-
-                      <Text
-                        style={[
-                          styles.companyName,
-                          dynamicText(12),
-                          { color: subTextColor },
-                        ]}
-                      >
-                        {job.company} • {job.location}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text
+                  <View
+                    key={job.id}
                     style={[
-                      styles.salaryText,
-                      dynamicText(13),
-                      {
-                        color: accentColor,
-                        marginTop: 8,
-                      },
+                      styles.jobCard,
+                      { backgroundColor: cardBg },
                     ]}
                   >
-                    {job.salary}
-                  </Text>
+                    <View style={styles.rowAlign}>
+                      <Image
+                        source={{ uri: job.companyLogo }}
+                        style={styles.avatarMini}
+                      />
 
-                  <View style={styles.badgeContainer}>
-                    {job.accessibilityBadges.map(
-                      (b: string, idx: number) => (
+                      <View
+                        style={{
+                          flex: 1,
+                          marginLeft: 10,
+                        }}
+                      >
                         <Text
-                          key={idx}
                           style={[
-                            styles.jobBadge,
-                            {
-                              color: textColor,
-                              backgroundColor: '#334155',
-                            },
+                            styles.jobTitle,
+                            dynamicText(14),
+                            { color: textColor },
                           ]}
                         >
-                          ✓ {b}
+                          {job.title}
                         </Text>
-                      ),
-                    )}
-                    {job.eligible_for_wheelchair && (
-                        <Text style={[styles.jobBadge, { color: '#fff', backgroundColor: '#2563eb' }]}>♿ Wheelchair</Text>
-                    )}
-                    {job.eligible_for_deaf && (
-                        <Text style={[styles.jobBadge, { color: '#fff', backgroundColor: '#9333ea' }]}>🧏 Deaf</Text>
-                    )}
-                    {job.eligible_for_blind && (
-                        <Text style={[styles.jobBadge, { color: '#fff', backgroundColor: '#d97706' }]}>🦯 Blind</Text>
-                    )}
-                  </View>
 
-                  <TouchableOpacity
-                    style={[
-                      styles.buyBtn,
-                      {
-                        backgroundColor: primaryButtonBg,
-                        marginTop: 10,
-                      },
-                    ]}
-                    onPress={() =>
-                      Alert.alert(
-                        'Applied!',
-                        `Application submitted for ${job.title}`,
-                      )
-                    }
-                  >
+                        <Text
+                          style={[
+                            styles.companyName,
+                            dynamicText(12),
+                            { color: subTextColor },
+                          ]}
+                        >
+                          {job.company} • {job.location}
+                        </Text>
+                      </View>
+                    </View>
+
                     <Text
                       style={[
-                        styles.buyBtnText,
-                        { color: primaryButtonText },
+                        styles.salaryText,
+                        dynamicText(13),
+                        {
+                          color: accentColor,
+                          marginTop: 8,
+                        },
                       ]}
                     >
-                      Apply Now
+                      {job.salary}
                     </Text>
-                  </TouchableOpacity>
-                </View>
-              )))}
+
+                    <View style={styles.badgeContainer}>
+                      {job.accessibilityBadges.map(
+                        (b: string, idx: number) => (
+                          <Text
+                            key={idx}
+                            style={[
+                              styles.jobBadge,
+                              {
+                                color: textColor,
+                                backgroundColor: '#334155',
+                              },
+                            ]}
+                          >
+                            ✓ {b}
+                          </Text>
+                        ),
+                      )}
+                      {job.eligible_for_wheelchair && (
+                        <Text style={[styles.jobBadge, { color: '#fff', backgroundColor: '#2563eb' }]}>♿ Wheelchair</Text>
+                      )}
+                      {job.eligible_for_deaf && (
+                        <Text style={[styles.jobBadge, { color: '#fff', backgroundColor: '#9333ea' }]}>🧏 Deaf</Text>
+                      )}
+                      {job.eligible_for_blind && (
+                        <Text style={[styles.jobBadge, { color: '#fff', backgroundColor: '#d97706' }]}>🦯 Blind</Text>
+                      )}
+                    </View>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.buyBtn,
+                        {
+                          backgroundColor: primaryButtonBg,
+                          marginTop: 10,
+                        },
+                      ]}
+                      onPress={() =>
+                        Alert.alert(
+                          'Applied!',
+                          `Application submitted for ${job.title}`,
+                        )
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.buyBtnText,
+                          { color: primaryButtonText },
+                        ]}
+                      >
+                        Apply Now
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )))}
             </View>
           )}
+          <Modal
+            visible={reviewModalLocationId !== null}
+            animationType="slide"
+            transparent
+            onRequestClose={() => setReviewModalLocationId(null)}
+          >
+            <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+              <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                {reviewModalLocationId && (
+                  <ReviewForm
+                    locationId={reviewModalLocationId}
+                    onSubmit={async (data) => {
+                      const newReview = addReview(data);
+                      try {
+                        await saveRating(data.locationId, data.criteriaRatings);
+                      } catch (err) {
+                        console.error('Failed to save rating to Supabase:', err);
+                        Alert.alert('Warning', 'Review saved locally, but the accessibility rating could not be saved to the database.');
+                      }
+                      setReviewModalLocationId(null);
+                      Alert.alert('Thank you!', 'Your accessibility review was submitted.');
+                    }}
+                  />
+                )}
+              </View>
+            </View>
+          </Modal>
 
           {/* MAP */}
           {activeTab === 'map' && (

@@ -5,6 +5,7 @@ import { DeviceFrame } from './core/components/layout/DeviceFrame';
 import { AppNavigator } from './core/navigation/AppNavigator';
 import { AiAssistantModal } from './features/ai-assistant';
 import { SellProductModal } from './features/marketplace';
+import { saveRating } from './services/ratingsService';
 
 export const App: React.FC = () => {
   return (
