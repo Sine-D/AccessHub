@@ -25,7 +25,7 @@ export interface AuthResult {
 export async function signUpWithEmail(formData: RegistrationFormData): Promise<AuthResult> {
   try {
     // 1. Create the auth user
-    const { data, error: signUpError } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await (supabase.auth as any).signUp({
       email: formData.email.trim().toLowerCase(),
       password: formData.password,
       options: {
@@ -105,9 +105,27 @@ export async function signInWithGoogle(): Promise<AuthResult> {
         return { success: false, error: 'Google sign-in was cancelled or failed.' };
       }
 
-      // Exchange the code for a session
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(result.url);
-      if (exchangeError) return { success: false, error: exchangeError.message };
+      // Extract code or tokens from the OAuth redirect URL
+      const normalizedUrl = result.url.replace('#', '?');
+      const urlObj = new URL(normalizedUrl);
+      const code = urlObj.searchParams.get('code');
+      const accessToken = urlObj.searchParams.get('access_token');
+      const refreshToken = urlObj.searchParams.get('refresh_token');
+
+      if (code) {
+        // Exchange PKCE code for a session
+        const { error: exchangeError } = await (supabase.auth as any).exchangeCodeForSession(code);
+        if (exchangeError) return { success: false, error: exchangeError.message };
+      } else if (accessToken && refreshToken) {
+        // Implicit grant fallback
+        const { error: setSessionError } = await (supabase.auth as any).setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (setSessionError) return { success: false, error: setSessionError.message };
+      } else {
+        return { success: false, error: 'No authorization code or session returned from Google.' };
+      }
 
       return { success: true };
     }
@@ -153,12 +171,12 @@ export async function upsertUserProfile(
 
 /** Returns the current Supabase session, or null if not signed in. */
 export async function getCurrentSession() {
-  const { data } = await supabase.auth.getSession();
+  const { data } = await (supabase.auth as any).getSession();
   return data?.session ?? null;
 }
 
 /** Returns the current authenticated user, or null. */
 export async function getCurrentUser() {
-  const { data } = await supabase.auth.getUser();
+  const { data } = await (supabase.auth as any).getUser();
   return data?.user ?? null;
 }
