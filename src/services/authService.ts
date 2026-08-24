@@ -5,9 +5,14 @@
  */
 
 import { Platform } from 'react-native';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import bcrypt from 'bcryptjs';
 import { supabase } from './supabaseClient';
 import { RegistrationFormData } from '../features/auth/store/useAccessibilityStore';
+
+// Required for web & in-app browser redirect handling
+WebBrowser.maybeCompleteAuthSession();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -82,10 +87,7 @@ export async function signInWithGoogle(): Promise<AuthResult> {
 
     } else {
       // ── Expo Go / React Native ────────────────────────────────────────────
-      const { makeRedirectUri } = await import('expo-auth-session');
-      const { openAuthSessionAsync } = await import('expo-web-browser');
-
-      const redirectUri = makeRedirectUri({ scheme: 'accesshub' });
+      const redirectUri = AuthSession.makeRedirectUri({ scheme: 'accesshub' });
 
       // Get the OAuth URL from Supabase (without auto-redirecting)
       const { data, error } = await (supabase.auth as any).signInWithOAuth({
@@ -100,7 +102,7 @@ export async function signInWithGoogle(): Promise<AuthResult> {
       if (!data?.url) return { success: false, error: 'Could not get Google OAuth URL.' };
 
       // Open in-app browser
-      const result = await openAuthSessionAsync(data.url, redirectUri);
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
 
       if (result.type !== 'success') {
         return { success: false, error: 'Google sign-in was cancelled or failed.' };
