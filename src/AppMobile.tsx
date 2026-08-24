@@ -33,11 +33,13 @@ import {
   mockNotifications,
 } from './mock/data';
 import { saveRating } from './services/ratingsService';
+import { CreateAccountScreen } from './features/auth';
 
 type MobileTab =
   | 'splash'
   | 'onboarding'
   | 'auth'
+  | 'register'
   | 'home'
   | 'marketplace'
   | 'services'
@@ -103,6 +105,165 @@ export default function AppMobile() {
   const accentColor = highContrast ? '#ffff00' : '#38bdf8';
   const primaryButtonBg = highContrast ? '#ffff00' : '#2563eb';
   const primaryButtonText = highContrast ? '#000000' : '#ffffff';
+
+  if (activeTab === 'splash') {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
+          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+          <TouchableOpacity
+            activeOpacity={0.95}
+            onPress={() => setActiveTab('onboarding')}
+            style={{
+              flex: 1,
+              backgroundColor: '#ffffff',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: 24,
+            }}
+          >
+            <Image
+              source={require('./assets/images/access_hub_logo.png')}
+              style={{ width: 320, height: 320, resizeMode: 'contain' }}
+            />
+          </TouchableOpacity>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (activeTab === 'onboarding') {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
+          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: '#ffffff',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingHorizontal: 24,
+              paddingVertical: 40,
+            }}
+          >
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+              <Image
+                source={require('./assets/images/Onboarding.png')}
+                style={{ width: 280, height: 280, resizeMode: 'contain', marginBottom: 24 }}
+              />
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#0d9488', backgroundColor: '#ccfbf1', paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20, marginBottom: 12 }}>
+                DISABLED SELLERS & CREATORS
+              </Text>
+              <Text style={{ fontSize: 24, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 8 }}>
+                Inclusive Local Marketplace
+              </Text>
+              <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center', lineHeight: 20, maxWidth: 300 }}>
+                Empowering persons with disabilities to showcase handcrafted goods, adaptive products, and offer freelance professional services across Sri Lanka.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#0d9488',
+                paddingVertical: 16,
+                borderRadius: 20,
+                width: '90%',
+                alignItems: 'center',
+                shadowColor: '#0d9488',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 4,
+              }}
+              onPress={() => setActiveTab('auth')}
+            >
+              <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16 }}>
+                🚀 Get Started Now
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (activeTab === 'auth') {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
+          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 40 }}>
+            <View style={{ width: '100%', alignItems: 'center' }}>
+              <Image
+                source={require('./assets/images/signup_login.jpg')}
+                style={{ width: 280, height: 260, resizeMode: 'contain', marginBottom: 20 }}
+              />
+              <Text style={{ fontSize: 24, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 8 }}>
+                Welcome to AccessHub
+              </Text>
+              <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center', lineHeight: 20, marginBottom: 24, maxWidth: 300 }}>
+                Sign up or log in to explore accessible products, jobs, and services.
+              </Text>
+
+              {/* Create Account Button */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#0d9488',
+                  paddingVertical: 16,
+                  borderRadius: 20,
+                  width: '90%',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                  shadowColor: '#0d9488',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }}
+                onPress={() => setActiveTab('register')}
+              >
+                <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16 }}>
+                  Create Account
+                </Text>
+              </TouchableOpacity>
+
+              {/* Log In Button */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#0f172a',
+                  paddingVertical: 16,
+                  borderRadius: 20,
+                  width: '90%',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                  shadowColor: '#0f172a',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 8,
+                  elevation: 3,
+                }}
+                onPress={() => setActiveTab('home')}
+              >
+                <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16 }}>
+                  Log In
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (activeTab === 'register') {
+    return (
+      <CreateAccountScreen
+        onCancel={() => setActiveTab('auth')}
+        onSuccess={() => setActiveTab('home')}
+      />
+    );
+  }
 
   return (
     <SafeAreaProvider>
