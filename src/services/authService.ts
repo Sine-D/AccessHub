@@ -20,7 +20,7 @@ export interface AuthResult {
 
 /**
  * Creates a new Supabase Auth user with email + password,
- * then inserts an extended profile row into `public.profiles`.
+ * then inserts an extended record into `public.users`.
  */
 export async function signUpWithEmail(formData: RegistrationFormData): Promise<AuthResult> {
   try {
@@ -45,11 +45,11 @@ export async function signUpWithEmail(formData: RegistrationFormData): Promise<A
       return { success: false, error: 'Account creation failed. Please try again.' };
     }
 
-    // 2. Insert extended profile into public.profiles
-    const profileResult = await upsertUserProfile(userId, formData);
-    if (!profileResult.success) {
-      // Non-fatal: profile insert failed but auth user exists
-      console.warn('Profile insert warning:', profileResult.error);
+    // 2. Insert record into public.users
+    const userResult = await upsertUser(userId, formData);
+    if (!userResult.success) {
+      // Non-fatal: user table insert failed but auth user exists
+      console.warn('User table insert warning:', userResult.error);
     }
 
     return { success: true, userId };
@@ -137,20 +137,21 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   }
 }
 
-// ─── Profile Upsert ───────────────────────────────────────────────────────────
-
+// ─── User Upsert ────────────────────────────────────────────────────────────
+ 
 /**
- * Inserts or updates the user's extended profile in `public.profiles`.
+ * Inserts or updates the user's record in `public.users`.
  * Call this after successful auth sign-up or Google OAuth.
  */
-export async function upsertUserProfile(
+export async function upsertUser(
   userId: string,
   formData: Partial<RegistrationFormData> & { highContrast?: boolean; fontScale?: number; audioGuidance?: boolean }
 ): Promise<AuthResult> {
   try {
-    const { error } = await supabase.from('profiles').upsert(
+    const { error } = await supabase.from('users').upsert(
       {
         id: userId,
+        email: formData.email,
         name: formData.fullName ?? '',
         role: formData.role ?? 'buyer',
       },
@@ -158,14 +159,17 @@ export async function upsertUserProfile(
     );
 
     if (error) {
-      console.warn('Profile upsert notice:', error.message);
+      console.warn('User table upsert notice:', error.message);
       return { success: false, error: error.message };
     }
     return { success: true, userId };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Profile update failed.' };
+    return { success: false, error: err?.message || 'User update failed.' };
   }
 }
+
+/** Backwards-compatibility alias for upsertUser */
+export const upsertUserProfile = upsertUser;
 
 // ─── Session Helpers ──────────────────────────────────────────────────────────
 
