@@ -128,7 +128,18 @@ export async function signInWithGoogle(): Promise<AuthResult> {
         return { success: false, error: 'No authorization code or session returned from Google.' };
       }
 
-      return { success: true };
+      // Fetch authenticated user details and upsert into public.users
+      const { data: userData } = await (supabase.auth as any).getUser();
+      const user = userData?.user;
+      if (user) {
+        await upsertUser(user.id, {
+          email: user.email,
+          fullName: user.user_metadata?.full_name || user.user_metadata?.name || '',
+          role: user.user_metadata?.role || 'buyer',
+        });
+      }
+
+      return { success: true, userId: user?.id };
     }
   } catch (err: any) {
     return {

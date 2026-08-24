@@ -104,6 +104,14 @@ export const Step2Credentials: React.FC = () => {
 
       // On Web: signInWithOAuth triggers a redirect — this code won't be reached
       // On Expo Go: if we get here, OAuth succeeded
+      const { data: userData } = await (supabase.auth as any).getUser();
+      if (userData?.user) {
+        updateFormData({
+          email: userData.user.email || formData.email,
+          fullName: userData.user.user_metadata?.full_name || userData.user.user_metadata?.name || formData.fullName,
+        });
+      }
+
       announceText('Successfully authenticated with Google!');
       Alert.alert(
         '🌐 Google Sign-In Successful',
