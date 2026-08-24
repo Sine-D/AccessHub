@@ -68,6 +68,9 @@ export interface Job {
   location: string;
   isRemote?: boolean;
   accessibilityBadges: string[];
+  eligible_for_wheelchair?: boolean;
+  eligible_for_deaf?: boolean;
+  eligible_for_blind?: boolean;
   description: string;
   category?: string;
   postedDate: string;
