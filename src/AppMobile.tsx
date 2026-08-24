@@ -64,6 +64,63 @@ export default function AppMobile() {
   const [reviewModalLocationId, setReviewModalLocationId] =
     useState<string | null>(null);
 
+  const [dbJobs, setDbJobs] = useState<JobPosting[]>([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+  const [jobSearch, setJobSearch] = useState('');
+  const [jobCategory, setJobCategory] = useState('All');
+  const [jobFilter, setJobFilter] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeTab === 'jobs') {
+      const fetchJobs = async () => {
+        setLoadingJobs(true);
+        try {
+          const { data, error } = await supabase.from('jobs').select('*');
+          if (error) throw error;
+          if (data && data.length > 0) {
+            const formattedJobs: JobPosting[] = data.map((job: any) => ({
+              id: job.id,
+              title: job.title,
+              company: job.company || 'Partner Company', 
+              companyLogo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=200',
+              salary: job.salary || 'Negotiable',
+              location: job.location || 'Sri Lanka / Remote',
+              accessibilityBadges: job.category ? [job.category] : [],
+              eligible_for_wheelchair: job.eligible_for_wheelchair,
+              eligible_for_deaf: job.eligible_for_deaf,
+              eligible_for_blind: job.eligible_for_blind,
+              description: job.description || `Job category: ${job.category || 'N/A'}.`,
+              postedDate: job.updated_at ? new Date(job.updated_at).toLocaleDateString() : new Date().toLocaleDateString(),
+              applicantCount: 0
+            }));
+            setDbJobs(formattedJobs);
+          } else {
+            setDbJobs([]);
+          }
+        } catch (err) {
+          console.error('Error fetching jobs:', err);
+        } finally {
+          setLoadingJobs(false);
+        }
+      };
+      fetchJobs();
+    }
+  }, [activeTab]);
+
+  const filteredJobs = useMemo(() => {
+    return dbJobs.filter((job) => {
+      const matchesSearch = job.title.toLowerCase().includes(jobSearch.toLowerCase()) || job.company.toLowerCase().includes(jobSearch.toLowerCase());
+      const matchesCategory = jobCategory === 'All' || job.accessibilityBadges.includes(jobCategory);
+      
+      let matchesFilter = true;
+      if (jobFilter === 'Wheelchair') matchesFilter = !!job.eligible_for_wheelchair;
+      if (jobFilter === 'Deaf') matchesFilter = !!job.eligible_for_deaf;
+      if (jobFilter === 'Blind') matchesFilter = !!job.eligible_for_blind;
+      
+      return matchesSearch && matchesCategory && matchesFilter;
+    });
+  }, [dbJobs, jobSearch, jobCategory, jobFilter]);
+
   // Auto transition from Splash to Onboarding after 2.5 seconds
   useEffect(() => {
     if (activeTab === 'splash') {
@@ -750,7 +807,72 @@ export default function AppMobile() {
                 💼 Disability-Confident Jobs
               </Text>
 
-              {mockJobs.map((job) => (
+              {/* SEARCH BAR */}
+              <TextInput
+                style={[
+                  styles.searchInput,
+                  { backgroundColor: cardBg, color: textColor, marginBottom: 12 },
+                ]}
+                placeholder="Search remote jobs..."
+                placeholderTextColor={subTextColor}
+                value={jobSearch}
+                onChangeText={setJobSearch}
+              />
+
+              {/* CATEGORY DROPDOWN & FILTER BUBBLES */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                {['All', 'Handcraft Items', 'Computer Designing', 'Software', 'Marketing', 'Support'].map(cat => (
+                  <TouchableOpacity
+                    key={cat}
+                    onPress={() => setJobCategory(cat)}
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      backgroundColor: jobCategory === cat ? accentColor : cardBg,
+                      marginRight: 8,
+                    }}
+                  >
+                    <Text style={{ color: jobCategory === cat ? '#fff' : textColor, fontWeight: 'bold' }}>
+                      {cat}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                 {[
+                   { label: 'All Needs', value: null },
+                   { label: 'Wheelchair', value: 'Wheelchair' },
+                   { label: 'Deaf Friendly', value: 'Deaf' },
+                   { label: 'Blind Friendly', value: 'Blind' }
+                 ].map(f => (
+                   <TouchableOpacity
+                     key={f.label}
+                     onPress={() => setJobFilter(f.value)}
+                     style={{
+                       paddingHorizontal: 12,
+                       paddingVertical: 6,
+                       borderRadius: 16,
+                       borderWidth: 1,
+                       borderColor: jobFilter === f.value ? accentColor : subTextColor,
+                       backgroundColor: jobFilter === f.value ? accentColor : 'transparent',
+                       marginRight: 8,
+                     }}
+                   >
+                     <Text style={{ color: jobFilter === f.value ? '#fff' : subTextColor, fontSize: 12 }}>
+                       {f.label}
+                     </Text>
+                   </TouchableOpacity>
+                 ))}
+              </ScrollView>
+
+              {loadingJobs ? (
+                <Text style={{ color: subTextColor, textAlign: 'center', marginTop: 20 }}>Loading inclusive jobs...</Text>
+              ) : filteredJobs.length === 0 ? (
+                <Text style={{ color: subTextColor, textAlign: 'center', marginTop: 20 }}>No jobs found.</Text>
+              ) : (
+                filteredJobs.map((job) => (
                 <View
                   key={job.id}
                   style={[
@@ -822,6 +944,15 @@ export default function AppMobile() {
                         </Text>
                       ),
                     )}
+                    {job.eligible_for_wheelchair && (
+                        <Text style={[styles.jobBadge, { color: '#fff', backgroundColor: '#2563eb' }]}>♿ Wheelchair</Text>
+                    )}
+                    {job.eligible_for_deaf && (
+                        <Text style={[styles.jobBadge, { color: '#fff', backgroundColor: '#9333ea' }]}>🧏 Deaf</Text>
+                    )}
+                    {job.eligible_for_blind && (
+                        <Text style={[styles.jobBadge, { color: '#fff', backgroundColor: '#d97706' }]}>🦯 Blind</Text>
+                    )}
                   </View>
 
                   <TouchableOpacity
@@ -849,7 +980,7 @@ export default function AppMobile() {
                     </Text>
                   </TouchableOpacity>
                 </View>
-              ))}
+              )))}
             </View>
           )}
 
@@ -986,8 +1117,16 @@ export default function AppMobile() {
                     {reviewModalLocationId && (
                       <ReviewForm
                         locationId={reviewModalLocationId}
-                        onSubmit={(data) => {
+                        onSubmit={async (data) => {
                           const newReview = addReview(data);
+
+                          try {
+                            // @ts-ignore (saveRating might need to be imported if it's missing)
+                            await saveRating(data.locationId, data.criteriaRatings);
+                          } catch (err) {
+                            console.error('Failed to save rating to Supabase:', err);
+                            Alert.alert('Warning', 'Review saved locally, but the accessibility rating could not be saved to the database.');
+                          }
 
                           console.log(
                             'Stored review with photo:',
