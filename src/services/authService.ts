@@ -1,0 +1,164 @@
+/**
+ * authService.ts
+ * Centralised Supabase Auth service for AccessHub.
+ * Handles Email/Password Sign-Up and Google OAuth (Web + Expo Go).
+ */
+
+import { Platform } from 'react-native';
+import { supabase } from './supabaseClient';
+import { RegistrationFormData } from '../features/auth/store/useAccessibilityStore';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface AuthResult {
+  success: boolean;
+  error?: string;
+  userId?: string;
+}
+
+// ─── Email / Password Sign-Up ─────────────────────────────────────────────────
+
+/**
+ * Creates a new Supabase Auth user with email + password,
+ * then inserts an extended profile row into `public.profiles`.
+ */
+export async function signUpWithEmail(formData: RegistrationFormData): Promise<AuthResult> {
+  try {
+    // 1. Create the auth user
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: formData.email.trim().toLowerCase(),
+      password: formData.password,
+      options: {
+        data: {
+          full_name: formData.fullName,
+          role: formData.role,
+        },
+      },
+    });
+
+    if (signUpError) {
+      return { success: false, error: signUpError.message };
+    }
+
+    const userId = data?.user?.id;
+    if (!userId) {
+      return { success: false, error: 'Account creation failed. Please try again.' };
+    }
+
+    // 2. Insert extended profile into public.profiles
+    const profileResult = await upsertUserProfile(userId, formData);
+    if (!profileResult.success) {
+      // Non-fatal: profile insert failed but auth user exists
+      console.warn('Profile insert warning:', profileResult.error);
+    }
+
+    return { success: true, userId };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'An unexpected error occurred.' };
+  }
+}
+
+// ─── Google OAuth ─────────────────────────────────────────────────────────────
+
+/**
+ * Initiates Google OAuth sign-in.
+ * - Web: Opens Google consent page via browser redirect.
+ * - Expo Go / React Native: Opens in-app browser via expo-web-browser.
+ */
+export async function signInWithGoogle(): Promise<AuthResult> {
+  try {
+    if (Platform.OS === 'web') {
+      // ── Web (Vite/browser) ────────────────────────────────────────────────
+      const { error } = await (supabase.auth as any).signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        },
+      });
+
+      if (error) return { success: false, error: error.message };
+      return { success: true }; // Page will redirect — no further action needed
+
+    } else {
+      // ── Expo Go / React Native ────────────────────────────────────────────
+      const { makeRedirectUri } = await import('expo-auth-session');
+      const { openAuthSessionAsync } = await import('expo-web-browser');
+
+      const redirectUri = makeRedirectUri({ scheme: 'accesshub' });
+
+      // Get the OAuth URL from Supabase (without auto-redirecting)
+      const { data, error } = await (supabase.auth as any).signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUri,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) return { success: false, error: error.message };
+      if (!data?.url) return { success: false, error: 'Could not get Google OAuth URL.' };
+
+      // Open in-app browser
+      const result = await openAuthSessionAsync(data.url, redirectUri);
+
+      if (result.type !== 'success') {
+        return { success: false, error: 'Google sign-in was cancelled or failed.' };
+      }
+
+      // Exchange the code for a session
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(result.url);
+      if (exchangeError) return { success: false, error: exchangeError.message };
+
+      return { success: true };
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'Google authentication failed. Please try again.',
+    };
+  }
+}
+
+// ─── Profile Upsert ───────────────────────────────────────────────────────────
+
+/**
+ * Inserts or updates the user's extended profile in `public.profiles`.
+ * Call this after successful auth sign-up or Google OAuth.
+ */
+export async function upsertUserProfile(
+  userId: string,
+  formData: Partial<RegistrationFormData> & { highContrast?: boolean; fontScale?: number; audioGuidance?: boolean }
+): Promise<AuthResult> {
+  try {
+    const { error } = await supabase.from('profiles').upsert(
+      {
+        id: userId,
+        name: formData.fullName ?? '',
+        role: formData.role ?? 'buyer',
+      },
+      { onConflict: 'id' }
+    );
+
+    if (error) {
+      console.warn('Profile upsert notice:', error.message);
+      return { success: false, error: error.message };
+    }
+    return { success: true, userId };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Profile update failed.' };
+  }
+}
+
+// ─── Session Helpers ──────────────────────────────────────────────────────────
+
+/** Returns the current Supabase session, or null if not signed in. */
+export async function getCurrentSession() {
+  const { data } = await supabase.auth.getSession();
+  return data?.session ?? null;
+}
+
+/** Returns the current authenticated user, or null. */
+export async function getCurrentUser() {
+  const { data } = await supabase.auth.getUser();
+  return data?.user ?? null;
+}

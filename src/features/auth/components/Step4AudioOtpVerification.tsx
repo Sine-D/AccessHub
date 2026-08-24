@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useAccessibilityStore } from '../store/useAccessibilityStore';
 import { AccessibleInput } from '../../../components/common/accessible/AccessibleInput';
 import { AccessibleButton } from '../../../components/common/accessible/AccessibleButton';
-import { supabase } from '../../../services/supabaseClient';
+import { signUpWithEmail } from '../../../services/authService';
 
 export interface Step4Props {
   onComplete: () => void;
@@ -54,37 +54,34 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
 
     setLoading(true);
     setError('');
-    announceText('Verifying credentials with Supabase Auth...');
+    announceText('Creating your AccessHub account...');
 
     try {
-      // Supabase Auth Integration
-      if (supabase && supabase.auth) {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              full_name: formData.fullName,
-              role: formData.role,
-              accommodations: formData.accommodations,
-            },
-          },
-        });
+      // ── Real Supabase Sign-Up ─────────────────────────────────────────────
+      const result = await signUpWithEmail(formData);
 
-        if (signUpError && !signUpError.message.includes('not configured')) {
-          console.log('Supabase Notice:', signUpError.message);
-        }
+      if (!result.success) {
+        // Show the real error (e.g. "User already registered", "Password too short", etc.)
+        setError(result.error || 'Registration failed.');
+        announceText(`Registration error: ${result.error}`);
+        Alert.alert('❌ Registration Failed', result.error || 'Please try again.');
+        return; // Do NOT proceed to onComplete
       }
-    } catch (err: any) {
-      console.log('Supabase offline fallback active:', err?.message || err);
-    } finally {
-      setLoading(false);
-      announceText(`Account verified successfully for ${formData.fullName}! Redirecting to Home.`);
+
+      // ── Success ───────────────────────────────────────────────────────────
+      announceText(`Account created successfully for ${formData.fullName}! Welcome to AccessHub.`);
       Alert.alert(
         '🎉 Account Activated!',
-        `Welcome to AccessHub, ${formData.fullName}! Your inclusive profile is active.`
+        `Welcome to AccessHub, ${formData.fullName}!\n\nCheck your email (${formData.email}) to confirm your account.`
       );
       onComplete();
+
+    } catch (err: any) {
+      const msg = err?.message || 'An unexpected error occurred.';
+      setError(msg);
+      Alert.alert('❌ Error', msg);
+    } finally {
+      setLoading(false);
     }
   };
 

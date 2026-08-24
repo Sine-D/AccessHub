@@ -4,6 +4,7 @@ import { useAccessibilityStore } from '../store/useAccessibilityStore';
 import { AccessibleInput } from '../../../components/common/accessible/AccessibleInput';
 import { AccessibleButton } from '../../../components/common/accessible/AccessibleButton';
 import { supabase } from '../../../services/supabaseClient';
+import { signInWithGoogle } from '../../../services/authService';
 
 const googleLogoImage = require('../../../../public/images/google.jpg');
 
@@ -84,43 +85,35 @@ export const Step2Credentials: React.FC = () => {
     return true;
   };
 
-  // Google OAuth Social Sign-In Handler
+  // Google OAuth Social Sign-In Handler (Real — Web + Expo Go)
   const handleGoogleSignIn = async () => {
     announceText('Initiating Google Authentication...');
     setGoogleLoading(true);
 
     try {
-      if (supabase && supabase.auth) {
-        const auth = supabase.auth as any;
-        if (typeof auth.signInWithOAuth === 'function') {
-          const { error } = await auth.signInWithOAuth({
-            provider: 'google',
-          });
-          if (error) throw error;
-        } else if (typeof auth.signIn === 'function') {
-          const { error } = await auth.signIn({
-            provider: 'google',
-          });
-          if (error) throw error;
-        }
-      }
-    } catch (err: any) {
-      console.log('Google Auth fallback simulation active:', err?.message || err);
-    } finally {
-      setGoogleLoading(false);
-      // Auto-fill Google Account Data
-      updateFormData({
-        fullName: 'Kavindi Perera (Google Verified)',
-        email: 'kavindi.perera@gmail.com',
-        password: 'GoogleSecurePass123!',
-      });
+      const result = await signInWithGoogle();
 
-      announceText('Successfully authenticated with Google! Signed in as kavindi.perera@gmail.com.');
+      if (!result.success) {
+        // Show error to user
+        Alert.alert(
+          '❌ Google Sign-In Failed',
+          result.error || 'Could not connect to Google. Please try again.'
+        );
+        return;
+      }
+
+      // On Web: signInWithOAuth triggers a redirect — this code won't be reached
+      // On Expo Go: if we get here, OAuth succeeded
+      announceText('Successfully authenticated with Google!');
       Alert.alert(
         '🌐 Google Sign-In Successful',
-        'Your profile was verified via Google. Proceeding to Step 3.'
+        'Your Google account was verified. Proceeding to Step 3.'
       );
       nextStep();
+    } catch (err: any) {
+      Alert.alert('❌ Error', err?.message || 'An unexpected error occurred.');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
