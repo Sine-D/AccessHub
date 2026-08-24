@@ -15,13 +15,29 @@ import {
   Trash2
 } from 'lucide-react';
 import { SpeechLanguageSelector } from './SpeechLanguageSelector';
+import {
+  DEFAULT_SPEECH_LOCALE,
+  getSpeechLanguage,
+  isSupportedSpeechLocale,
+  SpeechLocale,
+} from '../../../core/constants/speechLanguages';
 
 export const AiAssistantModal: React.FC = () => {
   const { aiModalOpen, setAiModalOpen, speakText } = useAccessibility();
   const { setActiveScreen } = useAppState();
 
   const [activeTab, setActiveTab] = useState<'voice' | 'camera' | 'fraud'>('voice');
-  const [speechLanguage, setSpeechLanguage] = useState('en-US');
+  const [speechLanguage, setSpeechLanguageState] =
+      useState<SpeechLocale>(() => {
+        const savedLanguage = localStorage.getItem(
+          'accesshub_speech_language',
+        );
+
+        return savedLanguage &&
+          isSupportedSpeechLocale(savedLanguage)
+          ? savedLanguage
+          : DEFAULT_SPEECH_LOCALE;
+      });
   const [aiResponse, setAiResponse] = useState<string>(
     'Ayubowan! I am AccessLink AI. Ask me anything via voice or scan an item.'
   );
@@ -38,6 +54,12 @@ export const AiAssistantModal: React.FC = () => {
   } = useSpeechRecognition({ language: speechLanguage });
 
   if (!aiModalOpen) return null;
+
+  const setSpeechLanguage = (locale: SpeechLocale) => {
+  setSpeechLanguageState(locale);
+  localStorage.setItem('accesshub_speech_language', locale);
+  resetTranscript();
+};
 
   const handleVoiceCommand = (command: string) => {
     const normalizedCommand = command.toLowerCase();
@@ -160,6 +182,23 @@ export const AiAssistantModal: React.FC = () => {
   onChange={setSpeechLanguage}
   value={speechLanguage}
 />
+
+{/* Announces the newly selected language to screen readers */}
+<p aria-live="polite" className="sr-only" role="status">
+  Recognition language selected:
+  {' '}
+  {getSpeechLanguage(speechLanguage).label}
+</p>
+
+{/* Shows a sample query in the selected language */}
+<p className="w-full rounded-xl bg-slate-100 px-3 py-2 text-left text-[11px] text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+  <span className="font-bold">
+    {getSpeechLanguage(speechLanguage).nativeLabel} example:
+  </span>
+  {' '}
+  “{getSpeechLanguage(speechLanguage).example}”
+</p>
+            
               {/* Accessible microphone controls */}
               <div className="relative">
                 <button

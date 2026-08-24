@@ -1,9 +1,13 @@
 import React from 'react';
+import {
+  SpeechLocale,
+  SUPPORTED_SPEECH_LANGUAGES,
+} from '../../../core/constants/speechLanguages';
 
 interface SpeechLanguageSelectorProps {
   disabled?: boolean;
-  onChange: (locale: string) => void;
-  value: string;
+  onChange: (locale: SpeechLocale) => void;
+  value: SpeechLocale;
 }
 
 const languages = [
@@ -32,7 +36,7 @@ export const SpeechLanguageSelector: React.FC<
       className="mt-2 grid grid-cols-3 gap-2"
       role="radiogroup"
     >
-      {languages.map((language) => {
+      {SUPPORTED_SPEECH_LANGUAGES.map((language) => {
         const selected = value === language.locale;
 
         return (
