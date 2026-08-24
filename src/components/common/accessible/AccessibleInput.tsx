@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TextInput,
+  TouchableOpacity,
   StyleSheet,
   TextInputProps,
   ViewStyle,
@@ -15,6 +16,9 @@ export interface AccessibleInputProps extends TextInputProps {
   accessibilityLabel: string;
   accessibilityHint?: string;
   containerStyle?: ViewStyle;
+  rightIcon?: React.ReactNode;
+  onRightIconPress?: () => void;
+  rightIconAccessibilityLabel?: string;
 }
 
 export const AccessibleInput: React.FC<AccessibleInputProps> = ({
@@ -29,6 +33,9 @@ export const AccessibleInput: React.FC<AccessibleInputProps> = ({
   value,
   onChangeText,
   placeholder,
+  rightIcon,
+  onRightIconPress,
+  rightIconAccessibilityLabel,
   ...props
 }) => {
   const { highContrast, fontScale } = useAccessibilityStore();
@@ -75,31 +82,51 @@ export const AccessibleInput: React.FC<AccessibleInputProps> = ({
         {label}
       </Text>
 
-      {/* Input Target (Min 48x48px) */}
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={highContrast ? '#888888' : '#94a3b8'}
-        secureTextEntry={secureTextEntry}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        accessibilityLabel={accessibilityLabel}
-        accessibilityHint={accessibilityHint}
-        accessibilityState={{ expanded: false }}
+      {/* Input Box Wrapper */}
+      <View
         style={[
-          styles.input,
+          styles.inputWrapper,
           {
             minHeight: 48,
-            fontSize: inputFontSize,
-            color: getTextColor(),
             backgroundColor: getBackgroundColor(),
             borderColor: getBorderColor(),
             borderWidth: isFocused || highContrast || error ? 2 : 1,
           },
         ]}
-        {...props}
-      />
+      >
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={highContrast ? '#888888' : '#94a3b8'}
+          secureTextEntry={secureTextEntry}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          accessibilityLabel={accessibilityLabel}
+          accessibilityHint={accessibilityHint}
+          style={[
+            styles.input,
+            {
+              fontSize: inputFontSize,
+              color: getTextColor(),
+            },
+          ]}
+          {...props}
+        />
+
+        {/* Right Icon / Eye Button (Inside Input Box) */}
+        {Boolean(rightIcon) && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={onRightIconPress}
+            accessibilityRole="button"
+            accessibilityLabel={rightIconAccessibilityLabel || 'Toggle input option'}
+            style={styles.iconButton}
+          >
+            {rightIcon}
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Screen Reader Live Error Region */}
       {Boolean(error) && (
@@ -130,11 +157,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 6,
   },
-  input: {
+  inputWrapper: {
     width: '100%',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 14,
+    paddingLeft: 16,
+    paddingRight: 6,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingRight: 8,
+  },
+  iconButton: {
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
   },
   errorText: {
     fontWeight: '700',

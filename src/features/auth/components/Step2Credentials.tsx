@@ -98,7 +98,7 @@ export const Step2Credentials: React.FC = () => {
         accessibilityHint="Type your valid email address for Supabase verification code"
       />
 
-      {/* Input 3: Password */}
+      {/* Input 3: Password with Eye Toggle inside input box */}
       <AccessibleInput
         label="Password *"
         placeholder="Min. 6 characters"
@@ -108,15 +108,17 @@ export const Step2Credentials: React.FC = () => {
         error={errors.password}
         accessibilityLabel="Secure Password input field"
         accessibilityHint="Type a strong password with at least 6 characters"
-      />
-
-      {/* Toggle Password Visibility */}
-      <AccessibleButton
-        title={showPassword ? '🔒 Hide Password' : '👁️ Show Password'}
-        variant="outline"
-        onPress={() => setShowPassword(!showPassword)}
-        accessibilityLabel={showPassword ? 'Hide password text' : 'Show password text'}
-        style={styles.toggleBtn}
+        rightIcon={
+          <Text style={{ fontSize: 18 }}>
+            {showPassword ? '👁️' : '🙈'}
+          </Text>
+        }
+        onRightIconPress={() => {
+          const nextState = !showPassword;
+          setShowPassword(nextState);
+          announceText(nextState ? 'Password visible' : 'Password hidden');
+        }}
+        rightIconAccessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
       />
 
       {/* Navigation Buttons */}
@@ -160,12 +162,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     lineHeight: 20,
-  },
-  toggleBtn: {
-    alignSelf: 'flex-start',
-    marginVertical: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
   },
   btnRow: {
     flexDirection: 'row',
