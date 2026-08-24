@@ -737,33 +737,62 @@ export default function AppMobile() {
           )}
 
             <Modal
-              visible={reviewModalLocationId !== null}
-              animationType="slide"
-              transparent
-              onRequestClose={() => setReviewModalLocationId(null)}
-            >
-              <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
-                  {reviewModalLocationId && (
-                    <ReviewForm
-  locationId={reviewModalLocationId}
-  onSubmit={async (data) => {
-    const newReview = addReview(data);
-    try {
-      await saveRating(data.locationId, data.criteriaRatings);
-    } catch (err) {
-      console.error('Failed to save rating to Supabase:', err);
-      Alert.alert('Warning', 'Review saved locally, but the accessibility rating could not be saved to the database.');
-    }
-    setReviewModalLocationId(null);
-    Alert.alert('Thank you!', 'Your accessibility review was submitted.');
-  }}
-/>
-                  )}
-                </View>
-              ))}
-            </View>
-          )}
+  visible={reviewModalLocationId !== null}
+  animationType="slide"
+  transparent
+  onRequestClose={() =>
+    setReviewModalLocationId(null)
+  }
+>
+  <View
+    style={{
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+    }}
+  >
+    <View
+      style={{
+        backgroundColor: cardBg,
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+      }}
+    >
+      {reviewModalLocationId && (
+        <ReviewForm
+          locationId={reviewModalLocationId}
+          onSubmit={async (data) => {
+            addReview(data);
+
+            try {
+              await saveRating(
+                data.locationId,
+                data.criteriaRatings,
+              );
+            } catch (err) {
+              console.error(
+                'Failed to save rating to Supabase:',
+                err,
+              );
+
+              Alert.alert(
+                'Warning',
+                'Review saved locally, but the accessibility rating could not be saved to the database.',
+              );
+            }
+
+            setReviewModalLocationId(null);
+
+            Alert.alert(
+              'Thank you!',
+              'Your accessibility review was submitted.',
+            );
+          }}
+        />
+      )}
+    </View>
+  </View>
+</Modal>
 
           {/* MAP */}
           {activeTab === 'map' && (
