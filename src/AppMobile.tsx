@@ -32,8 +32,7 @@ import {
   mockMessages,
   mockNotifications,
 } from './mock/data';
-import { supabase } from './core/supabase';
-import { JobPosting } from './core/types';
+import { saveRating } from './services/ratingsService';
 
 type MobileTab =
   | 'splash'
@@ -737,117 +736,30 @@ export default function AppMobile() {
             </View>
           )}
 
-          {/* JOBS */}
-          {activeTab === 'jobs' && (
-            <View>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  dynamicText(18),
-                  { color: textColor },
-                ]}
-              >
-                💼 Disability-Confident Jobs
-              </Text>
-
-              {mockJobs.map((job) => (
-                <View
-                  key={job.id}
-                  style={[
-                    styles.jobCard,
-                    { backgroundColor: cardBg },
-                  ]}
-                >
-                  <View style={styles.rowAlign}>
-                    <Image
-                      source={{ uri: job.companyLogo }}
-                      style={styles.avatarMini}
-                    />
-
-                    <View
-                      style={{
-                        flex: 1,
-                        marginLeft: 10,
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.jobTitle,
-                          dynamicText(14),
-                          { color: textColor },
-                        ]}
-                      >
-                        {job.title}
-                      </Text>
-
-                      <Text
-                        style={[
-                          styles.companyName,
-                          dynamicText(12),
-                          { color: subTextColor },
-                        ]}
-                      >
-                        {job.company} • {job.location}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text
-                    style={[
-                      styles.salaryText,
-                      dynamicText(13),
-                      {
-                        color: accentColor,
-                        marginTop: 8,
-                      },
-                    ]}
-                  >
-                    {job.salary}
-                  </Text>
-
-                  <View style={styles.badgeContainer}>
-                    {job.accessibilityBadges.map(
-                      (b: string, idx: number) => (
-                        <Text
-                          key={idx}
-                          style={[
-                            styles.jobBadge,
-                            {
-                              color: textColor,
-                              backgroundColor: '#334155',
-                            },
-                          ]}
-                        >
-                          ✓ {b}
-                        </Text>
-                      ),
-                    )}
-                  </View>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.buyBtn,
-                      {
-                        backgroundColor: primaryButtonBg,
-                        marginTop: 10,
-                      },
-                    ]}
-                    onPress={() =>
-                      Alert.alert(
-                        'Applied!',
-                        `Application submitted for ${job.title}`,
-                      )
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.buyBtnText,
-                        { color: primaryButtonText },
-                      ]}
-                    >
-                      Apply Now
-                    </Text>
-                  </TouchableOpacity>
+            <Modal
+              visible={reviewModalLocationId !== null}
+              animationType="slide"
+              transparent
+              onRequestClose={() => setReviewModalLocationId(null)}
+            >
+              <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                  {reviewModalLocationId && (
+                    <ReviewForm
+  locationId={reviewModalLocationId}
+  onSubmit={async (data) => {
+    const newReview = addReview(data);
+    try {
+      await saveRating(data.locationId, data.criteriaRatings);
+    } catch (err) {
+      console.error('Failed to save rating to Supabase:', err);
+      Alert.alert('Warning', 'Review saved locally, but the accessibility rating could not be saved to the database.');
+    }
+    setReviewModalLocationId(null);
+    Alert.alert('Thank you!', 'Your accessibility review was submitted.');
+  }}
+/>
+                  )}
                 </View>
               ))}
             </View>

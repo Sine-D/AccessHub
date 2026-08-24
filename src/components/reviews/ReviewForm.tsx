@@ -1,22 +1,13 @@
-// src/components/reviews/ReviewForm.tsx
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  Image,
-} from 'react-native';
-
-import { RatingInput } from './RatingInput';
-import { PhotoPicker } from './PhotoPicker';
+import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { RatingMatrix } from './RatingMatrix';
+import { CriteriaRatings } from '../../types/review';
 
 interface ReviewFormProps {
   locationId: string;
   onSubmit: (data: {
     locationId: string;
-    rating: number;
+    criteriaRatings: CriteriaRatings;
     comment: string;
     photoUri: string | null;
   }) => void;
@@ -26,15 +17,25 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   locationId,
   onSubmit,
 }) => {
-  const [rating, setRating] = useState(0);
+  const [criteriaRatings, setCriteriaRatings] = useState<CriteriaRatings>({
+    wheelchairRamp: 0,
+    brailleMenu: 0,
+    audioSignal: 0,
+    accessibleRestroom: 0,
+  });
+
   const [comment, setComment] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = () => {
-    if (rating === 0) {
-      setError('Please select a rating.');
+    const allRated = Object.values(criteriaRatings).every(
+      (v) => v >= 1 && v <= 5
+    );
+
+    if (!allRated) {
+      setError('Please rate all four accessibility criteria.');
       return;
     }
 
@@ -46,16 +47,21 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
     setError(null);
     setSubmitting(true);
 
-    // Submit review data including photo URI
     onSubmit({
       locationId,
-      rating,
+      criteriaRatings,
       comment: comment.trim(),
       photoUri,
     });
 
     // Reset form after submit
-    setRating(0);
+    setCriteriaRatings({
+      wheelchairRamp: 0,
+      brailleMenu: 0,
+      audioSignal: 0,
+      accessibleRestroom: 0,
+    });
+
     setComment('');
     setPhotoUri(null);
     setSubmitting(false);
@@ -63,9 +69,12 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>How accessible is this place?</Text>
+      <Text style={styles.label}>Rate each accessibility feature</Text>
 
-      <RatingInput value={rating} onChange={setRating} />
+      <RatingMatrix
+        value={criteriaRatings}
+        onChange={setCriteriaRatings}
+      />
 
       <Text style={styles.label}>Your review</Text>
 
@@ -141,14 +150,6 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontSize: 13,
     marginTop: 4,
-  },
-
-  photoPreview: {
-    width: '100%',
-    height: 160,
-    borderRadius: 8,
-    marginTop: 10,
-    backgroundColor: '#F3F4F6',
   },
 
   button: {
