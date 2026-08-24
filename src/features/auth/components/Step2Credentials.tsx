@@ -41,7 +41,7 @@ export const Step2Credentials: React.FC = () => {
     if (score === 3) {
       return { score: 2, label: 'Medium 🟡 (Add a special symbol e.g. @,#,$)', color: highContrast ? '#ffff00' : '#f59e0b' };
     }
-    return { score: 3, label: 'Strong 🔒 (WCAG AAA Security Compliant)', color: highContrast ? '#ffff00' : '#10b981' };
+    return { score: 3, label: 'Strong 🔒', color: highContrast ? '#ffff00' : '#10b981' };
   };
 
   const strength = getPasswordStrength(formData.password);
