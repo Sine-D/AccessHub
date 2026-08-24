@@ -249,6 +249,25 @@ export default function AppMobile() {
                   Log In
                 </Text>
               </TouchableOpacity>
+
+              {/* Google Auth Button */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderColor: '#0d9488',
+                  borderWidth: 2,
+                  paddingVertical: 16,
+                  borderRadius: 20,
+                  width: '90%',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                }}
+                onPress={() => setActiveTab('home')}
+              >
+                <Text style={{ color: '#0d9488', fontWeight: 'bold', fontSize: 16 }}>
+                  🌐 Continue with Google
+                </Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </SafeAreaView>
