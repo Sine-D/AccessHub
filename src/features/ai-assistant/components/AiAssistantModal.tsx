@@ -14,6 +14,7 @@ import {
   Square,
   Trash2
 } from 'lucide-react';
+import { SpeechLanguageSelector } from './SpeechLanguageSelector';
 
 export const AiAssistantModal: React.FC = () => {
   const { aiModalOpen, setAiModalOpen, speakText } = useAccessibility();
@@ -154,23 +155,11 @@ export const AiAssistantModal: React.FC = () => {
           {activeTab === 'voice' && (
             <div className="flex flex-col items-center text-center space-y-4 py-2">
 
-              <div className="w-full text-left">
-                <label htmlFor="speech-language" className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                  Recognition language
-                </label>
-                <select
-                  id="speech-language"
-                  value={speechLanguage}
-                  onChange={(event) => setSpeechLanguage(event.target.value)}
-                  disabled={isListening}
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                >
-                  <option value="en-US">English</option>
-                  <option value="si-LK">සිංහල (Sinhala)</option>
-                  <option value="ta-LK">தமிழ் (Tamil)</option>
-                </select>
-              </div>
-
+             <SpeechLanguageSelector
+  disabled={isListening}
+  onChange={setSpeechLanguage}
+  value={speechLanguage}
+/>
               {/* Accessible microphone controls */}
               <div className="relative">
                 <button
