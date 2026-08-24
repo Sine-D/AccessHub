@@ -66,6 +66,10 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSavingAddress, setIsSavingAddress] = useState(false);
 
+  // Delivery Instructions & Preferences State
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [handoffPreference, setHandoffPreference] = useState<'contactless' | 'call' | 'verbal'>('contactless');
+
   const [isListening, setIsListening] = useState(false);
   const [saveCard, setSaveCard] = useState(true);
 
@@ -99,6 +103,17 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
     };
 
     recognition.start();
+  };
+
+  const handlePreferenceChange = (pref: 'contactless' | 'call' | 'verbal') => {
+    setHandoffPreference(pref);
+    let msg = '';
+    if (pref === 'contactless') msg = 'Contactless Delivery selected';
+    if (pref === 'call') msg = 'Call Before Arrival selected';
+    if (pref === 'verbal') msg = 'Requires Verbal Confirmation selected';
+    if (AccessibilityInfo?.announceForAccessibility) {
+      AccessibilityInfo.announceForAccessibility(msg);
+    }
   };
 
   const price = product?.price || 0;
@@ -369,6 +384,80 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
                           Save Address
                         </Text>
                       )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Delivery Instructions & Preferences */}
+                <View style={styles.section}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <Text style={[styles.sectionTitle, dynamicText(12), { color: subTextColor, marginBottom: 0 }]}>Delivery Instructions</Text>
+                  </View>
+                  <View style={{ gap: 12 }}>
+                    <TextInput
+                      value={deliveryNotes}
+                      onChangeText={setDeliveryNotes}
+                      placeholder="e.g., Knock and leave at door"
+                      placeholderTextColor={subTextColor}
+                      multiline
+                      numberOfLines={3}
+                      style={[styles.input, dynamicText(14), { backgroundColor: cardBg, borderColor: subTextColor, color: textColor, fontWeight: '500', minHeight: 80, textAlignVertical: 'top' }]}
+                      accessibilityLabel="Custom delivery instructions"
+                      accessibilityHint="Enter any special notes for the driver"
+                      accessibilityRole="text"
+                    />
+
+                    <Text style={[dynamicText(12), { color: textColor, fontWeight: 'bold', marginTop: 8 }]}>Hand-off Preference</Text>
+                    
+                    <TouchableOpacity
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: handoffPreference === 'contactless' }}
+                      accessibilityLabel="Contactless Delivery"
+                      accessibilityHint="Driver will leave the package at your door"
+                      style={[
+                        styles.paymentOption,
+                        { borderColor: handoffPreference === 'contactless' ? accentColor : subTextColor, backgroundColor: cardBg, minHeight: 48, marginBottom: 4 }
+                      ]}
+                      onPress={() => handlePreferenceChange('contactless')}
+                    >
+                      <View style={[styles.radioOuter, { borderColor: handoffPreference === 'contactless' ? accentColor : subTextColor }]}>
+                        {handoffPreference === 'contactless' && <View style={[styles.radioInner, { backgroundColor: accentColor }]} />}
+                      </View>
+                      <Text style={[dynamicText(14), { color: textColor, fontWeight: 'bold' }]}>Contactless Delivery</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: handoffPreference === 'call' }}
+                      accessibilityLabel="Call Before Arrival"
+                      accessibilityHint="Driver will call you when they are near"
+                      style={[
+                        styles.paymentOption,
+                        { borderColor: handoffPreference === 'call' ? accentColor : subTextColor, backgroundColor: cardBg, minHeight: 48, marginBottom: 4 }
+                      ]}
+                      onPress={() => handlePreferenceChange('call')}
+                    >
+                      <View style={[styles.radioOuter, { borderColor: handoffPreference === 'call' ? accentColor : subTextColor }]}>
+                        {handoffPreference === 'call' && <View style={[styles.radioInner, { backgroundColor: accentColor }]} />}
+                      </View>
+                      <Text style={[dynamicText(14), { color: textColor, fontWeight: 'bold' }]}>Call Before Arrival</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: handoffPreference === 'verbal' }}
+                      accessibilityLabel="Requires Verbal Confirmation"
+                      accessibilityHint="Driver must confirm delivery with you verbally"
+                      style={[
+                        styles.paymentOption,
+                        { borderColor: handoffPreference === 'verbal' ? accentColor : subTextColor, backgroundColor: cardBg, minHeight: 48, marginBottom: 4 }
+                      ]}
+                      onPress={() => handlePreferenceChange('verbal')}
+                    >
+                      <View style={[styles.radioOuter, { borderColor: handoffPreference === 'verbal' ? accentColor : subTextColor }]}>
+                        {handoffPreference === 'verbal' && <View style={[styles.radioInner, { backgroundColor: accentColor }]} />}
+                      </View>
+                      <Text style={[dynamicText(14), { color: textColor, fontWeight: 'bold' }]}>Requires Verbal Confirmation</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
