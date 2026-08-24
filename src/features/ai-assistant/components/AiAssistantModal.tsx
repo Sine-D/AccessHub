@@ -21,6 +21,7 @@ import {
   isSupportedSpeechLocale,
   SpeechLocale,
 } from '../../../core/constants/speechLanguages';
+import { normalizeTranscript } from '../../../core/utils/normalizeTranscript';
 
 export const AiAssistantModal: React.FC = () => {
   const { aiModalOpen, setAiModalOpen, speakText } = useAccessibility();
@@ -61,10 +62,14 @@ export const AiAssistantModal: React.FC = () => {
   resetTranscript();
 };
 
-  const handleVoiceCommand = (command: string) => {
-    const normalizedCommand = command.toLowerCase();
-    setAiResponse(`Processing: “${command}”`);
-    speakText(`Processing command: ${command}`);
+ const handleVoiceCommand = (command: string) => {
+  const cleanCommand = normalizeTranscript(command);
+  const normalizedCommand =
+    cleanCommand.toLocaleLowerCase(speechLanguage);
+
+  setTranscript(cleanCommand);
+  setAiResponse(`Processing: “${cleanCommand}”`);
+  speakText(`Processing command: ${cleanCommand}`);
 
     setTimeout(() => {
       if (normalizedCommand.includes('wheelchair') || normalizedCommand.includes('marketplace')) {
@@ -85,8 +90,8 @@ export const AiAssistantModal: React.FC = () => {
         setActiveTab('camera');
         setAiResponse('AI Vision active. Point camera at product or document.');
       } else {
-        setAiResponse(`Processed command: "${command}". I am here to help you navigate AccessLink seamlessly.`);
-        speakText(`Processed command ${command}`);
+        setAiResponse(`Processed command: "${cleanCommand}". I am here to help you navigate AccessLink seamlessly.`);
+        speakText(`Processed command ${cleanCommand}`);
       }
     }, 1200);
   };
@@ -126,7 +131,7 @@ export const AiAssistantModal: React.FC = () => {
           </div>
           <button
             aria-label="Close AI assistant"
-            onClick={closeModal}
+            onClick={() => handleVoiceCommand(transcript)}
             className="p-1 rounded-full bg-white/10 hover:bg-white/20 transition-all text-white"
           >
             <X className="w-5 h-5" />
