@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Image } from 'react-native';
 import { RatingMatrix } from './RatingMatrix';
+import { PhotoPicker } from './PhotoPicker';
 import { CriteriaRatings } from '../../types/review';
 
 interface ReviewFormProps {
@@ -158,6 +159,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 12,
+  },
+
+  photoPreview: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+    marginTop: 8,
   },
 
   buttonDisabled: {
