@@ -73,6 +73,37 @@ export default function AppMobile() {
   const [jobCategory, setJobCategory] = useState('All Jobs');
   const [jobFilter, setJobFilter] = useState({ wheelchair: false, deaf: false, blind: false });
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [isListeningJobs, setIsListeningJobs] = useState(false);
+
+  const startVoiceSearch = () => {
+    if (Platform.OS === 'web') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => setIsListeningJobs(true);
+        recognition.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          setJobSearch(transcript);
+          setIsListeningJobs(false);
+        };
+        recognition.onerror = () => {
+          setIsListeningJobs(false);
+          Alert.alert('Voice Search Error', 'Could not recognize voice. Please try again.');
+        };
+        recognition.onend = () => setIsListeningJobs(false);
+
+        recognition.start();
+      } else {
+        Alert.alert('Not Supported', 'Voice search is not supported in this browser.');
+      }
+    } else {
+      Alert.alert('Not Supported', 'Voice search is currently available on the web version.');
+    }
+  };
 
   useEffect(() => {
     if (activeTab === 'jobs') {
@@ -991,27 +1022,50 @@ export default function AppMobile() {
 
               {/* SEARCH BAR AND DROPDOWN */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <TextInput
-                  style={[
-                    styles.searchInput,
-                    { flex: 1, backgroundColor: cardBg, color: textColor, marginBottom: 0 },
-                  ]}
-                  placeholder="Search remote jobs..."
-                  placeholderTextColor={subTextColor}
-                  value={jobSearch}
-                  onChangeText={setJobSearch}
-                />
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: cardBg, borderRadius: 8, borderWidth: 1, borderColor: '#334155', overflow: 'hidden' }}>
+                  <TextInput
+                    style={[
+                      styles.searchInput,
+                      { flex: 1, color: textColor, marginBottom: 0, borderWidth: 0 },
+                    ]}
+                    placeholder="Search remote jobs..."
+                    placeholderTextColor={subTextColor}
+                    value={jobSearch}
+                    onChangeText={setJobSearch}
+                    accessibilityRole="search"
+                    accessibilityLabel="Search jobs input"
+                    accessibilityHint="Type to filter jobs by title or category"
+                  />
+                  <TouchableOpacity
+                    onPress={startVoiceSearch}
+                    style={{ padding: 12 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Voice search"
+                    accessibilityHint="Double tap to dictate your search query"
+                  >
+                    <Text style={{ fontSize: 18, color: isListeningJobs ? '#ef4444' : subTextColor }}>
+                      {isListeningJobs ? '🔴' : '🎤'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
                 <TouchableOpacity
                   style={{ marginLeft: 8, paddingHorizontal: 12, paddingVertical: 12, backgroundColor: cardBg, borderRadius: 8, justifyContent: 'center', borderWidth: 1, borderColor: '#334155' }}
                   onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Job category selector. Current category is ${jobCategory}`}
+                  accessibilityHint="Double tap to open or close the job category dropdown"
+                  accessibilityState={{ expanded: showCategoryDropdown }}
                 >
                   <Text style={{ color: textColor, fontWeight: 'bold' }}>{jobCategory} ▼</Text>
                 </TouchableOpacity>
               </View>
 
               {showCategoryDropdown && (
-                <View style={{ backgroundColor: cardBg, borderRadius: 8, marginBottom: 12, padding: 8, borderWidth: 1, borderColor: '#334155' }}>
+                <View 
+                  style={{ backgroundColor: cardBg, borderRadius: 8, marginBottom: 12, padding: 8, borderWidth: 1, borderColor: '#334155' }}
+                  accessibilityRole="menu"
+                >
                   {['All Jobs', 'Handcraft Items', 'Computer Designing', 'Software', 'Marketing', 'Support'].map(cat => (
                     <TouchableOpacity
                       key={cat}
@@ -1020,6 +1074,10 @@ export default function AppMobile() {
                         setShowCategoryDropdown(false);
                       }}
                       style={{ paddingVertical: 10, borderBottomWidth: cat !== 'Support' ? 1 : 0, borderBottomColor: '#1e293b' }}
+                      accessibilityRole="menuitem"
+                      accessibilityLabel={cat}
+                      accessibilityHint={`Double tap to filter jobs by ${cat}`}
+                      accessibilityState={{ selected: jobCategory === cat }}
                     >
                       <Text style={{ color: jobCategory === cat ? accentColor : textColor }}>{cat}</Text>
                     </TouchableOpacity>
@@ -1028,7 +1086,12 @@ export default function AppMobile() {
               )}
 
               {/* FILTER BUBBLES */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                style={{ marginBottom: 16 }}
+                accessibilityLabel="Accessibility filters"
+              >
                 {[
                   { label: 'Wheelchair Persons', key: 'wheelchair' },
                   { label: 'Deaf Persons', key: 'deaf' },
@@ -1048,6 +1111,10 @@ export default function AppMobile() {
                         backgroundColor: isActive ? accentColor : 'transparent',
                         marginRight: 8,
                       }}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: isActive }}
+                      accessibilityLabel={f.label}
+                      accessibilityHint={`Double tap to toggle ${f.label} filter`}
                     >
                       <Text style={{ color: isActive ? '#fff' : subTextColor, fontSize: 12 }}>
                         {f.label}
@@ -1159,6 +1226,9 @@ export default function AppMobile() {
                           `Application submitted for ${job.title}`,
                         )
                       }
+                      accessibilityRole="button"
+                      accessibilityLabel={`Apply for ${job.title} at ${job.company}`}
+                      accessibilityHint="Double tap to submit your application"
                     >
                       <Text
                         style={[
