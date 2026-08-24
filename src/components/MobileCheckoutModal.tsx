@@ -12,6 +12,7 @@ import {
   TextInput,
   Platform
 } from 'react-native';
+import { supabase } from '../core/supabase';
 
 export interface MobileCheckoutModalProps {
   visible: boolean;
@@ -57,7 +58,14 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
 }) => {
   const [checkoutState, setCheckoutState] = useState<CheckoutState>('review');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('saved_card');
-  const [address, setAddress] = useState('42 Access Way, Colombo 03');
+  
+  // Delivery Address Form State
+  const [fullName, setFullName] = useState('');
+  const [streetAddress, setStreetAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+
   const [isListening, setIsListening] = useState(false);
   const [saveCard, setSaveCard] = useState(true);
 
@@ -87,7 +95,7 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
     };
     recognition.onresult = (e: any) => {
       const transcript = e.results[0][0].transcript;
-      setAddress(transcript);
+      setStreetAddress(transcript);
     };
 
     recognition.start();
@@ -129,7 +137,68 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
     }, 1200);
   };
 
+  const handleSaveAddress = async () => {
+    if (!fullName.trim() || !streetAddress.trim() || !city.trim() || !phoneNumber.trim()) {
+      const msg = 'Please fill in all delivery address fields before saving.';
+      Alert.alert('Validation Error', msg);
+      if (AccessibilityInfo?.announceForAccessibility) AccessibilityInfo.announceForAccessibility(msg);
+      return;
+    }
+
+    const phoneRegex = /^\+?[\d\s-]{9,15}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      const msg = 'Please enter a valid phone number (e.g. 0712345678).';
+      Alert.alert('Validation Error', msg);
+      if (AccessibilityInfo?.announceForAccessibility) AccessibilityInfo.announceForAccessibility(msg);
+      return;
+    }
+
+    setIsSavingAddress(true);
+    try {
+      const mockUserId = '11111111-1111-1111-1111-111111111111';
+
+      const { error } = await supabase
+        .from('user_addresses')
+        .insert([
+          {
+            user_id: mockUserId,
+            full_name: fullName,
+            street_address: streetAddress,
+            city: city,
+            phone_number: phoneNumber,
+            is_default: true,
+          }
+        ]);
+
+      if (error) throw error;
+
+      const successMsg = 'Delivery address saved successfully!';
+      Alert.alert('Success', successMsg);
+      if (AccessibilityInfo?.announceForAccessibility) AccessibilityInfo.announceForAccessibility(successMsg);
+    } catch (err: any) {
+      const errMsg = 'Could not save the address. Please try again.';
+      Alert.alert('Error', errMsg);
+      if (AccessibilityInfo?.announceForAccessibility) AccessibilityInfo.announceForAccessibility(errMsg);
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
+
   const handleConfirmClick = () => {
+    if (!fullName.trim() || !streetAddress.trim() || !city.trim() || !phoneNumber.trim()) {
+      const msg = 'Please complete your delivery address before confirming the order.';
+      Alert.alert('Validation Error', msg);
+      if (AccessibilityInfo?.announceForAccessibility) AccessibilityInfo.announceForAccessibility(msg);
+      return;
+    }
+    const phoneRegex = /^\+?[\d\s-]{9,15}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      const msg = 'Please enter a valid phone number in your delivery address.';
+      Alert.alert('Validation Error', msg);
+      if (AccessibilityInfo?.announceForAccessibility) AccessibilityInfo.announceForAccessibility(msg);
+      return;
+    }
+
     processPayment();
   };
 
@@ -225,33 +294,83 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
                 <View style={styles.section}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <Text style={[styles.sectionTitle, dynamicText(12), { color: subTextColor, marginBottom: 0 }]}>Delivery Address</Text>
-                    <TouchableOpacity 
-                      onPress={startVoiceTyping}
-                      style={{ 
-                        flexDirection: 'row', 
-                        alignItems: 'center', 
-                        backgroundColor: isListening ? 'rgba(239, 68, 68, 0.2)' : 'rgba(148, 163, 184, 0.2)',
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        borderRadius: 12
-                      }}
-                      accessibilityLabel="Voice Type Address"
+                  </View>
+                  <View style={{ gap: 12 }}>
+                    <TextInput
+                      value={fullName}
+                      onChangeText={setFullName}
+                      placeholder="Full Name"
+                      placeholderTextColor={subTextColor}
+                      style={[styles.input, dynamicText(14), { backgroundColor: cardBg, borderColor: subTextColor, color: textColor, fontWeight: '500' }]}
+                      accessibilityLabel="Full Name"
+                      accessibilityHint="Enter your full name for delivery"
+                      accessibilityRole="text"
+                    />
+                    
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: cardBg, borderRadius: 12, borderWidth: 2, borderColor: subTextColor }}>
+                      <TextInput
+                        value={streetAddress}
+                        onChangeText={setStreetAddress}
+                        placeholder="Street Address"
+                        placeholderTextColor={subTextColor}
+                        style={[{ flex: 1, minHeight: 52, paddingHorizontal: 16, paddingVertical: 12 }, dynamicText(14), { color: textColor, fontWeight: '500' }]}
+                        accessibilityLabel="Street Address"
+                        accessibilityHint="Enter your street address"
+                        accessibilityRole="text"
+                      />
+                      <TouchableOpacity 
+                        onPress={startVoiceTyping}
+                        style={{ padding: 12, flexDirection: 'row', alignItems: 'center' }}
+                        accessibilityLabel="Voice Type Street Address"
+                        accessibilityRole="button"
+                      >
+                        <Text style={{ fontSize: 16 }}>{isListening ? '🎙️' : '🎤'}</Text>
+                        <Text style={[dynamicText(10), { color: isListening ? '#ef4444' : subTextColor, fontWeight: 'bold', marginLeft: 4 }]}>
+                          {isListening ? 'Listening...' : 'Voice Type'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <TextInput
+                      value={city}
+                      onChangeText={setCity}
+                      placeholder="City"
+                      placeholderTextColor={subTextColor}
+                      style={[styles.input, dynamicText(14), { backgroundColor: cardBg, borderColor: subTextColor, color: textColor, fontWeight: '500' }]}
+                      accessibilityLabel="City"
+                      accessibilityHint="Enter your city"
+                      accessibilityRole="text"
+                    />
+
+                    <TextInput
+                      value={phoneNumber}
+                      onChangeText={setPhoneNumber}
+                      placeholder="Phone Number"
+                      keyboardType="phone-pad"
+                      placeholderTextColor={subTextColor}
+                      style={[styles.input, dynamicText(14), { backgroundColor: cardBg, borderColor: subTextColor, color: textColor, fontWeight: '500' }]}
+                      accessibilityLabel="Phone Number"
+                      accessibilityHint="Enter your phone number for delivery updates"
+                      accessibilityRole="text"
+                    />
+
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel="Save Delivery Address"
+                      accessibilityHint="Saves this address to your profile for future orders"
+                      style={[styles.blackBtn, { backgroundColor: primaryButtonBg, marginTop: 4, minHeight: 48, padding: 12 }]}
+                      onPress={handleSaveAddress}
+                      disabled={isSavingAddress}
                     >
-                      <Text style={{ fontSize: 12, marginRight: 4 }}>🎤</Text>
-                      <Text style={[dynamicText(10), { 
-                        color: isListening ? '#ef4444' : subTextColor,
-                        fontWeight: 'bold' 
-                      }]}>
-                        {isListening ? 'Listening...' : 'Voice Type'}
-                      </Text>
+                      {isSavingAddress ? (
+                        <ActivityIndicator color={primaryButtonText} size="small" />
+                      ) : (
+                        <Text style={[dynamicText(14), { color: primaryButtonText, fontWeight: 'bold', textAlign: 'center' }]}>
+                          Save Address
+                        </Text>
+                      )}
                     </TouchableOpacity>
                   </View>
-                  <TextInput
-                    value={address}
-                    onChangeText={setAddress}
-                    style={[styles.infoBox, dynamicText(14), { backgroundColor: cardBg, borderColor: subTextColor, color: textColor, fontWeight: '500' }]}
-                    accessibilityLabel="Delivery Address Input"
-                  />
                 </View>
 
                 {/* Payment Method */}
