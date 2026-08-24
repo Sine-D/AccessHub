@@ -5,6 +5,7 @@
  */
 
 import { Platform } from 'react-native';
+import bcrypt from 'bcryptjs';
 import { supabase } from './supabaseClient';
 import { RegistrationFormData } from '../features/auth/store/useAccessibilityStore';
 
@@ -141,20 +142,37 @@ export async function signInWithGoogle(): Promise<AuthResult> {
  
 /**
  * Inserts or updates the user's record in `public.users`.
+ * Hashes password with bcrypt before saving if provided.
  * Call this after successful auth sign-up or Google OAuth.
  */
 export async function upsertUser(
   userId: string,
-  formData: Partial<RegistrationFormData> & { highContrast?: boolean; fontScale?: number; audioGuidance?: boolean }
+  formData: Partial<RegistrationFormData> & { passwordHash?: string; highContrast?: boolean; fontScale?: number; audioGuidance?: boolean }
 ): Promise<AuthResult> {
   try {
+    let hashedPassword: string | undefined = formData.passwordHash;
+    if (formData.password) {
+      const salt = await bcrypt.genSalt(10);
+      hashedPassword = await bcrypt.hash(formData.password, salt);
+    }
+
+    const payload: Record<string, any> = {
+      id: userId,
+      email: formData.email ? formData.email.trim().toLowerCase() : undefined,
+      name: formData.fullName ?? '',
+      role: formData.role ?? 'buyer',
+    };
+
+    if (hashedPassword) {
+      payload.password = hashedPassword;
+    }
+
+    if (formData.accommodations) {
+      payload.accommodations = formData.accommodations;
+    }
+
     const { error } = await supabase.from('users').upsert(
-      {
-        id: userId,
-        email: formData.email,
-        name: formData.fullName ?? '',
-        role: formData.role ?? 'buyer',
-      },
+      payload,
       { onConflict: 'id' }
     );
 
