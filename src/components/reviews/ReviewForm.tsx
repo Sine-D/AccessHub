@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  Image,
-} from 'react-native';
-
+import { View, Text, TextInput, Pressable, StyleSheet, Image } from 'react-native';
 import { RatingMatrix } from './RatingMatrix';
 import { PhotoPicker } from './PhotoPicker';
 import { CriteriaRatings } from '../../types/review';

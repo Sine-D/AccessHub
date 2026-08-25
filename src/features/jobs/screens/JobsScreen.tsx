@@ -64,7 +64,7 @@ export const JobsScreen: React.FC = () => {
     setAppliedJob(jobTitle);
     
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData } = await (supabase.auth as any).getUser();
       if (userData?.user) {
         await supabase.from('job_applications').insert([
           {
