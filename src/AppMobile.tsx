@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import { ReviewForm } from './components/reviews/ReviewForm';
 import { MobileCheckoutModal } from './components/MobileCheckoutModal';
 import { addReview, getReviewsForLocation } from './mock/reviews';
@@ -27,6 +28,8 @@ import {
   mockCurrentUser,
   mockProducts,
   mockServices,
+  mockPendingServiceApplications,
+  SRI_LANKA_DISTRICTS,
   mockJobs,
   mockDonations,
   mockMapPins,
@@ -36,7 +39,7 @@ import {
 import { saveRating } from './services/ratingsService';
 import { CreateAccountScreen } from './features/auth';
 import { supabase } from './core/supabase';
-import { JobPosting } from './core/types';
+import { JobPosting, ServiceItem, FreelancerServiceApplication } from './core/types';
 
 type MobileTab =
   | 'splash'
@@ -48,6 +51,7 @@ type MobileTab =
   | 'services'
   | 'jobs'
   | 'map'
+  | 'admin'
   | 'profile';
 
 export default function AppMobile() {
@@ -75,6 +79,123 @@ export default function AppMobile() {
   const [jobFilter, setJobFilter] = useState({ wheelchair: false, deaf: false, blind: false });
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [isListeningJobs, setIsListeningJobs] = useState(false);
+
+  // Dynamic Freelancer & Admin State for Mobile
+  const [mobileServices, setMobileServices] = useState<ServiceItem[]>(mockServices);
+  const [mobilePendingApps, setMobilePendingApps] = useState<FreelancerServiceApplication[]>(mockPendingServiceApplications);
+  const [isFreelancerFormOpen, setIsFreelancerFormOpen] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+
+  // Freelancer Form Fields State
+  const [formName, setFormName] = useState('');
+  const [formAge, setFormAge] = useState('');
+  const [formDistrict, setFormDistrict] = useState('Colombo');
+  const [formAddress, setFormAddress] = useState('');
+  const [formGuardianName, setFormGuardianName] = useState('');
+  const [formGuardianPhone, setFormGuardianPhone] = useState('');
+  const [formPhone, setFormPhone] = useState('');
+  const [formIsFreelancer, setFormIsFreelancer] = useState(true);
+  const [formRating, setFormRating] = useState(5);
+  const [formRatingImages, setFormRatingImages] = useState<string[]>([]);
+  const [formServiceTitle, setFormServiceTitle] = useState('');
+  const [formHourlyRate, setFormHourlyRate] = useState('4500');
+  const [formCategory, setFormCategory] = useState('Tech & Accessibility');
+  const [formDescription, setFormDescription] = useState('');
+  const [formSkills, setFormSkills] = useState<string[]>(['Accessibility', 'Freelancer']);
+
+  const pickImageFromLocalStorage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: true,
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets) {
+        const newImages = result.assets.map(asset => 
+          asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri
+        );
+        setFormRatingImages(prev => [...prev, ...newImages]);
+      }
+    } catch (err) {
+      console.error('Local image picker error:', err);
+      Alert.alert('Upload Error', 'Could not access device storage.');
+    }
+  };
+
+  const handleFreelancerFormSubmit = () => {
+    if (!formName.trim() || !formPhone.trim() || !formServiceTitle.trim()) {
+      Alert.alert('Required Fields Missing', 'Please fill in Name, Phone Number, and Service Title.');
+      return;
+    }
+
+    const newApp: FreelancerServiceApplication = {
+      id: `app-${Date.now()}`,
+      name: formName,
+      age: formAge ? Number(formAge) : 25,
+      district: formDistrict,
+      address: formAddress || 'Sri Lanka',
+      guardianName: formGuardianName || 'N/A',
+      guardianPhone: formGuardianPhone || 'N/A',
+      phone: formPhone,
+      isFreelancer: formIsFreelancer,
+      rating: formRating,
+      ratingImages: formRatingImages.length > 0 ? formRatingImages : [
+        'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=600'
+      ],
+      serviceTitle: formServiceTitle,
+      hourlyRate: Number(formHourlyRate) || 4500,
+      category: formCategory,
+      description: formDescription || 'Professional freelancer service offered through AccessHub.',
+      skills: formSkills,
+      status: 'pending',
+      createdAt: new Date().toLocaleString()
+    };
+
+    setMobilePendingApps(prev => [newApp, ...prev]);
+    setIsFreelancerFormOpen(false);
+
+    Alert.alert(
+      'Application Submitted! 🛡️',
+      `Your freelancer application for "${formServiceTitle}" has been sent to the Admin Dashboard for review. Once approved (OK), it will immediately publish to Navbar Services!`,
+      [
+        { text: 'OK', onPress: () => {} },
+        { text: 'Open Admin Queue', onPress: () => setIsAdminModalOpen(true) }
+      ]
+    );
+  };
+
+  const handleAdminApproveApp = (id: string, name: string) => {
+    const appToApprove = mobilePendingApps.find(a => a.id === id);
+    if (!appToApprove) return;
+
+    const newService: ServiceItem = {
+      id: `s-${Date.now()}`,
+      title: appToApprove.serviceTitle,
+      hourlyRate: Number(appToApprove.hourlyRate),
+      providerName: appToApprove.name,
+      providerAvatar: appToApprove.ratingImages[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+      disabilityBadge: (appToApprove.disabilityBadge || 'Verified Freelancer') as any,
+      rating: appToApprove.rating,
+      reviewsCount: 1,
+      category: appToApprove.category,
+      availability: `${appToApprove.district} (${appToApprove.isFreelancer ? 'Freelancer' : 'In-House'})`,
+      portfolioImages: appToApprove.ratingImages,
+      description: appToApprove.description,
+      skills: appToApprove.skills
+    };
+
+    setMobileServices(prev => [newService, ...prev]);
+    setMobilePendingApps(prev => prev.filter(a => a.id !== id));
+    setIsAdminModalOpen(false);
+    setActiveTab('services');
+
+    Alert.alert(
+      'Approved (OK)! 🎉',
+      `Approved application for ${name}! OK confirmed and service has been published live to Navbar Services.`
+    );
+  };
 
   const startVoiceSearch = () => {
     if (Platform.OS === 'web') {
@@ -888,17 +1009,62 @@ export default function AppMobile() {
           {/* SERVICES */}
           {activeTab === 'services' && (
             <View>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  dynamicText(18),
-                  { color: textColor },
-                ]}
-              >
-                🤝 Inclusive Services
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    dynamicText(18),
+                    { color: textColor, marginBottom: 0 },
+                  ]}
+                >
+                  🤝 Inclusive Services
+                </Text>
 
-              {mockServices.map((srv) => (
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: accentColor,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 12,
+                  }}
+                  onPress={() => setIsFreelancerFormOpen(true)}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                    + Register Form
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {mobilePendingApps.length > 0 && (
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#0f172a',
+                    borderColor: '#334155',
+                    borderWidth: 1,
+                    padding: 12,
+                    borderRadius: 16,
+                    marginBottom: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                  onPress={() => setIsAdminModalOpen(true)}
+                >
+                  <View>
+                    <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 12 }}>
+                      🛡️ Admin Dashboard Queue ({mobilePendingApps.length})
+                    </Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 10 }}>
+                      Pending freelancer applications waiting for OK approval
+                    </Text>
+                  </View>
+                  <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 11 }}>
+                    Review →
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {mobileServices.map((srv) => (
                 <View
                   key={srv.id}
                   style={[
@@ -1221,12 +1387,10 @@ export default function AppMobile() {
                           marginTop: 10,
                         },
                       ]}
-                      onPress={() =>
-                        Alert.alert(
-                          'Applied!',
-                          `Application submitted for ${job.title}`,
-                        )
-                      }
+                      onPress={() => {
+                        setFormServiceTitle(job.title + ' Service');
+                        setIsFreelancerFormOpen(true);
+                      }}
                       accessibilityRole="button"
                       accessibilityLabel={`Apply for ${job.title} at ${job.company}`}
                       accessibilityHint="Double tap to submit your application"
@@ -1536,6 +1700,85 @@ export default function AppMobile() {
               ))}
             </View>
           )}
+
+          {/* ADMIN DASHBOARD SCREEN */}
+          {activeTab === 'admin' && (
+            <View style={{ padding: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    dynamicText(18),
+                    { color: textColor },
+                  ]}
+                >
+                  🛡️ Admin Dashboard
+                </Text>
+                <View style={{ backgroundColor: '#0284c7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
+                    {mobilePendingApps.length} Pending
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={{ color: subTextColor, fontSize: 12, marginBottom: 16 }}>
+                Review and approve freelancer applications. Approved services immediately display on the Navbar Services tab.
+              </Text>
+
+              {mobilePendingApps.length === 0 ? (
+                <View style={{ backgroundColor: cardBg, padding: 24, borderRadius: 20, alignItems: 'center', borderColor: '#334155', borderWidth: 1 }}>
+                  <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 16 }}>All Applications Approved! ✨</Text>
+                  <Text style={{ color: subTextColor, fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+                    There are currently no pending freelancer registration applications in the queue.
+                  </Text>
+                </View>
+              ) : (
+                mobilePendingApps.map((app) => (
+                  <View key={app.id} style={{ backgroundColor: cardBg, padding: 16, borderRadius: 20, marginBottom: 14, borderColor: '#334155', borderWidth: 1 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 15 }}>{app.name} (Age: {app.age})</Text>
+                      <View style={{ backgroundColor: '#0284c7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>Pending OK</Text>
+                      </View>
+                    </View>
+                    <Text style={{ color: accentColor, fontWeight: 'bold', fontSize: 12 }}>📍 {app.district} District • {app.isFreelancer ? 'Freelancer (YES)' : 'Staff (NO)'}</Text>
+                    
+                    <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 10, borderRadius: 12, marginVertical: 8 }}>
+                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>{app.serviceTitle}</Text>
+                      <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 12 }}>LKR {app.hourlyRate} / hr</Text>
+                      <Text style={{ color: '#fbbf24', fontSize: 11, marginTop: 2 }}>★ Rating Score: {app.rating}.0 / 5.0</Text>
+                      
+                      {app.ratingImages && app.ratingImages.length > 0 && (
+                        <View style={{ marginTop: 8 }}>
+                          <Text style={{ color: subTextColor, fontSize: 10, marginBottom: 4 }}>Uploaded Rating Proof Photos ({app.ratingImages.length}):</Text>
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                            {app.ratingImages.map((img, i) => (
+                              <Image key={i} source={{ uri: img }} style={{ width: 50, height: 50, borderRadius: 8 }} />
+                            ))}
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: 10, borderRadius: 12, marginBottom: 12 }}>
+                      <Text style={{ color: '#f59e0b', fontWeight: 'bold', fontSize: 11 }}>📱 Phone: {app.phone}</Text>
+                      <Text style={{ color: '#f59e0b', fontSize: 11 }}>🛡️ Guardian: {app.guardianName} ({app.guardianPhone})</Text>
+                      {app.address ? <Text style={{ color: subTextColor, fontSize: 11, marginTop: 2 }}>🏠 Address: {app.address}</Text> : null}
+                    </View>
+
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#10b981', padding: 12, borderRadius: 14, alignItems: 'center' }}
+                      onPress={() => handleAdminApproveApp(app.id, app.name)}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>
+                        Approve & Add to Navbar Services (OK)
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
         </ScrollView>
 
         {/* AI Voice Hub Modal */}
@@ -1674,6 +1917,7 @@ export default function AppMobile() {
               'services',
               'jobs',
               'map',
+              'admin',
               'profile',
             ] as const
           ).map((tab) => (
@@ -1693,7 +1937,9 @@ export default function AppMobile() {
                         ? '💼'
                         : tab === 'map'
                           ? '🗺️'
-                          : '👤'}
+                          : tab === 'admin'
+                            ? '🛡️'
+                            : '👤'}
               </Text>
 
               <Text
@@ -1709,7 +1955,7 @@ export default function AppMobile() {
                   },
                 ]}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'admin' ? 'Admin' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -1735,6 +1981,288 @@ export default function AppMobile() {
           fontScale={fontScale}
           setFontScale={setFontScale}
         />
+
+        {/* Freelancer Registration Form Modal */}
+        <Modal
+          visible={isFreelancerFormOpen}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setIsFreelancerFormOpen(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '85%' }}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: textColor }}>
+                    🛠️ Freelancer Registration Form
+                  </Text>
+                  <TouchableOpacity onPress={() => setIsFreelancerFormOpen(false)}>
+                    <Text style={{ fontSize: 18, color: subTextColor, fontWeight: 'bold' }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Section 1: Personal Info */}
+                <Text style={{ fontSize: 12, fontWeight: 'bold', color: accentColor, marginBottom: 8, textTransform: 'uppercase' }}>
+                  1. Personal Details
+                </Text>
+                
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Applicant Name *</Text>
+                <TextInput
+                  style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12, marginBottom: 10 }}
+                  placeholder="e.g. Kasun Perera"
+                  placeholderTextColor="#64748b"
+                  value={formName}
+                  onChangeText={setFormName}
+                />
+
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Age</Text>
+                    <TextInput
+                      style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12 }}
+                      placeholder="e.g. 26"
+                      keyboardType="numeric"
+                      placeholderTextColor="#64748b"
+                      value={formAge}
+                      onChangeText={setFormAge}
+                    />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>District *</Text>
+                    <TextInput
+                      style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12 }}
+                      placeholder="e.g. Colombo, Kandy"
+                      placeholderTextColor="#64748b"
+                      value={formDistrict}
+                      onChangeText={setFormDistrict}
+                    />
+                  </View>
+                </View>
+
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Phone Number *</Text>
+                <TextInput
+                  style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12, marginBottom: 10 }}
+                  placeholder="+94 77 123 4567"
+                  placeholderTextColor="#64748b"
+                  value={formPhone}
+                  onChangeText={setFormPhone}
+                />
+
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Full Address</Text>
+                <TextInput
+                  style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12, marginBottom: 10 }}
+                  placeholder="No. 45, Temple Road, Colombo"
+                  placeholderTextColor="#64748b"
+                  value={formAddress}
+                  onChangeText={setFormAddress}
+                />
+
+                {/* Section 2: Guardian Info */}
+                <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#f59e0b', marginTop: 6, marginBottom: 8, textTransform: 'uppercase' }}>
+                  2. Guardian Details (භාරකරුගේ විස්තර)
+                </Text>
+                
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Guardian Name</Text>
+                    <TextInput
+                      style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12 }}
+                      placeholder="Sunil Perera (Father)"
+                      placeholderTextColor="#64748b"
+                      value={formGuardianName}
+                      onChangeText={setFormGuardianName}
+                    />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Guardian Phone</Text>
+                    <TextInput
+                      style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12 }}
+                      placeholder="+94 71 888 9900"
+                      placeholderTextColor="#64748b"
+                      value={formGuardianPhone}
+                      onChangeText={setFormGuardianPhone}
+                    />
+                  </View>
+                </View>
+
+                {/* Section 3: Freelancer Yes/No */}
+                <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#38bdf8', marginTop: 6, marginBottom: 8, textTransform: 'uppercase' }}>
+                  3. Freelancer Status (Freelancer Yes / No)
+                </Text>
+                
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+                  <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: formIsFreelancer ? accentColor : themeBg, padding: 12, borderRadius: 12, alignItems: 'center' }}
+                    onPress={() => setFormIsFreelancer(true)}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>YES - Freelancer</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: !formIsFreelancer ? '#334155' : themeBg, padding: 12, borderRadius: 12, alignItems: 'center' }}
+                    onPress={() => setFormIsFreelancer(false)}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>NO - Staff</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Section 4: Rating & Proof Images */}
+                <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#fbbf24', marginTop: 6, marginBottom: 8, textTransform: 'uppercase' }}>
+                  4. Rating Score & Proof Images
+                </Text>
+
+                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity
+                      key={star}
+                      style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: star <= formRating ? '#f59e0b' : '#334155' }}
+                      onPress={() => setFormRating(star)}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>★ {star}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Local Storage Photo Upload Section Right Below Ratings */}
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 6 }}>
+                  📷 Upload Photos from Local Storage ({formRatingImages.length} uploaded)
+                </Text>
+
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: themeBg,
+                    borderColor: accentColor,
+                    borderWidth: 2,
+                    borderStyle: 'dashed',
+                    borderRadius: 14,
+                    padding: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 12
+                  }}
+                  onPress={pickImageFromLocalStorage}
+                >
+                  <Text style={{ color: accentColor, fontWeight: 'bold', fontSize: 13 }}>
+                    📂 Choose Photos from Device / Local Storage
+                  </Text>
+                  <Text style={{ color: subTextColor, fontSize: 10, marginTop: 4, textAlign: 'center' }}>
+                    Tap to open your phone/computer photo gallery and select local files
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Rating Images Preview Gallery */}
+                {formRatingImages.length > 0 && (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                    {formRatingImages.map((img, idx) => (
+                      <View key={idx} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#334155' }}>
+                        <Image source={{ uri: img }} style={{ width: 60, height: 55 }} />
+                        <TouchableOpacity
+                          style={{ position: 'absolute', top: 3, right: 3, backgroundColor: '#ef4444', width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' }}
+                          onPress={() => setFormRatingImages(prev => prev.filter((_, i) => i !== idx))}
+                        >
+                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Section 5: Service Info */}
+                <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#34d399', marginTop: 6, marginBottom: 8, textTransform: 'uppercase' }}>
+                  5. Service Details
+                </Text>
+
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Service Title *</Text>
+                <TextInput
+                  style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12, marginBottom: 10 }}
+                  placeholder="e.g. Handbags Making Service"
+                  placeholderTextColor="#64748b"
+                  value={formServiceTitle}
+                  onChangeText={setFormServiceTitle}
+                />
+
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Hourly Rate (LKR)</Text>
+                <TextInput
+                  style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12, marginBottom: 14 }}
+                  placeholder="4500"
+                  keyboardType="numeric"
+                  placeholderTextColor="#64748b"
+                  value={formHourlyRate}
+                  onChangeText={setFormHourlyRate}
+                />
+
+                <TouchableOpacity
+                  style={{ backgroundColor: accentColor, padding: 14, borderRadius: 14, alignItems: 'center', marginTop: 6 }}
+                  onPress={handleFreelancerFormSubmit}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>
+                    Submit Application to Admin Dashboard
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Admin Review Queue Modal */}
+        <Modal
+          visible={isAdminModalOpen}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setIsAdminModalOpen(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '85%' }}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: textColor }}>
+                    🛡️ Admin Dashboard Queue ({mobilePendingApps.length})
+                  </Text>
+                  <TouchableOpacity onPress={() => setIsAdminModalOpen(false)}>
+                    <Text style={{ fontSize: 18, color: subTextColor, fontWeight: 'bold' }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {mobilePendingApps.length === 0 ? (
+                  <View style={{ padding: 20, alignItems: 'center' }}>
+                    <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 14 }}>All Applications Approved!</Text>
+                    <Text style={{ color: subTextColor, fontSize: 12, marginTop: 4 }}>No pending freelancer applications.</Text>
+                  </View>
+                ) : (
+                  mobilePendingApps.map((app) => (
+                    <View key={app.id} style={{ backgroundColor: themeBg, padding: 14, borderRadius: 16, marginBottom: 12, borderColor: '#334155', borderWidth: 1 }}>
+                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 14 }}>{app.name} (Age: {app.age})</Text>
+                      <Text style={{ color: accentColor, fontWeight: 'bold', fontSize: 11, marginTop: 2 }}>📍 {app.district} District • {app.isFreelancer ? 'Freelancer (YES)' : 'Staff (NO)'}</Text>
+                      
+                      <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 10, marginVertical: 8 }}>
+                        <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 12 }}>{app.serviceTitle}</Text>
+                        <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 11 }}>LKR {app.hourlyRate} / hr</Text>
+                        <Text style={{ color: '#fbbf24', fontSize: 11, marginTop: 2 }}>★ Rating: {app.rating}.0 / 5.0</Text>
+                      </View>
+
+                      <View style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: 8, borderRadius: 10, marginBottom: 8 }}>
+                        <Text style={{ color: '#f59e0b', fontWeight: 'bold', fontSize: 10 }}>APPLICANT PHONE: {app.phone}</Text>
+                        <Text style={{ color: '#f59e0b', fontSize: 10 }}>GUARDIAN: {app.guardianName} ({app.guardianPhone})</Text>
+                        {app.address ? <Text style={{ color: subTextColor, fontSize: 10, marginTop: 2 }}>ADDRESS: {app.address}</Text> : null}
+                      </View>
+
+                      <TouchableOpacity
+                        style={{ backgroundColor: '#10b981', padding: 12, borderRadius: 12, alignItems: 'center' }}
+                        onPress={() => handleAdminApproveApp(app.id, app.name)}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
+                          Approve & Add to Navbar Services (OK)
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </SafeAreaProvider>
   );
