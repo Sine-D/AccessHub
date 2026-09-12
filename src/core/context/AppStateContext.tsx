@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { UserRole, Product, User } from '../types';
-import { mockCurrentUser, mockProducts } from '../../mock/data';
+import { UserRole, Product, User, ServiceItem, FreelancerServiceApplication } from '../types';
+import { mockCurrentUser, mockProducts, mockServices, mockPendingServiceApplications } from '../../mock/data';
 
 export type ScreenView = 
   | 'splash'
@@ -40,6 +40,13 @@ interface AppStateContextType {
   setDeviceFrame: (frame: 'iphone' | 'android' | 'fullscreen') => void;
   sellModalOpen: boolean;
   setSellModalOpen: (open: boolean) => void;
+  freelancerModalOpen: boolean;
+  setFreelancerModalOpen: (open: boolean) => void;
+  servicesList: ServiceItem[];
+  pendingServiceApplications: FreelancerServiceApplication[];
+  addFreelancerServiceApplication: (appData: Omit<FreelancerServiceApplication, 'id' | 'status' | 'createdAt'>) => void;
+  approveServiceApplication: (id: string) => void;
+  rejectServiceApplication: (id: string) => void;
   unreadNotifications: number;
 }
 
@@ -56,6 +63,12 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [wishlist, setWishlist] = useState<string[]>(['p1', 'p3']);
   const [deviceFrame, setDeviceFrame] = useState<'iphone' | 'android' | 'fullscreen'>('iphone');
   const [sellModalOpen, setSellModalOpen] = useState(false);
+  const [freelancerModalOpen, setFreelancerModalOpen] = useState(false);
+  
+  // Dynamic Services & Approvals Queue State
+  const [servicesList, setServicesList] = useState<ServiceItem[]>(mockServices);
+  const [pendingServiceApplications, setPendingServiceApplications] = useState<FreelancerServiceApplication[]>(mockPendingServiceApplications);
+
   const unreadNotifications = 2;
 
   const addToCart = (product: Product) => {
@@ -84,6 +97,50 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
     );
   };
 
+  const addFreelancerServiceApplication = (appData: Omit<FreelancerServiceApplication, 'id' | 'status' | 'createdAt'>) => {
+    const newApp: FreelancerServiceApplication = {
+      ...appData,
+      id: `app-${Date.now()}`,
+      status: 'pending',
+      createdAt: new Date().toLocaleString()
+    };
+    setPendingServiceApplications(prev => [newApp, ...prev]);
+  };
+
+  const approveServiceApplication = (id: string) => {
+    const appToApprove = pendingServiceApplications.find(a => a.id === id);
+    if (!appToApprove) return;
+
+    // Convert approved application to a published ServiceItem
+    const newService: ServiceItem = {
+      id: `s-${Date.now()}`,
+      title: appToApprove.serviceTitle,
+      hourlyRate: Number(appToApprove.hourlyRate),
+      providerName: appToApprove.name,
+      providerAvatar: appToApprove.ratingImages[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+      disabilityBadge: (appToApprove.disabilityBadge || 'Verified Freelancer') as any,
+      rating: appToApprove.rating,
+      reviewsCount: 1,
+      category: appToApprove.category,
+      availability: `${appToApprove.district} (${appToApprove.isFreelancer ? 'Freelancer' : 'In-House'})`,
+      portfolioImages: appToApprove.ratingImages.length > 0 ? appToApprove.ratingImages : [
+        'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=600'
+      ],
+      description: appToApprove.description,
+      skills: appToApprove.skills.length > 0 ? appToApprove.skills : ['Freelancer', appToApprove.district]
+    };
+
+    // Add to active published services list
+    setServicesList(prev => [newService, ...prev]);
+
+    // Remove from pending application queue
+    setPendingServiceApplications(prev => prev.filter(a => a.id !== id));
+  };
+
+  const rejectServiceApplication = (id: string) => {
+    setPendingServiceApplications(prev => prev.filter(a => a.id !== id));
+  };
+
   return (
     <AppStateContext.Provider
       value={{
@@ -104,6 +161,13 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
         setDeviceFrame,
         sellModalOpen,
         setSellModalOpen,
+        freelancerModalOpen,
+        setFreelancerModalOpen,
+        servicesList,
+        pendingServiceApplications,
+        addFreelancerServiceApplication,
+        approveServiceApplication,
+        rejectServiceApplication,
         unreadNotifications,
       }}
     >
