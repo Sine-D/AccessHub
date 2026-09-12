@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 export const SellProductModal: React.FC = () => {
-  const { sellModalOpen, setSellModalOpen, setActiveScreen } = useAppState();
+  const { sellModalOpen, setSellModalOpen, setFreelancerModalOpen, setActiveScreen } = useAppState();
   const { speakText } = useAccessibility();
 
   const [itemType, setItemType] = useState<'product' | 'service' | 'job' | 'donation'>('product');
@@ -25,14 +25,20 @@ export const SellProductModal: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    isSubmitted;
+    if (itemType === 'service') {
+      setSellModalOpen(false);
+      setFreelancerModalOpen(true);
+      return;
+    }
+
     setIsSubmitted(true);
-    speakText(`Listing published successfully! Your ${itemType} is now live on AccessLink.`);
+    speakText(`Listing published successfully! Your ${itemType} is live on AccessLink.`);
 
     setTimeout(() => {
       setIsSubmitted(false);
       setSellModalOpen(false);
       if (itemType === 'product') setActiveScreen('marketplace');
-      if (itemType === 'service') setActiveScreen('services');
       if (itemType === 'job') setActiveScreen('jobs');
       if (itemType === 'donation') setActiveScreen('donations');
     }, 1500);
