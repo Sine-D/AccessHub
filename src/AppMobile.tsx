@@ -80,9 +80,10 @@ export default function AppMobile() {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [isListeningJobs, setIsListeningJobs] = useState(false);
 
-  // Dynamic Freelancer & Admin State for Mobile
-  const [mobileServices, setMobileServices] = useState<ServiceItem[]>(mockServices);
-  const [mobilePendingApps, setMobilePendingApps] = useState<FreelancerServiceApplication[]>(mockPendingServiceApplications);
+  // Dynamic Freelancer & Admin State for Mobile (REAL SUPABASE DATA ONLY)
+  const [mobileServices, setMobileServices] = useState<ServiceItem[]>([]);
+  const [mobilePendingApps, setMobilePendingApps] = useState<FreelancerServiceApplication[]>([]);
+  const [serviceSearch, setServiceSearch] = useState('');
   const [isFreelancerFormOpen, setIsFreelancerFormOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
@@ -124,14 +125,15 @@ export default function AppMobile() {
     }
   };
 
-  const handleFreelancerFormSubmit = () => {
+  const handleFreelancerFormSubmit = async () => {
     if (!formName.trim() || !formPhone.trim() || !formServiceTitle.trim()) {
       Alert.alert('Required Fields Missing', 'Please fill in Name, Phone Number, and Service Title.');
       return;
     }
 
+    const tempId = `app-${Date.now()}`;
     const newApp: FreelancerServiceApplication = {
-      id: `app-${Date.now()}`,
+      id: tempId,
       name: formName,
       age: formAge ? Number(formAge) : 25,
       district: formDistrict,
@@ -141,9 +143,7 @@ export default function AppMobile() {
       phone: formPhone,
       isFreelancer: formIsFreelancer,
       rating: formRating,
-      ratingImages: formRatingImages.length > 0 ? formRatingImages : [
-        'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=600'
-      ],
+      ratingImages: formRatingImages,
       serviceTitle: formServiceTitle,
       hourlyRate: Number(formHourlyRate) || 4500,
       category: formCategory,
@@ -156,6 +156,34 @@ export default function AppMobile() {
     setMobilePendingApps(prev => [newApp, ...prev]);
     setIsFreelancerFormOpen(false);
 
+    try {
+      const { data, error } = await supabase.from('freelancer_applications').insert([{
+        name: formName,
+        age: formAge ? Number(formAge) : 25,
+        district: formDistrict,
+        address: formAddress || 'Sri Lanka',
+        guardian_name: formGuardianName || 'N/A',
+        guardian_phone: formGuardianPhone || 'N/A',
+        phone: formPhone,
+        is_freelancer: formIsFreelancer,
+        rating: formRating,
+        rating_images: formRatingImages,
+        service_title: formServiceTitle,
+        hourly_rate: Number(formHourlyRate) || 4500,
+        category: formCategory,
+        description: formDescription || 'Professional freelancer service offered through AccessHub.',
+        skills: formSkills,
+        status: 'pending'
+      }]).select();
+
+      if (!error && data && data.length > 0) {
+        const realId = data[0].id;
+        setMobilePendingApps(prev => prev.map(item => item.id === tempId ? { ...item, id: realId } : item));
+      }
+    } catch (err) {
+      console.error('Error inserting mobile application to Supabase:', err);
+    }
+
     Alert.alert(
       'Application Submitted! 🛡️',
       `Your freelancer application for "${formServiceTitle}" has been sent to the Admin Dashboard for review. Once approved (OK), it will immediately publish to Navbar Services!`,
@@ -166,7 +194,7 @@ export default function AppMobile() {
     );
   };
 
-  const handleAdminApproveApp = (id: string, name: string) => {
+  const handleAdminApproveApp = async (id: string, name: string) => {
     const appToApprove = mobilePendingApps.find(a => a.id === id);
     if (!appToApprove) return;
 
@@ -190,6 +218,29 @@ export default function AppMobile() {
     setMobilePendingApps(prev => prev.filter(a => a.id !== id));
     setIsAdminModalOpen(false);
     setActiveTab('services');
+
+    try {
+      if (!id.startsWith('app-')) {
+        await supabase.from('freelancer_applications').update({ status: 'approved' }).eq('id', id);
+      }
+
+      await supabase.from('services').insert([{
+        title: newService.title,
+        hourly_rate: newService.hourlyRate,
+        provider_name: newService.providerName,
+        provider_avatar: newService.providerAvatar,
+        disability_badge: newService.disabilityBadge,
+        rating: newService.rating,
+        reviews_count: newService.reviewsCount,
+        category: newService.category,
+        availability: newService.availability,
+        portfolio_images: newService.portfolioImages,
+        description: newService.description,
+        skills: newService.skills
+      }]);
+    } catch (err) {
+      console.error('Error updating Supabase on mobile approval:', err);
+    }
 
     Alert.alert(
       'Approved (OK)! 🎉',
@@ -228,6 +279,66 @@ export default function AppMobile() {
   };
 
   useEffect(() => {
+    const fetchMobileServicesAndApps = async () => {
+      try {
+        // Fetch real services from Supabase
+        const { data: sData } = await supabase.from('services').select('*');
+        if (sData) {
+          const formattedServices: ServiceItem[] = sData.map(item => ({
+            id: item.id,
+            title: item.title,
+            hourlyRate: Number(item.hourly_rate),
+            providerName: item.provider_name,
+            providerAvatar: item.provider_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+            disabilityBadge: item.disability_badge || 'Verified Freelancer',
+            rating: item.rating || 5.0,
+            reviewsCount: item.reviews_count || 1,
+            category: item.category || 'Services',
+            availability: item.availability || 'Sri Lanka',
+            portfolioImages: item.portfolio_images || [],
+            description: item.description || '',
+            skills: item.skills || ['Freelancer']
+          }));
+          setMobileServices(formattedServices);
+        } else {
+          setMobileServices([]);
+        }
+
+        // Fetch real pending apps from Supabase
+        const { data: aData } = await supabase.from('freelancer_applications').select('*').eq('status', 'pending');
+        if (aData) {
+          const formattedApps: FreelancerServiceApplication[] = aData.map(item => ({
+            id: item.id,
+            name: item.name,
+            age: item.age,
+            district: item.district,
+            address: item.address,
+            guardianName: item.guardian_name,
+            guardianPhone: item.guardian_phone,
+            phone: item.phone,
+            isFreelancer: item.is_freelancer,
+            rating: item.rating,
+            ratingImages: item.rating_images || [],
+            serviceTitle: item.service_title,
+            hourlyRate: Number(item.hourly_rate),
+            category: item.category || 'Tech & Accessibility',
+            description: item.description || '',
+            skills: item.skills || [],
+            disabilityBadge: item.disability_badge,
+            status: item.status,
+            createdAt: new Date(item.created_at || Date.now()).toLocaleString()
+          }));
+          setMobilePendingApps(formattedApps);
+        } else {
+          setMobilePendingApps([]);
+        }
+      } catch (err) {
+        console.error('Error fetching mobile services/apps:', err);
+      }
+    };
+
+    fetchMobileServicesAndApps();
+
     if (activeTab === 'jobs') {
       const fetchJobs = async () => {
         setLoadingJobs(true);
@@ -1035,6 +1146,32 @@ export default function AppMobile() {
                 </TouchableOpacity>
               </View>
 
+              {/* SEARCH BAR FOR SERVICES */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: cardBg, borderRadius: 12, borderWidth: 1, borderColor: '#334155', overflow: 'hidden' }}>
+                  <TextInput
+                    style={[
+                      styles.searchInput,
+                      { flex: 1, color: textColor, marginBottom: 0, borderWidth: 0, paddingHorizontal: 12 },
+                    ]}
+                    placeholder="Search services, skills, providers..."
+                    placeholderTextColor={subTextColor}
+                    value={serviceSearch}
+                    onChangeText={setServiceSearch}
+                    accessibilityRole="search"
+                    accessibilityLabel="Search services input"
+                  />
+                  <TouchableOpacity
+                    onPress={startVoiceSearch}
+                    style={{ padding: 12 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Voice search"
+                  >
+                    <Text style={{ fontSize: 16 }}>🎤</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               {mobilePendingApps.length > 0 && (
                 <TouchableOpacity
                   style={{
@@ -1064,7 +1201,16 @@ export default function AppMobile() {
                 </TouchableOpacity>
               )}
 
-              {mobileServices.map((srv) => (
+              {mobileServices.filter((srv) => {
+                if (!serviceSearch.trim()) return true;
+                const q = serviceSearch.toLowerCase().trim();
+                const matchTitle = srv.title.toLowerCase().includes(q);
+                const matchProvider = srv.providerName.toLowerCase().includes(q);
+                const matchDesc = srv.description ? srv.description.toLowerCase().includes(q) : false;
+                const matchSkills = srv.skills ? srv.skills.some(s => s.toLowerCase().includes(q)) : false;
+                const matchBadge = srv.disabilityBadge ? srv.disabilityBadge.toLowerCase().includes(q) : false;
+                return matchTitle || matchProvider || matchDesc || matchSkills || matchBadge;
+              }).map((srv) => (
                 <View
                   key={srv.id}
                   style={[

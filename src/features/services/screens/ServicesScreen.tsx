@@ -11,12 +11,13 @@ import {
   MessageSquare,
   ShieldCheck,
   Plus,
-  UserCheck
+  Search
 } from 'lucide-react';
 
 export const ServicesScreen: React.FC = () => {
   const { servicesList, setActiveScreen, setFreelancerModalOpen } = useAppState();
   const { speakText } = useAccessibility();
+  const [searchQuery, setSearchQuery] = useState('');
   const [bookingSuccess, setBookingSuccess] = useState(false);
 
   const handleBookService = (serviceTitle: string) => {
@@ -27,6 +28,18 @@ export const ServicesScreen: React.FC = () => {
       setActiveScreen('chat');
     }, 1800);
   };
+
+  const filteredServices = servicesList.filter((service) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    const matchTitle = service.title.toLowerCase().includes(q);
+    const matchProvider = service.providerName.toLowerCase().includes(q);
+    const matchDesc = service.description.toLowerCase().includes(q);
+    const matchSkills = service.skills.some((s: string) => s.toLowerCase().includes(q));
+    const matchDistrict = service.availability ? service.availability.toLowerCase().includes(q) : false;
+    const matchBadge = service.disabilityBadge ? service.disabilityBadge.toLowerCase().includes(q) : false;
+    return matchTitle || matchProvider || matchDesc || matchSkills || matchDistrict || matchBadge;
+  });
 
   return (
     <div className="w-full h-full min-h-[800px] bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white flex flex-col justify-between overflow-y-auto">
@@ -64,14 +77,32 @@ export const ServicesScreen: React.FC = () => {
             </button>
 
             <span className="text-[10px] font-semibold text-teal-200">
-              {servicesList.length} Live Providers
+              {filteredServices.length} Providers Found
             </span>
           </div>
         </div>
 
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+          <input
+            type="text"
+            placeholder="Search services, skills, provider names, Colombo..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-teal-500 outline-none shadow-xs"
+          />
+        </div>
+
         {/* Services List */}
         <div className="space-y-4">
-          {servicesList.map((service) => (
+          {filteredServices.length === 0 ? (
+            <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2">
+              <p className="font-extrabold text-sm text-slate-700 dark:text-slate-300">No services found matching "{searchQuery}"</p>
+              <p className="text-xs text-slate-400">Try searching for other keywords like "UX", "Braille", "Design", or provider names.</p>
+            </div>
+          ) : (
+            filteredServices.map((service) => (
             <div 
               key={service.id}
               className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 shadow-sm hover:border-teal-500 transition-all"
@@ -153,7 +184,7 @@ export const ServicesScreen: React.FC = () => {
               </div>
 
             </div>
-          ))}
+          )))}
         </div>
 
         {bookingSuccess && (
