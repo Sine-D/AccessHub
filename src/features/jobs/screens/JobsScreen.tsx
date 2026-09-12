@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../core/supabase';
 import { JobPosting } from '../../../core/types';
+import { useAppState } from '../../../core/hooks/useAppState';
 import { useAccessibility } from '../../../core/hooks/useAccessibility';
 import { TopHeader } from '../../../core/navigation/TopHeader';
 import { BottomNav } from '../../../core/navigation/BottomNav';
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 
 export const JobsScreen: React.FC = () => {
+  const { setFreelancerModalOpen } = useAppState();
   const { speakText } = useAccessibility();
   const [jobs, setJobs] = useState<JobPosting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,26 +62,9 @@ export const JobsScreen: React.FC = () => {
     fetchJobs();
   }, []);
 
-  const handleApply = async (jobId: string, jobTitle: string) => {
-    setAppliedJob(jobTitle);
-    
-    try {
-      const { data: userData } = await (supabase.auth as any).getUser();
-      if (userData?.user) {
-        await supabase.from('job_applications').insert([
-          {
-            job_id: jobId,
-            user_id: userData.user.id,
-            status: 'PENDING'
-          }
-        ]);
-      }
-    } catch (err) {
-      console.error('Application error:', err);
-    }
-
-    speakText(`Application submitted for ${jobTitle}. Company recruiter has received your accessible profile.`);
-    setTimeout(() => setAppliedJob(null), 2500);
+  const handleApply = (jobTitle: string) => {
+    speakText(`Opening Freelancer Application Form for ${jobTitle}`);
+    setFreelancerModalOpen(true);
   };
 
   return (
@@ -182,13 +167,16 @@ export const JobsScreen: React.FC = () => {
               </p>
 
               {/* Apply Action */}
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
-                <span className="text-[11px] text-slate-400 font-medium">Posted {job.postedDate} • {job.applicantCount} applicants</span>
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-700 space-y-2">
+                <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                  <span>Posted {job.postedDate}</span>
+                  <span>{job.applicantCount} Applicants</span>
+                </div>
                 <button
-                  onClick={() => handleApply(job.id, job.title)}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition-all"
+                  onClick={() => handleApply(job.title)}
+                  className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-lg hover:shadow-blue-500/30 transition-all flex items-center justify-center space-x-1"
                 >
-                  1-Tap Apply
+                  <span>Apply Now</span>
                 </button>
               </div>
 
