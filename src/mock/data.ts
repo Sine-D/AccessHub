@@ -1,4 +1,62 @@
-import { User, Product, ServiceItem, JobPosting, DonationItem, MapPinItem, Message, NotificationItem } from '../core/types';
+import { User, Product, ServiceItem, FreelancerServiceApplication, JobPosting, DonationItem, MapPinItem, Message, NotificationItem } from '../core/types';
+
+export const SRI_LANKA_DISTRICTS = [
+  'Colombo', 'Gampaha', 'Kalutara', 'Kandy', 'Matale', 'Nuwara Eliya', 
+  'Galle', 'Matara', 'Hambantota', 'Jaffna', 'Kilinochchi', 'Mannar', 
+  'Vavuniya', 'Mullaitivu', 'Batticaloa', 'Ampara', 'Trincomalee', 
+  'Kurunegala', 'Puttalam', 'Anuradhapura', 'Polonnaruwa', 'Badulla', 
+  'Monaragala', 'Ratnapura', 'Kegalle'
+];
+
+export const mockPendingServiceApplications: FreelancerServiceApplication[] = [
+  {
+    id: 'app-101',
+    name: 'Ruwan Kumara',
+    age: 28,
+    district: 'Colombo',
+    address: 'No. 142/B, High Level Road, Maharagama',
+    guardianName: 'Sunil Kumara (Father)',
+    guardianPhone: '+94 77 123 4567',
+    phone: '+94 71 987 6543',
+    isFreelancer: true,
+    rating: 5,
+    ratingImages: [
+      'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&q=80&w=600',
+      'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&q=80&w=600'
+    ],
+    serviceTitle: 'Graphic Design & Adaptive Branding',
+    hourlyRate: 3500,
+    category: 'Design & Creative',
+    description: 'Expert graphic designer specializing in high contrast logos, accessible digital banners, and inclusive branding.',
+    skills: ['Figma', 'Illustrator', 'WCAG Graphics', 'Logo Design'],
+    disabilityBadge: 'Mobility Impaired',
+    status: 'pending',
+    createdAt: '2026-09-12 10:30 AM'
+  },
+  {
+    id: 'app-102',
+    name: 'Thilini Gunasekara',
+    age: 24,
+    district: 'Kandy',
+    address: 'Peradeniya Road, Kandy',
+    guardianName: 'Kamala Gunasekara (Mother)',
+    guardianPhone: '+94 76 333 2211',
+    phone: '+94 70 444 5566',
+    isFreelancer: true,
+    rating: 4.8,
+    ratingImages: [
+      'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=600'
+    ],
+    serviceTitle: 'Braille Proofreading & Document Translation',
+    hourlyRate: 4000,
+    category: 'Translation',
+    description: 'Certified Sinhala and English Braille transcriber and document formatting specialist.',
+    skills: ['Braille Transcription', 'Tactile Proofing', 'Sinhala Translation'],
+    disabilityBadge: 'Visually Impaired',
+    status: 'pending',
+    createdAt: '2026-09-12 14:15 PM'
+  }
+];
 
 export const mockCurrentUser: User = {
   id: 'u1',
