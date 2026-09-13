@@ -1007,7 +1007,6 @@ export default function AppMobile() {
             </View>
           )}
 
-
           {/* JOBS */}
           {activeTab === 'jobs' && (
             <View>
@@ -1256,7 +1255,7 @@ export default function AppMobile() {
                   <ReviewForm
                     locationId={reviewModalLocationId}
                     onSubmit={async (data) => {
-                      const newReview = addReview(data);
+                      addReview(data);
                       try {
                         await saveRating(data.locationId, data.criteriaRatings);
                       } catch (err) {
@@ -1271,7 +1270,6 @@ export default function AppMobile() {
               </View>
             </View>
           </Modal>
-
           {/* MAP */}
           {activeTab === 'map' && (
             <View>
