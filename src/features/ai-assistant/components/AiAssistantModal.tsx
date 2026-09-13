@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useAccessibility } from '../../../core/hooks/useAccessibility';
 import { useAppState } from '../../../core/hooks/useAppState';
 import { useSpeechRecognition } from '../../../core/hooks/useSpeechRecognition';
@@ -43,6 +43,19 @@ export const AiAssistantModal: React.FC = () => {
     'Ayubowan! I am AccessLink AI. Ask me anything via voice or scan an item.'
   );
   const [scannedResult, setScannedResult] = useState<string | null>(null);
+
+  const persistSpeechLanguage = useCallback((locale: string) => {
+    const supportedLocale = isSupportedSpeechLocale(locale)
+      ? locale
+      : DEFAULT_SPEECH_LOCALE;
+
+    setSpeechLanguageState(supportedLocale);
+    localStorage.setItem(
+      'accesshub_speech_language',
+      supportedLocale,
+    );
+  }, []);
+
   const {
     error: speechError,
     isListening,
@@ -52,15 +65,18 @@ export const AiAssistantModal: React.FC = () => {
     startListening,
     stopListening,
     transcript,
-  } = useSpeechRecognition({ language: speechLanguage });
+  } = useSpeechRecognition({
+    fallbackLanguage: DEFAULT_SPEECH_LOCALE,
+    language: speechLanguage,
+    onLanguageFallback: persistSpeechLanguage,
+  });
 
   if (!aiModalOpen) return null;
 
   const setSpeechLanguage = (locale: SpeechLocale) => {
-  setSpeechLanguageState(locale);
-  localStorage.setItem('accesshub_speech_language', locale);
-  resetTranscript();
-};
+    persistSpeechLanguage(locale);
+    resetTranscript();
+  };
 
  const handleVoiceCommand = (command: string) => {
   const cleanCommand = normalizeTranscript(command);
@@ -131,7 +147,7 @@ export const AiAssistantModal: React.FC = () => {
           </div>
           <button
             aria-label="Close AI assistant"
-            onClick={() => handleVoiceCommand(transcript)}
+            onClick={closeModal}
             className="p-1 rounded-full bg-white/10 hover:bg-white/20 transition-all text-white"
           >
             <X className="w-5 h-5" />

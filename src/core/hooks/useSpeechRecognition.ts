@@ -28,16 +28,21 @@ const errorMessages: Record<string, string> = {
 };
 
 interface UseSpeechRecognitionOptions {
+  fallbackLanguage?: string;
   language?: string;
+  onLanguageFallback?: (language: string) => void;
 }
 
 export const useSpeechRecognition = ({
+  fallbackLanguage = 'en-LK',
   language = 'en-US',
+  onLanguageFallback,
 }: UseSpeechRecognitionOptions = {}) => {
   const recognitionRef =
     useRef<SpeechRecognition | null>(null);
 
   const committedTranscriptRef = useRef('');
+  const fallbackAttemptedRef = useRef(false);
 
   const [transcript, setTranscriptState] =
     useState('');
@@ -160,6 +165,20 @@ export const useSpeechRecognition = ({
     };
 
     recognition.onerror = (event) => {
+      if (
+        event.error === 'language-not-supported' &&
+        language !== fallbackLanguage &&
+        !fallbackAttemptedRef.current
+      ) {
+        fallbackAttemptedRef.current = true;
+        onLanguageFallback?.(fallbackLanguage);
+        setError(
+          'The selected spoken language is not supported by this device. Recognition has switched to English. You can also type or correct the transcript.',
+        );
+        setIsListening(false);
+        return;
+      }
+
       if (event.error !== 'aborted') {
         setError(
           errorMessages[event.error] ??
@@ -189,9 +208,15 @@ export const useSpeechRecognition = ({
     }
   }, [
     Recognition,
+    fallbackLanguage,
     isListening,
     language,
+    onLanguageFallback,
   ]);
+
+  useEffect(() => {
+    fallbackAttemptedRef.current = false;
+  }, [language]);
 
   useEffect(() => {
     return () => {
