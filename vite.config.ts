@@ -23,8 +23,22 @@ export default defineConfig(({ mode }) => {
       ),
     },
     resolve: {
+      extensions: ['.web.js', '.web.jsx', '.web.ts', '.web.tsx', '.js', '.jsx', '.ts', '.tsx'],
       alias: {
         '@': path.resolve(__dirname, './src'),
+        'react-native-safe-area-context': path.resolve(
+          __dirname,
+          './src/utils/SafeAreaContext.web.tsx'
+        ),
+        'expo-auth-session': path.resolve(
+          __dirname,
+          './src/utils/ExpoAuthSession.web.ts'
+        ),
+        'expo-web-browser': path.resolve(
+          __dirname,
+          './src/utils/ExpoWebBrowser.web.ts'
+        ),
+        'react-native': 'react-native-web',
       },
     },
     server: {
