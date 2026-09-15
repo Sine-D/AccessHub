@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Image } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  Image,
+} from 'react-native';
 import { RatingMatrix } from './RatingMatrix';
 import { PhotoPicker } from './PhotoPicker';
 import { CriteriaRatings } from '../../types/review';
@@ -12,12 +19,13 @@ interface ReviewFormProps {
     criteriaRatings: CriteriaRatings;
     comment: string;
     photoUri: string | null;
-  }) => void;
+  }) => void | Promise<void>;
 }
 
-export const ReviewForm: React.FC<
-  ReviewFormProps
-> = ({ locationId, onSubmit }) => {
+export const ReviewForm: React.FC<ReviewFormProps> = ({
+  locationId,
+  onSubmit,
+}) => {
   const [criteriaRatings, setCriteriaRatings] =
     useState<CriteriaRatings>({
       wheelchairRamp: 0,
@@ -27,20 +35,12 @@ export const ReviewForm: React.FC<
     });
 
   const [comment, setComment] = useState('');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const [photoUri, setPhotoUri] =
-    useState<string | null>(null);
-
-  const [error, setError] =
-    useState<string | null>(null);
-
-  const [submitting, setSubmitting] =
-    useState(false);
-
-  const handleSubmit = () => {
-    const allRated = Object.values(
-      criteriaRatings,
-    ).every(
+  const handleSubmit = async () => {
+    const allRated = Object.values(criteriaRatings).every(
       (rating) => rating >= 1 && rating <= 5,
     );
 
@@ -48,7 +48,6 @@ export const ReviewForm: React.FC<
       setError(
         'Please rate all four accessibility criteria.',
       );
-
       return;
     }
 
@@ -60,23 +59,31 @@ export const ReviewForm: React.FC<
     setError(null);
     setSubmitting(true);
 
-    onSubmit({
-      locationId,
-      criteriaRatings,
-      comment: comment.trim(),
-      photoUri,
-    });
+    try {
+      await onSubmit({
+        locationId,
+        criteriaRatings,
+        comment: comment.trim(),
+        photoUri,
+      });
 
-    setCriteriaRatings({
-      wheelchairRamp: 0,
-      brailleMenu: 0,
-      audioSignal: 0,
-      accessibleRestroom: 0,
-    });
+      setCriteriaRatings({
+        wheelchairRamp: 0,
+        brailleMenu: 0,
+        audioSignal: 0,
+        accessibleRestroom: 0,
+      });
 
-    setComment('');
-    setPhotoUri(null);
-    setSubmitting(false);
+      setComment('');
+      setPhotoUri(null);
+    } catch (err) {
+      console.error('Failed to submit review:', err);
+      setError(
+        'Failed to submit the review. Please try again.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
