@@ -52,8 +52,7 @@ export const getAverageRatings = async (locationId: string) => {
   if (!data || data.length === 0) return null;
 
   const avg = (key: keyof typeof data[0]) =>
-    data.reduce((sum, r) => sum + r[key], 0) / data.length;
-
+  data.reduce((sum: number, r: typeof data[0]) => sum + r[key], 0) / data.length;
   return {
     wheelchairRamp: avg('wheelchair_ramp'),
     brailleMenu: avg('braille_menu'),
