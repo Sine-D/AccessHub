@@ -33,7 +33,8 @@ import {
   mockMessages,
   mockNotifications,
 } from './mock/data';
-import { saveRating } from './services/ratingsService';
+
+import { saveRatingWithVerification } from './services/ratingsService';
 import { CreateAccountScreen } from './features/auth';
 import { supabase } from './core/supabase';
 import { JobPosting } from './core/types';
@@ -72,37 +73,57 @@ export default function AppMobile() {
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [jobSearch, setJobSearch] = useState('');
   const [jobCategory, setJobCategory] = useState('All Jobs');
-  const [jobFilter, setJobFilter] = useState({ wheelchair: false, deaf: false, blind: false });
+  const [jobFilter, setJobFilter] = useState({
+    wheelchair: false,
+    deaf: false,
+    blind: false,
+  });
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [isListeningJobs, setIsListeningJobs] = useState(false);
 
   const startVoiceSearch = () => {
     if (Platform.OS === 'web') {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const SpeechRecognition =
+        (window as any).SpeechRecognition ||
+        (window as any).webkitSpeechRecognition;
+
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
+
         recognition.continuous = false;
         recognition.interimResults = false;
         recognition.lang = 'en-US';
 
         recognition.onstart = () => setIsListeningJobs(true);
+
         recognition.onresult = (event: any) => {
           const transcript = event.results[0][0].transcript;
           setJobSearch(transcript);
           setIsListeningJobs(false);
         };
+
         recognition.onerror = () => {
           setIsListeningJobs(false);
-          Alert.alert('Voice Search Error', 'Could not recognize voice. Please try again.');
+          Alert.alert(
+            'Voice Search Error',
+            'Could not recognize voice. Please try again.',
+          );
         };
+
         recognition.onend = () => setIsListeningJobs(false);
 
         recognition.start();
       } else {
-        Alert.alert('Not Supported', 'Voice search is not supported in this browser.');
+        Alert.alert(
+          'Not Supported',
+          'Voice search is not supported in this browser.',
+        );
       }
     } else {
-      Alert.alert('Not Supported', 'Voice search is currently available on the web version.');
+      Alert.alert(
+        'Not Supported',
+        'Voice search is currently available on the web version.',
+      );
     }
   };
 
@@ -110,25 +131,36 @@ export default function AppMobile() {
     if (activeTab === 'jobs') {
       const fetchJobs = async () => {
         setLoadingJobs(true);
+
         try {
-          const { data, error } = await supabase.from('jobs').select('*');
+          const { data, error } = await supabase
+            .from('jobs')
+            .select('*');
+
           if (error) throw error;
+
           if (data && data.length > 0) {
             const formattedJobs: JobPosting[] = data.map((job: any) => ({
               id: job.id,
               title: job.title,
               company: job.company || 'Partner Company',
-              companyLogo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=200',
+              companyLogo:
+                'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=200',
               salary: job.salary || 'Negotiable',
               location: job.location || 'Sri Lanka / Remote',
               accessibilityBadges: job.category ? [job.category] : [],
               eligible_for_wheelchair: job.eligible_for_wheelchair,
               eligible_for_deaf: job.eligible_for_deaf,
               eligible_for_blind: job.eligible_for_blind,
-              description: job.description || `Job category: ${job.category || 'N/A'}.`,
-              postedDate: job.updated_at ? new Date(job.updated_at).toLocaleDateString() : new Date().toLocaleDateString(),
-              applicantCount: 0
+              description:
+                job.description ||
+                `Job category: ${job.category || 'N/A'}.`,
+              postedDate: job.updated_at
+                ? new Date(job.updated_at).toLocaleDateString()
+                : new Date().toLocaleDateString(),
+              applicantCount: 0,
             }));
+
             setDbJobs(formattedJobs);
           } else {
             setDbJobs([]);
@@ -139,35 +171,75 @@ export default function AppMobile() {
           setLoadingJobs(false);
         }
       };
+
       fetchJobs();
     }
   }, [activeTab]);
 
   const filteredJobs = useMemo(() => {
     let result = dbJobs.filter((job) => {
-      const matchText = (job.title + ' ' + (job.category || '')).toLowerCase();
-      const matchesSearch = matchText.includes(jobSearch.toLowerCase());
-      const matchesCategory = jobCategory === 'All Jobs' || job.accessibilityBadges.includes(jobCategory) || job.category === jobCategory;
+      const matchText = (
+        job.title +
+        ' ' +
+        (job.category || '')
+      ).toLowerCase();
+
+      const matchesSearch = matchText.includes(
+        jobSearch.toLowerCase(),
+      );
+
+      const matchesCategory =
+        jobCategory === 'All Jobs' ||
+        job.accessibilityBadges.includes(jobCategory) ||
+        job.category === jobCategory;
 
       let matchesFilter = true;
-      if (jobFilter.wheelchair && !job.eligible_for_wheelchair) matchesFilter = false;
-      if (jobFilter.deaf && !job.eligible_for_deaf) matchesFilter = false;
-      if (jobFilter.blind && !job.eligible_for_blind) matchesFilter = false;
 
-      return matchesSearch && matchesCategory && matchesFilter;
+      if (
+        jobFilter.wheelchair &&
+        !job.eligible_for_wheelchair
+      ) {
+        matchesFilter = false;
+      }
+
+      if (jobFilter.deaf && !job.eligible_for_deaf) {
+        matchesFilter = false;
+      }
+
+      if (jobFilter.blind && !job.eligible_for_blind) {
+        matchesFilter = false;
+      }
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesFilter
+      );
     });
 
-    const onlyWheelchair = jobFilter.wheelchair && !jobFilter.deaf && !jobFilter.blind;
+    const onlyWheelchair =
+      jobFilter.wheelchair &&
+      !jobFilter.deaf &&
+      !jobFilter.blind;
 
     if (onlyWheelchair) {
       result.sort((a, b) => {
         const getPriority = (job: any) => {
-          if (!job.eligible_for_deaf && !job.eligible_for_blind) return 1;
-          if (job.eligible_for_deaf && !job.eligible_for_blind) return 2;
-          if (!job.eligible_for_deaf && job.eligible_for_blind) return 3;
-          if (job.eligible_for_deaf && job.eligible_for_blind) return 4;
+          if (!job.eligible_for_deaf && !job.eligible_for_blind)
+            return 1;
+
+          if (job.eligible_for_deaf && !job.eligible_for_blind)
+            return 2;
+
+          if (!job.eligible_for_deaf && job.eligible_for_blind)
+            return 3;
+
+          if (job.eligible_for_deaf && job.eligible_for_blind)
+            return 4;
+
           return 5;
         };
+
         return getPriority(a) - getPriority(b);
       });
     }
@@ -175,7 +247,6 @@ export default function AppMobile() {
     return result;
   }, [dbJobs, jobSearch, jobCategory, jobFilter]);
 
-  // Auto transition from Splash to Onboarding after 2.5 seconds
   useEffect(() => {
     if (activeTab === 'splash') {
       const timer = setTimeout(() => {
@@ -192,9 +263,12 @@ export default function AppMobile() {
     }
   };
 
-  // Font scale multiplier
   const fontSizeMultiplier =
-    fontScale === 'xl' ? 1.3 : fontScale === 'lg' ? 1.15 : 1.0;
+    fontScale === 'xl'
+      ? 1.3
+      : fontScale === 'lg'
+        ? 1.15
+        : 1.0;
 
   const dynamicText = (baseSize: number) => ({
     fontSize: Math.round(baseSize * fontSizeMultiplier),
@@ -219,8 +293,17 @@ export default function AppMobile() {
   if (activeTab === 'splash') {
     return (
       <SafeAreaProvider>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
-          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <SafeAreaView
+          style={{
+            flex: 1,
+            backgroundColor: '#ffffff',
+          }}
+        >
+          <StatusBar
+            barStyle="dark-content"
+            backgroundColor="#ffffff"
+          />
+
           <TouchableOpacity
             activeOpacity={0.95}
             onPress={() => setActiveTab('onboarding')}
@@ -234,7 +317,11 @@ export default function AppMobile() {
           >
             <Image
               source={require('./assets/images/access_hub_logo.png')}
-              style={{ width: 320, height: 320, resizeMode: 'contain' }}
+              style={{
+                width: 320,
+                height: 320,
+                resizeMode: 'contain',
+              }}
             />
           </TouchableOpacity>
         </SafeAreaView>
@@ -245,8 +332,17 @@ export default function AppMobile() {
   if (activeTab === 'onboarding') {
     return (
       <SafeAreaProvider>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
-          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <SafeAreaView
+          style={{
+            flex: 1,
+            backgroundColor: '#ffffff',
+          }}
+        >
+          <StatusBar
+            barStyle="dark-content"
+            backgroundColor="#ffffff"
+          />
+
           <View
             style={{
               flex: 1,
@@ -257,19 +353,63 @@ export default function AppMobile() {
               paddingVertical: 40,
             }}
           >
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+            <View
+              style={{
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: '100%',
+              }}
+            >
               <Image
                 source={require('./assets/images/Onboarding.png')}
-                style={{ width: 280, height: 280, resizeMode: 'contain', marginBottom: 24 }}
+                style={{
+                  width: 280,
+                  height: 280,
+                  resizeMode: 'contain',
+                  marginBottom: 24,
+                }}
               />
-              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#0d9488', backgroundColor: '#ccfbf1', paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20, marginBottom: 12 }}>
+
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: 'bold',
+                  color: '#0d9488',
+                  backgroundColor: '#ccfbf1',
+                  paddingHorizontal: 14,
+                  paddingVertical: 5,
+                  borderRadius: 20,
+                  marginBottom: 12,
+                }}
+              >
                 DISABLED SELLERS & CREATORS
               </Text>
-              <Text style={{ fontSize: 24, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 8 }}>
+
+              <Text
+                style={{
+                  fontSize: 24,
+                  fontWeight: '800',
+                  color: '#0f172a',
+                  textAlign: 'center',
+                  marginBottom: 8,
+                }}
+              >
                 Inclusive Local Marketplace
               </Text>
-              <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center', lineHeight: 20, maxWidth: 300 }}>
-                Empowering persons with disabilities to showcase handcrafted goods, adaptive products, and offer freelance professional services across Sri Lanka.
+
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: '#64748b',
+                  textAlign: 'center',
+                  lineHeight: 20,
+                  maxWidth: 300,
+                }}
+              >
+                Empowering persons with disabilities to showcase
+                handcrafted goods, adaptive products, and offer
+                freelance professional services across Sri Lanka.
               </Text>
             </View>
 
@@ -281,14 +421,23 @@ export default function AppMobile() {
                 width: '90%',
                 alignItems: 'center',
                 shadowColor: '#0d9488',
-                shadowOffset: { width: 0, height: 4 },
+                shadowOffset: {
+                  width: 0,
+                  height: 4,
+                },
                 shadowOpacity: 0.3,
                 shadowRadius: 8,
                 elevation: 4,
               }}
               onPress={() => setActiveTab('auth')}
             >
-              <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16 }}>
+              <Text
+                style={{
+                  color: '#ffffff',
+                  fontWeight: 'bold',
+                  fontSize: 16,
+                }}
+              >
                 🚀 Get Started Now
               </Text>
             </TouchableOpacity>
@@ -301,22 +450,68 @@ export default function AppMobile() {
   if (activeTab === 'auth') {
     return (
       <SafeAreaProvider>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
-          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 40 }}>
-            <View style={{ width: '100%', alignItems: 'center' }}>
+        <SafeAreaView
+          style={{
+            flex: 1,
+            backgroundColor: '#ffffff',
+          }}
+        >
+          <StatusBar
+            barStyle="dark-content"
+            backgroundColor="#ffffff"
+          />
+
+          <ScrollView
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingHorizontal: 24,
+              paddingVertical: 40,
+            }}
+          >
+            <View
+              style={{
+                width: '100%',
+                alignItems: 'center',
+              }}
+            >
               <Image
                 source={require('./assets/images/signup_login.jpg')}
-                style={{ width: 280, height: 260, resizeMode: 'contain', marginBottom: 20 }}
+                style={{
+                  width: 280,
+                  height: 260,
+                  resizeMode: 'contain',
+                  marginBottom: 20,
+                }}
               />
-              <Text style={{ fontSize: 24, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 8 }}>
+
+              <Text
+                style={{
+                  fontSize: 24,
+                  fontWeight: '800',
+                  color: '#0f172a',
+                  textAlign: 'center',
+                  marginBottom: 8,
+                }}
+              >
                 Welcome to AccessHub
               </Text>
-              <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center', lineHeight: 20, marginBottom: 24, maxWidth: 300 }}>
-                Sign up or log in to explore accessible products, jobs, and services.
+
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: '#64748b',
+                  textAlign: 'center',
+                  lineHeight: 20,
+                  marginBottom: 24,
+                  maxWidth: 300,
+                }}
+              >
+                Sign up or log in to explore accessible products,
+                jobs, and services.
               </Text>
 
-              {/* Create Account Button */}
               <TouchableOpacity
                 style={{
                   backgroundColor: '#0d9488',
@@ -326,19 +521,27 @@ export default function AppMobile() {
                   alignItems: 'center',
                   marginBottom: 12,
                   shadowColor: '#0d9488',
-                  shadowOffset: { width: 0, height: 4 },
+                  shadowOffset: {
+                    width: 0,
+                    height: 4,
+                  },
                   shadowOpacity: 0.3,
                   shadowRadius: 8,
                   elevation: 4,
                 }}
                 onPress={() => setActiveTab('register')}
               >
-                <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16 }}>
+                <Text
+                  style={{
+                    color: '#ffffff',
+                    fontWeight: 'bold',
+                    fontSize: 16,
+                  }}
+                >
                   Create Account
                 </Text>
               </TouchableOpacity>
 
-              {/* Log In Button */}
               <TouchableOpacity
                 style={{
                   backgroundColor: '#0f172a',
@@ -348,14 +551,23 @@ export default function AppMobile() {
                   alignItems: 'center',
                   marginBottom: 12,
                   shadowColor: '#0f172a',
-                  shadowOffset: { width: 0, height: 4 },
+                  shadowOffset: {
+                    width: 0,
+                    height: 4,
+                  },
                   shadowOpacity: 0.2,
                   shadowRadius: 8,
                   elevation: 3,
                 }}
                 onPress={() => setActiveTab('home')}
               >
-                <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16 }}>
+                <Text
+                  style={{
+                    color: '#ffffff',
+                    fontWeight: 'bold',
+                    fontSize: 16,
+                  }}
+                >
                   Log In
                 </Text>
               </TouchableOpacity>
@@ -378,7 +590,12 @@ export default function AppMobile() {
   return (
     <SafeAreaProvider>
       <SafeAreaView
-        style={[styles.container, { backgroundColor: themeBg }]}
+        style={[
+          styles.container,
+          {
+            backgroundColor: themeBg,
+          },
+        ]}
       >
         <StatusBar
           barStyle="light-content"
@@ -406,7 +623,9 @@ export default function AppMobile() {
                 style={[
                   styles.brandTitle,
                   dynamicText(18),
-                  { color: textColor },
+                  {
+                    color: textColor,
+                  },
                 ]}
               >
                 AccessLink
@@ -416,7 +635,9 @@ export default function AppMobile() {
                 style={[
                   styles.brandSub,
                   dynamicText(10),
-                  { color: subTextColor },
+                  {
+                    color: subTextColor,
+                  },
                 ]}
               >
                 Inclusive Mobile Ecosystem
@@ -439,7 +660,9 @@ export default function AppMobile() {
               style={[
                 styles.aiButtonText,
                 {
-                  color: highContrast ? '#000' : '#fff',
+                  color: highContrast
+                    ? '#000'
+                    : '#fff',
                 },
               ]}
             >
@@ -485,10 +708,15 @@ export default function AppMobile() {
               styles.a11yChip,
               highContrast && styles.a11yChipActive,
             ]}
-            onPress={() => setHighContrast(!highContrast)}
+            onPress={() =>
+              setHighContrast(!highContrast)
+            }
           >
             <Text style={styles.a11yChipText}>
-              👁️ {highContrast ? 'Contrast ON' : 'Contrast'}
+              👁️{' '}
+              {highContrast
+                ? 'Contrast ON'
+                : 'Contrast'}
             </Text>
           </TouchableOpacity>
 
@@ -498,7 +726,8 @@ export default function AppMobile() {
                 key={s}
                 style={[
                   styles.scaleBtn,
-                  fontScale === s && styles.scaleBtnActive,
+                  fontScale === s &&
+                    styles.scaleBtnActive,
                 ]}
                 onPress={() => setFontScale(s)}
               >
@@ -515,20 +744,23 @@ export default function AppMobile() {
           style={styles.contentScroll}
           contentContainerStyle={styles.scrollContent}
         >
-
           {/* HOME */}
           {activeTab === 'home' && (
             <View>
               <View
                 style={[
                   styles.heroCard,
-                  { backgroundColor: cardBg },
+                  {
+                    backgroundColor: cardBg,
+                  },
                 ]}
               >
                 <Text
                   style={[
                     styles.heroBadge,
-                    { color: accentColor },
+                    {
+                      color: accentColor,
+                    },
                   ]}
                 >
                   WELCOME BACK 👋
@@ -538,7 +770,9 @@ export default function AppMobile() {
                   style={[
                     styles.heroTitle,
                     dynamicText(20),
-                    { color: textColor },
+                    {
+                      color: textColor,
+                    },
                   ]}
                 >
                   {mockCurrentUser.name}
@@ -548,7 +782,9 @@ export default function AppMobile() {
                   style={[
                     styles.heroSub,
                     dynamicText(12),
-                    { color: subTextColor },
+                    {
+                      color: subTextColor,
+                    },
                   ]}
                 >
                   Empowering disabled entrepreneurs and barrier-free
@@ -560,13 +796,15 @@ export default function AppMobile() {
                     <Text
                       style={[
                         styles.statValue,
-                        { color: accentColor },
+                        {
+                          color: accentColor,
+                        },
                       ]}
                     >
                       LKR{' '}
                       {(
-                        (mockCurrentUser.totalEarnings ?? 0) /
-                        1000
+                        (mockCurrentUser.totalEarnings ??
+                          0) / 1000
                       ).toFixed(0)}
                       k
                     </Text>
@@ -574,7 +812,9 @@ export default function AppMobile() {
                     <Text
                       style={[
                         styles.statLabel,
-                        { color: subTextColor },
+                        {
+                          color: subTextColor,
+                        },
                       ]}
                     >
                       Earnings
@@ -585,7 +825,9 @@ export default function AppMobile() {
                     <Text
                       style={[
                         styles.statValue,
-                        { color: accentColor },
+                        {
+                          color: accentColor,
+                        },
                       ]}
                     >
                       {mockCurrentUser.totalOrders ?? 0}
@@ -594,7 +836,9 @@ export default function AppMobile() {
                     <Text
                       style={[
                         styles.statLabel,
-                        { color: subTextColor },
+                        {
+                          color: subTextColor,
+                        },
                       ]}
                     >
                       Orders
@@ -605,7 +849,9 @@ export default function AppMobile() {
                     <Text
                       style={[
                         styles.statValue,
-                        { color: accentColor },
+                        {
+                          color: accentColor,
+                        },
                       ]}
                     >
                       ⭐ {mockCurrentUser.rating}
@@ -614,7 +860,9 @@ export default function AppMobile() {
                     <Text
                       style={[
                         styles.statLabel,
-                        { color: subTextColor },
+                        {
+                          color: subTextColor,
+                        },
                       ]}
                     >
                       Rating
@@ -627,7 +875,9 @@ export default function AppMobile() {
                 style={[
                   styles.sectionTitle,
                   dynamicText(16),
-                  { color: textColor },
+                  {
+                    color: textColor,
+                  },
                 ]}
               >
                 🚀 Inclusive Suite
@@ -637,16 +887,25 @@ export default function AppMobile() {
                 <TouchableOpacity
                   style={[
                     styles.quickCard,
-                    { backgroundColor: cardBg },
+                    {
+                      backgroundColor: cardBg,
+                    },
                   ]}
-                  onPress={() => setActiveTab('marketplace')}
+                  onPress={() =>
+                    setActiveTab('marketplace')
+                  }
                 >
-                  <Text style={styles.quickIcon}>🛒</Text>
+                  <Text style={styles.quickIcon}>
+                    🛒
+                  </Text>
+
                   <Text
                     style={[
                       styles.quickText,
                       dynamicText(12),
-                      { color: textColor },
+                      {
+                        color: textColor,
+                      },
                     ]}
                   >
                     Marketplace
@@ -656,16 +915,25 @@ export default function AppMobile() {
                 <TouchableOpacity
                   style={[
                     styles.quickCard,
-                    { backgroundColor: cardBg },
+                    {
+                      backgroundColor: cardBg,
+                    },
                   ]}
-                  onPress={() => setActiveTab('services')}
+                  onPress={() =>
+                    setActiveTab('services')
+                  }
                 >
-                  <Text style={styles.quickIcon}>🤝</Text>
+                  <Text style={styles.quickIcon}>
+                    🤝
+                  </Text>
+
                   <Text
                     style={[
                       styles.quickText,
                       dynamicText(12),
-                      { color: textColor },
+                      {
+                        color: textColor,
+                      },
                     ]}
                   >
                     Services
@@ -675,16 +943,25 @@ export default function AppMobile() {
                 <TouchableOpacity
                   style={[
                     styles.quickCard,
-                    { backgroundColor: cardBg },
+                    {
+                      backgroundColor: cardBg,
+                    },
                   ]}
-                  onPress={() => setActiveTab('jobs')}
+                  onPress={() =>
+                    setActiveTab('jobs')
+                  }
                 >
-                  <Text style={styles.quickIcon}>💼</Text>
+                  <Text style={styles.quickIcon}>
+                    💼
+                  </Text>
+
                   <Text
                     style={[
                       styles.quickText,
                       dynamicText(12),
-                      { color: textColor },
+                      {
+                        color: textColor,
+                      },
                     ]}
                   >
                     Jobs
@@ -694,16 +971,25 @@ export default function AppMobile() {
                 <TouchableOpacity
                   style={[
                     styles.quickCard,
-                    { backgroundColor: cardBg },
+                    {
+                      backgroundColor: cardBg,
+                    },
                   ]}
-                  onPress={() => setActiveTab('map')}
+                  onPress={() =>
+                    setActiveTab('map')
+                  }
                 >
-                  <Text style={styles.quickIcon}>🗺️</Text>
+                  <Text style={styles.quickIcon}>
+                    🗺️
+                  </Text>
+
                   <Text
                     style={[
                       styles.quickText,
                       dynamicText(12),
-                      { color: textColor },
+                      {
+                        color: textColor,
+                      },
                     ]}
                   >
                     Map Pins
@@ -715,7 +1001,9 @@ export default function AppMobile() {
                 style={[
                   styles.sectionTitle,
                   dynamicText(16),
-                  { color: textColor },
+                  {
+                    color: textColor,
+                  },
                 ]}
               >
                 ✨ Featured Assistive Tech
@@ -726,7 +1014,9 @@ export default function AppMobile() {
                   key={item.id}
                   style={[
                     styles.productCard,
-                    { backgroundColor: cardBg },
+                    {
+                      backgroundColor: cardBg,
+                    },
                   ]}
                 >
                   <Image
@@ -738,7 +1028,9 @@ export default function AppMobile() {
                     <Text
                       style={[
                         styles.badgeTag,
-                        { color: accentColor },
+                        {
+                          color: accentColor,
+                        },
                       ]}
                     >
                       ♿ {item.disabilityBadge}
@@ -748,7 +1040,9 @@ export default function AppMobile() {
                       style={[
                         styles.productTitle,
                         dynamicText(14),
-                        { color: textColor },
+                        {
+                          color: textColor,
+                        },
                       ]}
                     >
                       {item.title}
@@ -758,7 +1052,9 @@ export default function AppMobile() {
                       style={[
                         styles.productPrice,
                         dynamicText(15),
-                        { color: accentColor },
+                        {
+                          color: accentColor,
+                        },
                       ]}
                     >
                       LKR {item.price.toLocaleString()}
@@ -768,7 +1064,9 @@ export default function AppMobile() {
                       style={[
                         styles.sellerName,
                         dynamicText(11),
-                        { color: subTextColor },
+                        {
+                          color: subTextColor,
+                        },
                       ]}
                     >
                       By {item.sellerName}
@@ -786,7 +1084,9 @@ export default function AppMobile() {
                 style={[
                   styles.sectionTitle,
                   dynamicText(18),
-                  { color: textColor },
+                  {
+                    color: textColor,
+                  },
                 ]}
               >
                 🛒 Assistive Marketplace
@@ -811,7 +1111,9 @@ export default function AppMobile() {
                   key={item.id}
                   style={[
                     styles.productCard,
-                    { backgroundColor: cardBg },
+                    {
+                      backgroundColor: cardBg,
+                    },
                   ]}
                 >
                   <Image
@@ -823,7 +1125,9 @@ export default function AppMobile() {
                     <Text
                       style={[
                         styles.badgeTag,
-                        { color: accentColor },
+                        {
+                          color: accentColor,
+                        },
                       ]}
                     >
                       ♿ {item.disabilityBadge}
@@ -833,7 +1137,9 @@ export default function AppMobile() {
                       style={[
                         styles.productTitle,
                         dynamicText(14),
-                        { color: textColor },
+                        {
+                          color: textColor,
+                        },
                       ]}
                     >
                       {item.title}
@@ -843,7 +1149,9 @@ export default function AppMobile() {
                       style={[
                         styles.productPrice,
                         dynamicText(15),
-                        { color: accentColor },
+                        {
+                          color: accentColor,
+                        },
                       ]}
                     >
                       LKR {item.price.toLocaleString()}
@@ -853,7 +1161,9 @@ export default function AppMobile() {
                       style={[
                         styles.sellerName,
                         dynamicText(11),
-                        { color: subTextColor },
+                        {
+                          color: subTextColor,
+                        },
                       ]}
                     >
                       Seller: {item.sellerName} (⭐{' '}
@@ -863,7 +1173,10 @@ export default function AppMobile() {
                     <TouchableOpacity
                       style={[
                         styles.buyBtn,
-                        { backgroundColor: primaryButtonBg },
+                        {
+                          backgroundColor:
+                            primaryButtonBg,
+                        },
                       ]}
                       onPress={() => {
                         setCheckoutProduct(item);
@@ -873,7 +1186,10 @@ export default function AppMobile() {
                       <Text
                         style={[
                           styles.buyBtnText,
-                          { color: primaryButtonText },
+                          {
+                            color:
+                              primaryButtonText,
+                          },
                         ]}
                       >
                         Order Now
@@ -892,7 +1208,9 @@ export default function AppMobile() {
                 style={[
                   styles.sectionTitle,
                   dynamicText(18),
-                  { color: textColor },
+                  {
+                    color: textColor,
+                  },
                 ]}
               >
                 🤝 Inclusive Services
@@ -903,12 +1221,16 @@ export default function AppMobile() {
                   key={srv.id}
                   style={[
                     styles.serviceCard,
-                    { backgroundColor: cardBg },
+                    {
+                      backgroundColor: cardBg,
+                    },
                   ]}
                 >
                   <View style={styles.rowAlign}>
                     <Image
-                      source={{ uri: srv.providerAvatar }}
+                      source={{
+                        uri: srv.providerAvatar,
+                      }}
                       style={styles.avatarMini}
                     />
 
@@ -922,7 +1244,9 @@ export default function AppMobile() {
                         style={[
                           styles.providerName,
                           dynamicText(14),
-                          { color: textColor },
+                          {
+                            color: textColor,
+                          },
                         ]}
                       >
                         {srv.providerName}
@@ -931,7 +1255,9 @@ export default function AppMobile() {
                       <Text
                         style={[
                           styles.badgeTag,
-                          { color: accentColor },
+                          {
+                            color: accentColor,
+                          },
                         ]}
                       >
                         ♿ {srv.disabilityBadge}
@@ -962,7 +1288,8 @@ export default function AppMobile() {
                       },
                     ]}
                   >
-                    LKR {srv.hourlyRate.toLocaleString()} / hour
+                    LKR {srv.hourlyRate.toLocaleString()} /
+                    hour
                   </Text>
 
                   <Text
@@ -982,7 +1309,8 @@ export default function AppMobile() {
                     style={[
                       styles.buyBtn,
                       {
-                        backgroundColor: primaryButtonBg,
+                        backgroundColor:
+                          primaryButtonBg,
                         marginTop: 10,
                       },
                     ]}
@@ -996,7 +1324,10 @@ export default function AppMobile() {
                     <Text
                       style={[
                         styles.buyBtnText,
-                        { color: primaryButtonText },
+                        {
+                          color:
+                            primaryButtonText,
+                        },
                       ]}
                     >
                       Book Provider
@@ -1014,19 +1345,42 @@ export default function AppMobile() {
                 style={[
                   styles.sectionTitle,
                   dynamicText(18),
-                  { color: textColor },
+                  {
+                    color: textColor,
+                  },
                 ]}
               >
                 💼 Disability-Confident Jobs
               </Text>
 
-              {/* SEARCH BAR AND DROPDOWN */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: cardBg, borderRadius: 8, borderWidth: 1, borderColor: '#334155', overflow: 'hidden' }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                }}
+              >
+                <View
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: cardBg,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#334155',
+                    overflow: 'hidden',
+                  }}
+                >
                   <TextInput
                     style={[
                       styles.searchInput,
-                      { flex: 1, color: textColor, marginBottom: 0, borderWidth: 0 },
+                      {
+                        flex: 1,
+                        color: textColor,
+                        marginBottom: 0,
+                        borderWidth: 0,
+                      },
                     ]}
                     placeholder="Search remote jobs..."
                     placeholderTextColor={subTextColor}
@@ -1036,6 +1390,7 @@ export default function AppMobile() {
                     accessibilityLabel="Search jobs input"
                     accessibilityHint="Type to filter jobs by title or category"
                   />
+
                   <TouchableOpacity
                     onPress={startVoiceSearch}
                     style={{ padding: 12 }}
@@ -1043,80 +1398,173 @@ export default function AppMobile() {
                     accessibilityLabel="Voice search"
                     accessibilityHint="Double tap to dictate your search query"
                   >
-                    <Text style={{ fontSize: 18, color: isListeningJobs ? '#ef4444' : subTextColor }}>
+                    <Text
+                      style={{
+                        fontSize: 18,
+                        color: isListeningJobs
+                          ? '#ef4444'
+                          : subTextColor,
+                      }}
+                    >
                       {isListeningJobs ? '🔴' : '🎤'}
                     </Text>
                   </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity
-                  style={{ marginLeft: 8, paddingHorizontal: 12, paddingVertical: 12, backgroundColor: cardBg, borderRadius: 8, justifyContent: 'center', borderWidth: 1, borderColor: '#334155' }}
-                  onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                  style={{
+                    marginLeft: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 12,
+                    backgroundColor: cardBg,
+                    borderRadius: 8,
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: '#334155',
+                  }}
+                  onPress={() =>
+                    setShowCategoryDropdown(
+                      !showCategoryDropdown,
+                    )
+                  }
                   accessibilityRole="button"
                   accessibilityLabel={`Job category selector. Current category is ${jobCategory}`}
                   accessibilityHint="Double tap to open or close the job category dropdown"
-                  accessibilityState={{ expanded: showCategoryDropdown }}
+                  accessibilityState={{
+                    expanded: showCategoryDropdown,
+                  }}
                 >
-                  <Text style={{ color: textColor, fontWeight: 'bold' }}>{jobCategory} ▼</Text>
+                  <Text
+                    style={{
+                      color: textColor,
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {jobCategory} ▼
+                  </Text>
                 </TouchableOpacity>
               </View>
 
               {showCategoryDropdown && (
-                <View 
-                  style={{ backgroundColor: cardBg, borderRadius: 8, marginBottom: 12, padding: 8, borderWidth: 1, borderColor: '#334155' }}
+                <View
+                  style={{
+                    backgroundColor: cardBg,
+                    borderRadius: 8,
+                    marginBottom: 12,
+                    padding: 8,
+                    borderWidth: 1,
+                    borderColor: '#334155',
+                  }}
                   accessibilityRole="menu"
                 >
-                  {['All Jobs', 'Handcraft Items', 'Computer Designing', 'Software', 'Marketing', 'Support'].map(cat => (
+                  {[
+                    'All Jobs',
+                    'Handcraft Items',
+                    'Computer Designing',
+                    'Software',
+                    'Marketing',
+                    'Support',
+                  ].map((cat) => (
                     <TouchableOpacity
                       key={cat}
                       onPress={() => {
                         setJobCategory(cat);
                         setShowCategoryDropdown(false);
                       }}
-                      style={{ paddingVertical: 10, borderBottomWidth: cat !== 'Support' ? 1 : 0, borderBottomColor: '#1e293b' }}
+                      style={{
+                        paddingVertical: 10,
+                        borderBottomWidth:
+                          cat !== 'Support' ? 1 : 0,
+                        borderBottomColor: '#1e293b',
+                      }}
                       accessibilityRole="menuitem"
                       accessibilityLabel={cat}
                       accessibilityHint={`Double tap to filter jobs by ${cat}`}
-                      accessibilityState={{ selected: jobCategory === cat }}
+                      accessibilityState={{
+                        selected:
+                          jobCategory === cat,
+                      }}
                     >
-                      <Text style={{ color: jobCategory === cat ? accentColor : textColor }}>{cat}</Text>
+                      <Text
+                        style={{
+                          color:
+                            jobCategory === cat
+                              ? accentColor
+                              : textColor,
+                        }}
+                      >
+                        {cat}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               )}
 
-              {/* FILTER BUBBLES */}
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false} 
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
                 style={{ marginBottom: 16 }}
                 accessibilityLabel="Accessibility filters"
               >
                 {[
-                  { label: 'Wheelchair Persons', key: 'wheelchair' },
-                  { label: 'Deaf Persons', key: 'deaf' },
-                  { label: 'Blind Persons', key: 'blind' }
-                ].map(f => {
-                  const isActive = jobFilter[f.key as keyof typeof jobFilter];
+                  {
+                    label: 'Wheelchair Persons',
+                    key: 'wheelchair',
+                  },
+                  {
+                    label: 'Deaf Persons',
+                    key: 'deaf',
+                  },
+                  {
+                    label: 'Blind Persons',
+                    key: 'blind',
+                  },
+                ].map((f) => {
+                  const isActive =
+                    jobFilter[
+                      f.key as keyof typeof jobFilter
+                    ];
+
                   return (
                     <TouchableOpacity
                       key={f.label}
-                      onPress={() => setJobFilter(prev => ({ ...prev, [f.key]: !prev[f.key as keyof typeof prev] }))}
+                      onPress={() =>
+                        setJobFilter((prev) => ({
+                          ...prev,
+                          [f.key]:
+                            !prev[
+                              f.key as keyof typeof prev
+                            ],
+                        }))
+                      }
                       style={{
                         paddingHorizontal: 12,
                         paddingVertical: 6,
                         borderRadius: 16,
                         borderWidth: 1,
-                        borderColor: isActive ? accentColor : subTextColor,
-                        backgroundColor: isActive ? accentColor : 'transparent',
+                        borderColor: isActive
+                          ? accentColor
+                          : subTextColor,
+                        backgroundColor: isActive
+                          ? accentColor
+                          : 'transparent',
                         marginRight: 8,
                       }}
                       accessibilityRole="checkbox"
-                      accessibilityState={{ checked: isActive }}
+                      accessibilityState={{
+                        checked: isActive,
+                      }}
                       accessibilityLabel={f.label}
                       accessibilityHint={`Double tap to toggle ${f.label} filter`}
                     >
-                      <Text style={{ color: isActive ? '#fff' : subTextColor, fontSize: 12 }}>
+                      <Text
+                        style={{
+                          color: isActive
+                            ? '#fff'
+                            : subTextColor,
+                          fontSize: 12,
+                        }}
+                      >
                         {f.label}
                       </Text>
                     </TouchableOpacity>
@@ -1125,21 +1573,41 @@ export default function AppMobile() {
               </ScrollView>
 
               {loadingJobs ? (
-                <Text style={{ color: subTextColor, textAlign: 'center', marginTop: 20 }}>Loading inclusive jobs...</Text>
+                <Text
+                  style={{
+                    color: subTextColor,
+                    textAlign: 'center',
+                    marginTop: 20,
+                  }}
+                >
+                  Loading inclusive jobs...
+                </Text>
               ) : filteredJobs.length === 0 ? (
-                <Text style={{ color: subTextColor, textAlign: 'center', marginTop: 20 }}>No jobs found.</Text>
+                <Text
+                  style={{
+                    color: subTextColor,
+                    textAlign: 'center',
+                    marginTop: 20,
+                  }}
+                >
+                  No jobs found.
+                </Text>
               ) : (
                 filteredJobs.map((job) => (
                   <View
                     key={job.id}
                     style={[
                       styles.jobCard,
-                      { backgroundColor: cardBg },
+                      {
+                        backgroundColor: cardBg,
+                      },
                     ]}
                   >
                     <View style={styles.rowAlign}>
                       <Image
-                        source={{ uri: job.companyLogo }}
+                        source={{
+                          uri: job.companyLogo,
+                        }}
                         style={styles.avatarMini}
                       />
 
@@ -1153,7 +1621,9 @@ export default function AppMobile() {
                           style={[
                             styles.jobTitle,
                             dynamicText(14),
-                            { color: textColor },
+                            {
+                              color: textColor,
+                            },
                           ]}
                         >
                           {job.title}
@@ -1163,10 +1633,13 @@ export default function AppMobile() {
                           style={[
                             styles.companyName,
                             dynamicText(12),
-                            { color: subTextColor },
+                            {
+                              color: subTextColor,
+                            },
                           ]}
                         >
-                          {job.company} • {job.location}
+                          {job.company} •{' '}
+                          {job.location}
                         </Text>
                       </View>
                     </View>
@@ -1186,14 +1659,18 @@ export default function AppMobile() {
 
                     <View style={styles.badgeContainer}>
                       {job.accessibilityBadges.map(
-                        (b: string, idx: number) => (
+                        (
+                          b: string,
+                          idx: number,
+                        ) => (
                           <Text
                             key={idx}
                             style={[
                               styles.jobBadge,
                               {
                                 color: textColor,
-                                backgroundColor: '#334155',
+                                backgroundColor:
+                                  '#334155',
                               },
                             ]}
                           >
@@ -1201,14 +1678,50 @@ export default function AppMobile() {
                           </Text>
                         ),
                       )}
+
                       {job.eligible_for_wheelchair && (
-                        <Text style={[styles.jobBadge, { color: '#fff', backgroundColor: '#2563eb' }]}>♿ Wheelchair</Text>
+                        <Text
+                          style={[
+                            styles.jobBadge,
+                            {
+                              color: '#fff',
+                              backgroundColor:
+                                '#2563eb',
+                            },
+                          ]}
+                        >
+                          ♿ Wheelchair
+                        </Text>
                       )}
+
                       {job.eligible_for_deaf && (
-                        <Text style={[styles.jobBadge, { color: '#fff', backgroundColor: '#9333ea' }]}>🧏 Deaf</Text>
+                        <Text
+                          style={[
+                            styles.jobBadge,
+                            {
+                              color: '#fff',
+                              backgroundColor:
+                                '#9333ea',
+                            },
+                          ]}
+                        >
+                          🧏 Deaf
+                        </Text>
                       )}
+
                       {job.eligible_for_blind && (
-                        <Text style={[styles.jobBadge, { color: '#fff', backgroundColor: '#d97706' }]}>🦯 Blind</Text>
+                        <Text
+                          style={[
+                            styles.jobBadge,
+                            {
+                              color: '#fff',
+                              backgroundColor:
+                                '#d97706',
+                            },
+                          ]}
+                        >
+                          🦯 Blind
+                        </Text>
                       )}
                     </View>
 
@@ -1216,7 +1729,8 @@ export default function AppMobile() {
                       style={[
                         styles.buyBtn,
                         {
-                          backgroundColor: primaryButtonBg,
+                          backgroundColor:
+                            primaryButtonBg,
                           marginTop: 10,
                         },
                       ]}
@@ -1233,43 +1747,21 @@ export default function AppMobile() {
                       <Text
                         style={[
                           styles.buyBtnText,
-                          { color: primaryButtonText },
+                          {
+                            color:
+                              primaryButtonText,
+                          },
                         ]}
                       >
                         Apply Now
                       </Text>
                     </TouchableOpacity>
                   </View>
-                )))}
+                ))
+              )}
             </View>
           )}
-          <Modal
-            visible={reviewModalLocationId !== null}
-            animationType="slide"
-            transparent
-            onRequestClose={() => setReviewModalLocationId(null)}
-          >
-            <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-              <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
-                {reviewModalLocationId && (
-                  <ReviewForm
-                    locationId={reviewModalLocationId}
-                    onSubmit={async (data) => {
-                      addReview(data);
-                      try {
-                        await saveRating(data.locationId, data.criteriaRatings);
-                      } catch (err) {
-                        console.error('Failed to save rating to Supabase:', err);
-                        Alert.alert('Warning', 'Review saved locally, but the accessibility rating could not be saved to the database.');
-                      }
-                      setReviewModalLocationId(null);
-                      Alert.alert('Thank you!', 'Your accessibility review was submitted.');
-                    }}
-                  />
-                )}
-              </View>
-            </View>
-          </Modal>
+
           {/* MAP */}
           {activeTab === 'map' && (
             <View>
@@ -1277,17 +1769,18 @@ export default function AppMobile() {
                 style={[
                   styles.sectionTitle,
                   dynamicText(18),
-                  { color: textColor },
+                  {
+                    color: textColor,
+                  },
                 ]}
               >
                 🗺️ Accessible Map Locations
               </Text>
 
               {mockMapPins.map((pin) => {
-                // AC-81:
-                // Get only reviews belonging to this specific location
-                // and count reviews that contain a photo.
-                const photoCount = getReviewsForLocation(pin.id).filter(
+                const photoCount = getReviewsForLocation(
+                  pin.id,
+                ).filter(
                   (review) => Boolean(review.photoUri),
                 ).length;
 
@@ -1296,7 +1789,9 @@ export default function AppMobile() {
                     key={pin.id}
                     style={[
                       styles.mapCard,
-                      { backgroundColor: cardBg },
+                      {
+                        backgroundColor: cardBg,
+                      },
                     ]}
                   >
                     <Image
@@ -1309,7 +1804,9 @@ export default function AppMobile() {
                         style={[
                           styles.mapPinTitle,
                           dynamicText(15),
-                          { color: textColor },
+                          {
+                            color: textColor,
+                          },
                         ]}
                       >
                         {pin.title}
@@ -1325,7 +1822,8 @@ export default function AppMobile() {
                           },
                         ]}
                       >
-                        📍 {pin.address} ({pin.distance})
+                        📍 {pin.address} (
+                        {pin.distance})
                       </Text>
 
                       <Text
@@ -1340,7 +1838,6 @@ export default function AppMobile() {
                         ♿ {pin.badge}
                       </Text>
 
-                      {/* AC-81 PHOTO COUNT */}
                       {photoCount > 0 && (
                         <Text
                           style={[
@@ -1351,13 +1848,18 @@ export default function AppMobile() {
                           ]}
                         >
                           📷 {photoCount} photo
-                          {photoCount === 1 ? '' : 's'} submitted
+                          {photoCount === 1
+                            ? ''
+                            : 's'}{' '}
+                          submitted
                         </Text>
                       )}
 
                       <TouchableOpacity
                         onPress={() =>
-                          setReviewModalLocationId(pin.id)
+                          setReviewModalLocationId(
+                            pin.id,
+                          )
                         }
                         accessibilityRole="button"
                         accessibilityLabel={`Write a review for ${pin.title}`}
@@ -1379,7 +1881,9 @@ export default function AppMobile() {
 
               {/* Review Modal */}
               <Modal
-                visible={reviewModalLocationId !== null}
+                visible={
+                  reviewModalLocationId !== null
+                }
                 animationType="slide"
                 transparent
                 onRequestClose={() =>
@@ -1390,7 +1894,8 @@ export default function AppMobile() {
                   style={{
                     flex: 1,
                     justifyContent: 'flex-end',
-                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    backgroundColor:
+                      'rgba(0,0,0,0.5)',
                   }}
                 >
                   <View
@@ -1402,16 +1907,30 @@ export default function AppMobile() {
                   >
                     {reviewModalLocationId && (
                       <ReviewForm
-                        locationId={reviewModalLocationId}
+                        locationId={
+                          reviewModalLocationId
+                        }
                         onSubmit={async (data) => {
-                          const newReview = addReview(data);
+                          const newReview =
+                            addReview(data);
 
                           try {
-                            // @ts-ignore (saveRating might need to be imported if it's missing)
-                            await saveRating(data.locationId, data.criteriaRatings);
+                            await saveRatingWithVerification(
+                              data.locationId,
+                              data.criteriaRatings,
+                              data.comment,
+                              data.photoUri,
+                            );
                           } catch (err) {
-                            console.error('Failed to save rating to Supabase:', err);
-                            Alert.alert('Warning', 'Review saved locally, but the accessibility rating could not be saved to the database.');
+                            console.error(
+                              'Failed to save rating to Supabase:',
+                              err,
+                            );
+
+                            Alert.alert(
+                              'Warning',
+                              'Review saved locally, but the accessibility rating could not be saved to the database.',
+                            );
                           }
 
                           console.log(
@@ -1419,7 +1938,9 @@ export default function AppMobile() {
                             newReview,
                           );
 
-                          setReviewModalLocationId(null);
+                          setReviewModalLocationId(
+                            null,
+                          );
 
                           Alert.alert(
                             'Thank you!',
@@ -1440,11 +1961,15 @@ export default function AppMobile() {
               <View
                 style={[
                   styles.profileCard,
-                  { backgroundColor: cardBg },
+                  {
+                    backgroundColor: cardBg,
+                  },
                 ]}
               >
                 <Image
-                  source={{ uri: mockCurrentUser.avatar }}
+                  source={{
+                    uri: mockCurrentUser.avatar,
+                  }}
                   style={styles.profileAvatar}
                 />
 
@@ -1470,7 +1995,8 @@ export default function AppMobile() {
                     },
                   ]}
                 >
-                  ♿ {mockCurrentUser.disabilityBadge}
+                  ♿{' '}
+                  {mockCurrentUser.disabilityBadge}
                 </Text>
 
                 <Text
@@ -1505,14 +2031,18 @@ export default function AppMobile() {
                   key={n.id}
                   style={[
                     styles.notifCard,
-                    { backgroundColor: cardBg },
+                    {
+                      backgroundColor: cardBg,
+                    },
                   ]}
                 >
                   <Text
                     style={[
                       styles.notifTitle,
                       dynamicText(13),
-                      { color: textColor },
+                      {
+                        color: textColor,
+                      },
                     ]}
                   >
                     {n.title}
@@ -1546,14 +2076,18 @@ export default function AppMobile() {
             <View
               style={[
                 styles.modalContent,
-                { backgroundColor: cardBg },
+                {
+                  backgroundColor: cardBg,
+                },
               ]}
             >
               <Text
                 style={[
                   styles.modalTitle,
                   dynamicText(16),
-                  { color: textColor },
+                  {
+                    color: textColor,
+                  },
                 ]}
               >
                 🤖 AccessLink AI Voice Hub
@@ -1569,8 +2103,8 @@ export default function AppMobile() {
                   },
                 ]}
               >
-                Speak or type accessibility commands (e.g.
-                "Find ramp entrance near me").
+                Speak or type accessibility commands
+                (e.g. "Find ramp entrance near me").
               </Text>
 
               <TextInput
@@ -1582,7 +2116,9 @@ export default function AppMobile() {
                   },
                 ]}
                 placeholder="Ask AI Voice Assistant..."
-                placeholderTextColor={subTextColor}
+                placeholderTextColor={
+                  subTextColor
+                }
                 value={voiceQuery}
                 onChangeText={setVoiceQuery}
               />
@@ -1598,7 +2134,8 @@ export default function AppMobile() {
                   style={[
                     styles.modalAskBtn,
                     {
-                      backgroundColor: primaryButtonBg,
+                      backgroundColor:
+                        primaryButtonBg,
                       flex: 1,
                       marginRight: 8,
                     },
@@ -1608,7 +2145,10 @@ export default function AppMobile() {
                   <Text
                     style={[
                       styles.buyBtnText,
-                      { color: primaryButtonText },
+                      {
+                        color:
+                          primaryButtonText,
+                      },
                     ]}
                   >
                     Submit Question
@@ -1623,7 +2163,9 @@ export default function AppMobile() {
                       width: 80,
                     },
                   ]}
-                  onPress={() => setAiModalVisible(false)}
+                  onPress={() =>
+                    setAiModalVisible(false)
+                  }
                 >
                   <Text
                     style={{
@@ -1643,7 +2185,9 @@ export default function AppMobile() {
                     style={[
                       styles.aiResText,
                       dynamicText(12),
-                      { color: accentColor },
+                      {
+                        color: accentColor,
+                      },
                     ]}
                   >
                     {aiResponse}
@@ -1703,11 +2247,14 @@ export default function AppMobile() {
                         ? accentColor
                         : subTextColor,
                     fontWeight:
-                      activeTab === tab ? 'bold' : 'normal',
+                      activeTab === tab
+                        ? 'bold'
+                        : 'normal',
                   },
                 ]}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab.charAt(0).toUpperCase() +
+                  tab.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -1716,7 +2263,9 @@ export default function AppMobile() {
         {/* Checkout Modal */}
         <MobileCheckoutModal
           visible={isCheckoutModalVisible}
-          onClose={() => setCheckoutModalVisible(false)}
+          onClose={() =>
+            setCheckoutModalVisible(false)
+          }
           product={checkoutProduct}
           themeBg={themeBg}
           cardBg={cardBg}
@@ -2065,9 +2614,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
 
-  // AC-81
-  // Displays the number of photo reviews
-  // belonging specifically to each location.
   photoCountText: {
     fontSize: 11,
     marginTop: 4,
