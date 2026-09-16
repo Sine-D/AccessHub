@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAppState } from '../../../core/hooks/useAppState';
 import { useAccessibility } from '../../../core/hooks/useAccessibility';
-import { mockServices } from '../../../mock/data';
 import { TopHeader } from '../../../core/navigation/TopHeader';
 import { BottomNav } from '../../../core/navigation/BottomNav';
 import { 
@@ -10,12 +9,15 @@ import {
   CheckCircle2, 
   Wrench, 
   MessageSquare,
-  ShieldCheck
+  ShieldCheck,
+  Plus,
+  Search
 } from 'lucide-react';
 
 export const ServicesScreen: React.FC = () => {
-  const { setActiveScreen } = useAppState();
+  const { servicesList, setActiveScreen, setFreelancerModalOpen } = useAppState();
   const { speakText } = useAccessibility();
+  const [searchQuery, setSearchQuery] = useState('');
   const [bookingSuccess, setBookingSuccess] = useState(false);
 
   const handleBookService = (serviceTitle: string) => {
@@ -27,6 +29,18 @@ export const ServicesScreen: React.FC = () => {
     }, 1800);
   };
 
+  const filteredServices = servicesList.filter((service) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    const matchTitle = service.title.toLowerCase().includes(q);
+    const matchProvider = service.providerName.toLowerCase().includes(q);
+    const matchDesc = service.description.toLowerCase().includes(q);
+    const matchSkills = service.skills.some((s: string) => s.toLowerCase().includes(q));
+    const matchDistrict = service.availability ? service.availability.toLowerCase().includes(q) : false;
+    const matchBadge = service.disabilityBadge ? service.disabilityBadge.toLowerCase().includes(q) : false;
+    return matchTitle || matchProvider || matchDesc || matchSkills || matchDistrict || matchBadge;
+  });
+
   return (
     <div className="w-full h-full min-h-[800px] bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white flex flex-col justify-between overflow-y-auto">
       
@@ -34,28 +48,69 @@ export const ServicesScreen: React.FC = () => {
 
       <div className="p-4 space-y-4 pb-8">
         
-        {/* Banner */}
-        <div className="p-4 rounded-3xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg space-y-1">
-          <div className="flex items-center space-x-2">
-            <Wrench className="w-5 h-5" />
-            <h3 className="font-extrabold text-sm">Inclusive Service Providers</h3>
+        {/* Banner with Register Freelancer Action */}
+        <div className="p-4 rounded-3xl bg-gradient-to-r from-teal-700 via-emerald-600 to-teal-800 text-white shadow-lg space-y-2 border border-teal-600/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Wrench className="w-5 h-5 text-teal-200" />
+              <h3 className="font-extrabold text-sm">Inclusive Service Marketplace</h3>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">
+              Navbar Services
+            </span>
           </div>
-          <p className="text-xs text-teal-100">
+
+          <p className="text-xs text-teal-100 leading-snug">
             Hire verified disabled experts for UX audits, sign language translation, tailoring, and technical design.
           </p>
+
+          <div className="pt-1 flex items-center justify-between">
+            <button
+              onClick={() => {
+                speakText('Opening Freelancer Registration Form');
+                setFreelancerModalOpen(true);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-white text-teal-800 font-extrabold text-xs shadow-md hover:bg-teal-50 flex items-center space-x-1.5 transition-all"
+            >
+              <Plus className="w-4 h-4 text-teal-700" />
+              <span>Register as Freelancer Form</span>
+            </button>
+
+            <span className="text-[10px] font-semibold text-teal-200">
+              {filteredServices.length} Providers Found
+            </span>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+          <input
+            type="text"
+            placeholder="Search services, skills, provider names, Colombo..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-teal-500 outline-none shadow-xs"
+          />
         </div>
 
         {/* Services List */}
         <div className="space-y-4">
-          {mockServices.map((service) => (
+          {filteredServices.length === 0 ? (
+            <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2">
+              <p className="font-extrabold text-sm text-slate-700 dark:text-slate-300">No services found matching "{searchQuery}"</p>
+              <p className="text-xs text-slate-400">Try searching for other keywords like "UX", "Braille", "Design", or provider names.</p>
+            </div>
+          ) : (
+            filteredServices.map((service) => (
             <div 
               key={service.id}
-              className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 shadow-xs"
+              className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 shadow-sm hover:border-teal-500 transition-all"
             >
               {/* Provider Info */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <img src={service.providerAvatar} alt={service.providerName} className="w-12 h-12 rounded-full object-cover" />
+                  <img src={service.providerAvatar} alt={service.providerName} className="w-12 h-12 rounded-full object-cover ring-2 ring-teal-500/20" />
                   <div>
                     <div className="flex items-center space-x-1">
                       <h4 className="font-bold text-xs text-slate-900 dark:text-white">{service.providerName}</h4>
@@ -64,6 +119,11 @@ export const ServicesScreen: React.FC = () => {
                     <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 block">
                       ♿ {service.disabilityBadge}
                     </span>
+                    {service.availability && (
+                      <span className="text-[9px] text-slate-400 font-medium block">
+                        📍 {service.availability}
+                      </span>
+                    )}
                   </div>
                 </div>
                 
@@ -89,18 +149,20 @@ export const ServicesScreen: React.FC = () => {
               {/* Skills Tags */}
               <div className="flex flex-wrap gap-1.5">
                 {service.skills.map((skill: string, idx: number) => (
-                  <span key={idx} className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                  <span key={idx} className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-teal-50 dark:bg-slate-700 text-teal-700 dark:text-slate-300">
                     {skill}
                   </span>
                 ))}
               </div>
 
               {/* Portfolio Preview Images */}
-              <div className="flex space-x-2 overflow-x-auto pt-1">
-                {service.portfolioImages.map((img: string, i: number) => (
-                  <img key={i} src={img} alt="portfolio" className="w-20 h-16 rounded-xl object-cover shrink-0" />
-                ))}
-              </div>
+              {service.portfolioImages && service.portfolioImages.length > 0 && (
+                <div className="flex space-x-2 overflow-x-auto pt-1">
+                  {service.portfolioImages.map((img: string, i: number) => (
+                    <img key={i} src={img} alt="portfolio" className="w-20 h-16 rounded-xl object-cover shrink-0 border border-slate-100 dark:border-slate-700" />
+                  ))}
+                </div>
+              )}
 
               {/* Booking Action */}
               <div className="flex items-center space-x-2 pt-2 border-t border-slate-100 dark:border-slate-700">
@@ -122,7 +184,7 @@ export const ServicesScreen: React.FC = () => {
               </div>
 
             </div>
-          ))}
+          )))}
         </div>
 
         {bookingSuccess && (
@@ -142,3 +204,4 @@ export const ServicesScreen: React.FC = () => {
     </div>
   );
 };
+

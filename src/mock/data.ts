@@ -1,4 +1,14 @@
-import { User, Product, ServiceItem, JobPosting, DonationItem, MapPinItem, Message, NotificationItem } from '../core/types';
+import { User, Product, ServiceItem, FreelancerServiceApplication, JobPosting, DonationItem, MapPinItem, Message, NotificationItem } from '../core/types';
+
+export const SRI_LANKA_DISTRICTS = [
+  'Colombo', 'Gampaha', 'Kalutara', 'Kandy', 'Matale', 'Nuwara Eliya', 
+  'Galle', 'Matara', 'Hambantota', 'Jaffna', 'Kilinochchi', 'Mannar', 
+  'Vavuniya', 'Mullaitivu', 'Batticaloa', 'Ampara', 'Trincomalee', 
+  'Kurunegala', 'Puttalam', 'Anuradhapura', 'Polonnaruwa', 'Badulla', 
+  'Monaragala', 'Ratnapura', 'Kegalle'
+];
+
+export const mockPendingServiceApplications: FreelancerServiceApplication[] = [];
 
 export const mockCurrentUser: User = {
   id: 'u1',
@@ -116,43 +126,7 @@ export const mockProducts: Product[] = [
   }
 ];
 
-export const mockServices: ServiceItem[] = [
-  {
-    id: 's1',
-    title: 'Accessibility UX Audit & Screen Reader Compliance Testing',
-    hourlyRate: 7500,
-    providerName: 'Kasun De Silva',
-    providerAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=300',
-    disabilityBadge: 'Visually Impaired',
-    rating: 5.0,
-    reviewsCount: 64,
-    category: 'Tech & Accessibility',
-    availability: 'Mon - Fri (Online)',
-    portfolioImages: [
-      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=600',
-      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=600'
-    ],
-    description: 'Expert Web Content Accessibility Guidelines (WCAG 2.1 AA/AAA) audit conducted using NVDA, JAWS, and VoiceOver screen readers.',
-    skills: ['WCAG Audit', 'NVDA Screen Reader', 'A11y Remediation', 'React A11y']
-  },
-  {
-    id: 's2',
-    title: 'Sign Language Translation & Video Captioning Services',
-    hourlyRate: 5000,
-    providerName: 'Rashmi Mendis',
-    providerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300',
-    disabilityBadge: 'Hearing Impaired',
-    rating: 4.9,
-    reviewsCount: 88,
-    category: 'Translation & Media',
-    availability: 'Flexible (Remote)',
-    portfolioImages: [
-      'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=600'
-    ],
-    description: 'Professional Sri Lankan Sign Language (SSL) & International Sign interpretation alongside accurate closed captioning.',
-    skills: ['Sign Language', 'Subtitling', 'Video Editing', 'Event Translation']
-  }
-];
+export const mockServices: ServiceItem[] = [];
 
 export const mockJobs: JobPosting[] = [
   {
