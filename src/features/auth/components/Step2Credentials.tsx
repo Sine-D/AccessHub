@@ -6,7 +6,7 @@ import { AccessibleButton } from '../../../components/common/accessible/Accessib
 import { supabase } from '../../../services/supabaseClient';
 import { signInWithGoogle } from '../../../services/authService';
 
-const googleLogoImage = require('../../../../public/images/google.jpg');
+const googleLogoImage = { uri: '/images/google.jpg' };
 
 export const Step2Credentials: React.FC = () => {
   const {

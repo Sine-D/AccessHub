@@ -1,42 +1,53 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Image } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  Image,
+} from 'react-native';
 import { RatingMatrix } from './RatingMatrix';
 import { PhotoPicker } from './PhotoPicker';
 import { CriteriaRatings } from '../../types/review';
 
 interface ReviewFormProps {
   locationId: string;
+
   onSubmit: (data: {
     locationId: string;
     criteriaRatings: CriteriaRatings;
     comment: string;
     photoUri: string | null;
-  }) => void;
+  }) => void | Promise<void>;
 }
 
 export const ReviewForm: React.FC<ReviewFormProps> = ({
   locationId,
   onSubmit,
 }) => {
-  const [criteriaRatings, setCriteriaRatings] = useState<CriteriaRatings>({
-    wheelchairRamp: 0,
-    brailleMenu: 0,
-    audioSignal: 0,
-    accessibleRestroom: 0,
-  });
+  const [criteriaRatings, setCriteriaRatings] =
+    useState<CriteriaRatings>({
+      wheelchairRamp: 0,
+      brailleMenu: 0,
+      audioSignal: 0,
+      accessibleRestroom: 0,
+    });
 
   const [comment, setComment] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const allRated = Object.values(criteriaRatings).every(
-      (v) => v >= 1 && v <= 5
+      (rating) => rating >= 1 && rating <= 5,
     );
 
     if (!allRated) {
-      setError('Please rate all four accessibility criteria.');
+      setError(
+        'Please rate all four accessibility criteria.',
+      );
       return;
     }
 
@@ -48,49 +59,75 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
     setError(null);
     setSubmitting(true);
 
-    onSubmit({
-      locationId,
-      criteriaRatings,
-      comment: comment.trim(),
-      photoUri,
-    });
+    try {
+      await onSubmit({
+        locationId,
+        criteriaRatings,
+        comment: comment.trim(),
+        photoUri,
+      });
 
-    // Reset form after submit
-    setCriteriaRatings({
-      wheelchairRamp: 0,
-      brailleMenu: 0,
-      audioSignal: 0,
-      accessibleRestroom: 0,
-    });
+      setCriteriaRatings({
+        wheelchairRamp: 0,
+        brailleMenu: 0,
+        audioSignal: 0,
+        accessibleRestroom: 0,
+      });
 
-    setComment('');
-    setPhotoUri(null);
-    setSubmitting(false);
+      setComment('');
+      setPhotoUri(null);
+    } catch (err) {
+      console.error('Failed to submit review:', err);
+      setError(
+        'Failed to submit the review. Please try again.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Rate each accessibility feature</Text>
+      <Text style={styles.label}>
+        Rate each accessibility feature
+      </Text>
 
       <RatingMatrix
         value={criteriaRatings}
         onChange={setCriteriaRatings}
       />
 
-      <Text style={styles.label}>Your review</Text>
+      <Text style={styles.label}>
+        Your review
+      </Text>
 
       <TextInput
         style={styles.input}
         value={comment}
-        onChangeText={setComment}
+        onChangeText={(value) => {
+          setComment(value);
+
+          if (error) {
+            setError(null);
+          }
+        }}
         placeholder="Describe the accessibility of this location..."
         placeholderTextColor="#9CA3AF"
         multiline
         numberOfLines={4}
         accessibilityLabel="Review comment"
+        accessibilityHint="Describe the accessibility features of this location"
       />
 
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && (
+        <Text
+          style={styles.error}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="assertive"
+        >
+          {error}
+        </Text>
+      )}
 
       <PhotoPicker
         value={photoUri}
@@ -102,6 +139,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           source={{ uri: photoUri }}
           style={styles.photoPreview}
           accessibilityLabel="Preview of selected accessibility photo"
+          resizeMode="cover"
         />
       )}
 
@@ -113,10 +151,20 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         onPress={handleSubmit}
         disabled={submitting}
         accessibilityRole="button"
-        accessibilityLabel="Submit review"
+        accessibilityLabel={
+          submitting
+            ? 'Submitting review'
+            : 'Submit accessibility review'
+        }
+        accessibilityState={{
+          disabled: submitting,
+          busy: submitting,
+        }}
       >
         <Text style={styles.buttonText}>
-          {submitting ? 'Submitting...' : 'Submit Review'}
+          {submitting
+            ? 'Submitting...'
+            : 'Submit Review'}
         </Text>
       </Pressable>
     </View>
@@ -153,19 +201,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
+  photoPreview: {
+    width: '100%',
+    height: 180,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+
   button: {
     backgroundColor: '#2563EB',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 12,
-  },
-
-  photoPreview: {
-    width: '100%',
-    height: 150,
-    borderRadius: 8,
-    marginTop: 8,
   },
 
   buttonDisabled: {

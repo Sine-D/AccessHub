@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useAccessibility } from '../../../core/hooks/useAccessibility';
 import { useAppState } from '../../../core/hooks/useAppState';
 import { useSpeechRecognition } from '../../../core/hooks/useSpeechRecognition';
@@ -14,17 +14,48 @@ import {
   Square,
   Trash2
 } from 'lucide-react';
+import { SpeechLanguageSelector } from './SpeechLanguageSelector';
+import {
+  DEFAULT_SPEECH_LOCALE,
+  getSpeechLanguage,
+  isSupportedSpeechLocale,
+  SpeechLocale,
+} from '../../../core/constants/speechLanguages';
+import { normalizeTranscript } from '../../../core/utils/normalizeTranscript';
 
 export const AiAssistantModal: React.FC = () => {
   const { aiModalOpen, setAiModalOpen, speakText } = useAccessibility();
   const { setActiveScreen } = useAppState();
 
   const [activeTab, setActiveTab] = useState<'voice' | 'camera' | 'fraud'>('voice');
-  const [speechLanguage, setSpeechLanguage] = useState('en-US');
+  const [speechLanguage, setSpeechLanguageState] =
+      useState<SpeechLocale>(() => {
+        const savedLanguage = localStorage.getItem(
+          'accesshub_speech_language',
+        );
+
+        return savedLanguage &&
+          isSupportedSpeechLocale(savedLanguage)
+          ? savedLanguage
+          : DEFAULT_SPEECH_LOCALE;
+      });
   const [aiResponse, setAiResponse] = useState<string>(
     'Ayubowan! I am AccessLink AI. Ask me anything via voice or scan an item.'
   );
   const [scannedResult, setScannedResult] = useState<string | null>(null);
+
+  const persistSpeechLanguage = useCallback((locale: string) => {
+    const supportedLocale = isSupportedSpeechLocale(locale)
+      ? locale
+      : DEFAULT_SPEECH_LOCALE;
+
+    setSpeechLanguageState(supportedLocale);
+    localStorage.setItem(
+      'accesshub_speech_language',
+      supportedLocale,
+    );
+  }, []);
+
   const {
     error: speechError,
     isListening,
@@ -34,14 +65,27 @@ export const AiAssistantModal: React.FC = () => {
     startListening,
     stopListening,
     transcript,
-  } = useSpeechRecognition({ language: speechLanguage });
+  } = useSpeechRecognition({
+    fallbackLanguage: DEFAULT_SPEECH_LOCALE,
+    language: speechLanguage,
+    onLanguageFallback: persistSpeechLanguage,
+  });
 
   if (!aiModalOpen) return null;
 
-  const handleVoiceCommand = (command: string) => {
-    const normalizedCommand = command.toLowerCase();
-    setAiResponse(`Processing: “${command}”`);
-    speakText(`Processing command: ${command}`);
+  const setSpeechLanguage = (locale: SpeechLocale) => {
+    persistSpeechLanguage(locale);
+    resetTranscript();
+  };
+
+ const handleVoiceCommand = (command: string) => {
+  const cleanCommand = normalizeTranscript(command);
+  const normalizedCommand =
+    cleanCommand.toLocaleLowerCase(speechLanguage);
+
+  setTranscript(cleanCommand);
+  setAiResponse(`Processing: “${cleanCommand}”`);
+  speakText(`Processing command: ${cleanCommand}`);
 
     setTimeout(() => {
       if (normalizedCommand.includes('wheelchair') || normalizedCommand.includes('marketplace')) {
@@ -62,8 +106,8 @@ export const AiAssistantModal: React.FC = () => {
         setActiveTab('camera');
         setAiResponse('AI Vision active. Point camera at product or document.');
       } else {
-        setAiResponse(`Processed command: "${command}". I am here to help you navigate AccessLink seamlessly.`);
-        speakText(`Processed command ${command}`);
+        setAiResponse(`Processed command: "${cleanCommand}". I am here to help you navigate AccessLink seamlessly.`);
+        speakText(`Processed command ${cleanCommand}`);
       }
     }, 1200);
   };
@@ -154,23 +198,28 @@ export const AiAssistantModal: React.FC = () => {
           {activeTab === 'voice' && (
             <div className="flex flex-col items-center text-center space-y-4 py-2">
 
-              <div className="w-full text-left">
-                <label htmlFor="speech-language" className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                  Recognition language
-                </label>
-                <select
-                  id="speech-language"
-                  value={speechLanguage}
-                  onChange={(event) => setSpeechLanguage(event.target.value)}
-                  disabled={isListening}
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                >
-                  <option value="en-US">English</option>
-                  <option value="si-LK">සිංහල (Sinhala)</option>
-                  <option value="ta-LK">தமிழ் (Tamil)</option>
-                </select>
-              </div>
+             <SpeechLanguageSelector
+  disabled={isListening}
+  onChange={setSpeechLanguage}
+  value={speechLanguage}
+/>
 
+{/* Announces the newly selected language to screen readers */}
+<p aria-live="polite" className="sr-only" role="status">
+  Recognition language selected:
+  {' '}
+  {getSpeechLanguage(speechLanguage).label}
+</p>
+
+{/* Shows a sample query in the selected language */}
+<p className="w-full rounded-xl bg-slate-100 px-3 py-2 text-left text-[11px] text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+  <span className="font-bold">
+    {getSpeechLanguage(speechLanguage).nativeLabel} example:
+  </span>
+  {' '}
+  “{getSpeechLanguage(speechLanguage).example}”
+</p>
+            
               {/* Accessible microphone controls */}
               <div className="relative">
                 <button

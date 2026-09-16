@@ -44,6 +44,7 @@
   "devDependencies": {
     "@babel/core": "^7.24.0",
     "@expo/env": "^2.4.2",
+    "@types/google.maps": "^3.66.2",
     "@types/node": "^20.19.43",
     "@types/react": "~19.1.10",
     "@types/react-dom": "~19.1.7",

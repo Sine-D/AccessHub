@@ -1,37 +1,82 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
-const errorMessages: Record<string, string> = {  aborted: 'Voice capture was stopped.',
-  'audio-capture': 'No working microphone was found. Check your device audio settings.',
-  'bad-grammar': 'The speech service could not understand the recognition rules.',
-  'language-not-supported': 'The selected speech language is not supported on this device.',
-  network: 'Voice recognition could not reach the speech service. Check your internet connection.',
-  'no-speech': 'No speech was detected. Move closer to the microphone and try again.',
-  'not-allowed': 'Microphone access was blocked. Allow microphone permission in your browser and try again.',
-  'phrases-not-supported': 'Speech phrases are not supported by this browser.',
-  'service-not-allowed': 'This browser has blocked the speech-recognition service.',
+import { normalizeTranscript } from '../utils/normalizeTranscript';
+
+const errorMessages: Record<string, string> = {
+  aborted: 'Voice capture was stopped.',
+  'audio-capture':
+    'No working microphone was found. Check your device audio settings.',
+  'bad-grammar':
+    'The speech service could not understand the recognition rules.',
+  'language-not-supported':
+    'The selected speech language is not supported on this device.',
+  network:
+    'Voice recognition could not reach the speech service. Check your internet connection.',
+  'no-speech':
+    'No speech was detected. Move closer to the microphone and try again.',
+  'not-allowed':
+    'Microphone access was blocked. Allow microphone permission in your browser and try again.',
+  'phrases-not-supported':
+    'Speech phrases are not supported by this browser.',
+  'service-not-allowed':
+    'This browser has blocked the speech-recognition service.',
 };
 
 interface UseSpeechRecognitionOptions {
+  fallbackLanguage?: string;
   language?: string;
+  onLanguageFallback?: (language: string) => void;
 }
 
-export const useSpeechRecognition = ({ language = 'en-US' }: UseSpeechRecognitionOptions = {}) => {
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+export const useSpeechRecognition = ({
+  fallbackLanguage = 'en-LK',
+  language = 'en-US',
+  onLanguageFallback,
+}: UseSpeechRecognitionOptions = {}) => {
+  const recognitionRef =
+    useRef<SpeechRecognition | null>(null);
+
   const committedTranscriptRef = useRef('');
-  const [transcript, setTranscriptState] = useState('');
-  const [isListening, setIsListening] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const fallbackAttemptedRef = useRef(false);
+
+  const [transcript, setTranscriptState] =
+    useState('');
+
+  const [isListening, setIsListening] =
+    useState(false);
+
+  const [error, setError] =
+    useState<string | null>(null);
 
   const Recognition =
     typeof window === 'undefined'
       ? undefined
-      : window.SpeechRecognition ?? window.webkitSpeechRecognition;
+      : window.SpeechRecognition ??
+        window.webkitSpeechRecognition;
+
   const isSupported = Boolean(Recognition);
 
-  const setTranscript = useCallback((value: string) => {
-    committedTranscriptRef.current = value.trim();
-    setTranscriptState(value);
-  }, []);
+  /*
+   * Normalizes manually typed or corrected transcript text
+   * before saving it as the committed transcript.
+   */
+  const setTranscript = useCallback(
+    (value: string) => {
+      const normalizedValue =
+        normalizeTranscript(value);
+
+      committedTranscriptRef.current =
+        normalizedValue;
+
+      setTranscriptState(normalizedValue);
+    },
+    [],
+  );
 
   const resetTranscript = useCallback(() => {
     committedTranscriptRef.current = '';
@@ -45,13 +90,17 @@ export const useSpeechRecognition = ({ language = 'en-US' }: UseSpeechRecognitio
 
   const startListening = useCallback(() => {
     if (!Recognition) {
-      setError('Voice recognition is not supported in this browser. Use current Chrome or Edge, or type your query below.');
+      setError(
+        'Voice recognition is not supported in this browser. Use current Chrome or Edge, or type your query below.',
+      );
+
       return;
     }
 
     if (isListening) return;
 
     const recognition = new Recognition();
+
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = language;
@@ -66,29 +115,77 @@ export const useSpeechRecognition = ({ language = 'en-US' }: UseSpeechRecognitio
       let finalText = '';
       let interimText = '';
 
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      for (
+        let index = event.resultIndex;
+        index < event.results.length;
+        index += 1
+      ) {
         const result = event.results[index];
-        const spokenText = result[0]?.transcript ?? '';
 
-        if (result.isFinal) finalText += spokenText;
-        else interimText += spokenText;
+        const spokenText =
+          result[0]?.transcript ?? '';
+
+        if (result.isFinal) {
+          finalText += spokenText;
+        } else {
+          interimText += spokenText;
+        }
       }
 
+      /*
+       * Adds the final recognized words to the committed
+       * transcript and normalizes Unicode and spacing.
+       */
       if (finalText.trim()) {
-        committedTranscriptRef.current = [committedTranscriptRef.current, finalText.trim()]
-          .filter(Boolean)
-          .join(' ');
+        committedTranscriptRef.current =
+          normalizeTranscript(
+            [
+              committedTranscriptRef.current,
+              finalText,
+            ]
+              .filter(Boolean)
+              .join(' '),
+          );
       }
 
+      /*
+       * Displays the committed transcript together with
+       * the latest interim recognition result.
+       */
       setTranscriptState(
-        [committedTranscriptRef.current, interimText.trim()].filter(Boolean).join(' '),
+        normalizeTranscript(
+          [
+            committedTranscriptRef.current,
+            interimText,
+          ]
+            .filter(Boolean)
+            .join(' '),
+        ),
       );
     };
 
     recognition.onerror = (event) => {
-      if (event.error !== 'aborted') {
-        setError(errorMessages[event.error] ?? 'Voice recognition failed. Please try again or type your query.');
+      if (
+        event.error === 'language-not-supported' &&
+        language !== fallbackLanguage &&
+        !fallbackAttemptedRef.current
+      ) {
+        fallbackAttemptedRef.current = true;
+        onLanguageFallback?.(fallbackLanguage);
+        setError(
+          'The selected spoken language is not supported by this device. Recognition has switched to English. You can also type or correct the transcript.',
+        );
+        setIsListening(false);
+        return;
       }
+
+      if (event.error !== 'aborted') {
+        setError(
+          errorMessages[event.error] ??
+            'Voice recognition failed. Please try again or type your query.',
+        );
+      }
+
       setIsListening(false);
     };
 
@@ -104,12 +201,27 @@ export const useSpeechRecognition = ({ language = 'en-US' }: UseSpeechRecognitio
     } catch {
       recognitionRef.current = null;
       setIsListening(false);
-      setError('The microphone is already in use. Stop the current recording and try again.');
+
+      setError(
+        'The microphone is already in use. Stop the current recording and try again.',
+      );
     }
-  }, [Recognition, isListening, language]);
+  }, [
+    Recognition,
+    fallbackLanguage,
+    isListening,
+    language,
+    onLanguageFallback,
+  ]);
 
   useEffect(() => {
-    return () => recognitionRef.current?.abort();
+    fallbackAttemptedRef.current = false;
+  }, [language]);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.abort();
+    };
   }, []);
 
   return {
