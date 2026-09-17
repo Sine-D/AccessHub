@@ -89,6 +89,7 @@ export default function AppMobile() {
   const [mobileServices, setMobileServices] = useState<ServiceItem[]>([]);
   const [mobilePendingApps, setMobilePendingApps] = useState<FreelancerServiceApplication[]>([]);
   const [serviceSearch, setServiceSearch] = useState('');
+  const [serviceCategory, setServiceCategory] = useState('All');
   const [isFreelancerFormOpen, setIsFreelancerFormOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
@@ -1463,7 +1464,7 @@ export default function AppMobile() {
               </View>
 
               {/* SEARCH BAR FOR SERVICES */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: cardBg, borderRadius: 12, borderWidth: 1, borderColor: '#334155', overflow: 'hidden' }}>
                   <TextInput
                     style={[
@@ -1487,6 +1488,45 @@ export default function AppMobile() {
                   </TouchableOpacity>
                 </View>
               </View>
+
+              {/* CATEGORY FILTER PILLS FOR SERVICES */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingBottom: 8 }}
+                style={{ marginBottom: 8 }}
+              >
+                {['All', 'HandCraft', 'Designing', 'Development', 'Translation'].map((cat) => {
+                  const isSelected = serviceCategory === cat;
+                  return (
+                    <TouchableOpacity
+                      key={cat}
+                      onPress={() => {
+                        setServiceCategory(cat);
+                        speakText(`Filter by ${cat}`);
+                      }}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        backgroundColor: isSelected ? accentColor : cardBg,
+                        borderWidth: 1,
+                        borderColor: isSelected ? accentColor : '#334155',
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 'bold',
+                          color: isSelected ? '#ffffff' : subTextColor,
+                        }}
+                      >
+                        {cat}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
 
               {mobilePendingApps.length > 0 && (
                 <TouchableOpacity
@@ -1518,6 +1558,44 @@ export default function AppMobile() {
               )}
 
               {mobileServices.filter((srv) => {
+                // Category Pill Filter
+                if (serviceCategory !== 'All') {
+                  const cat = serviceCategory.toLowerCase();
+                  const serviceCat = srv.category?.toLowerCase() || '';
+                  const serviceTitle = srv.title?.toLowerCase() || '';
+                  const serviceDesc = srv.description?.toLowerCase() || '';
+                  const serviceSkills = (srv.skills || []).map((s: string) => s.toLowerCase());
+
+                  let matchCategory = false;
+
+                  if (cat === 'handcraft') {
+                    matchCategory = serviceCat.includes('handcraft') || serviceCat.includes('craft') || serviceCat.includes('handbag') || serviceCat.includes('tailor') ||
+                                    serviceTitle.includes('handcraft') || serviceTitle.includes('craft') || serviceTitle.includes('making') || serviceTitle.includes('handbag') || serviceTitle.includes('tailor') ||
+                                    serviceDesc.includes('craft') || serviceDesc.includes('hand') ||
+                                    serviceSkills.some((s: string) => s.includes('craft') || s.includes('hand') || s.includes('making') || s.includes('tailor'));
+                  } else if (cat === 'designing') {
+                    matchCategory = serviceCat.includes('design') || 
+                                    serviceTitle.includes('design') || serviceTitle.includes('ux') || serviceTitle.includes('ui') || serviceTitle.includes('graphic') ||
+                                    serviceDesc.includes('design') || serviceDesc.includes('ux') ||
+                                    serviceSkills.some((s: string) => s.includes('design') || s.includes('ux') || s.includes('ui'));
+                  } else if (cat === 'development') {
+                    matchCategory = serviceCat.includes('dev') || serviceCat.includes('code') || serviceCat.includes('software') || serviceCat.includes('web') ||
+                                    serviceTitle.includes('dev') || serviceTitle.includes('code') || serviceTitle.includes('software') || serviceTitle.includes('web') || serviceTitle.includes('tech') ||
+                                    serviceDesc.includes('dev') || serviceDesc.includes('code') || serviceDesc.includes('software') ||
+                                    serviceSkills.some((s: string) => s.includes('dev') || s.includes('code') || s.includes('web') || s.includes('react') || s.includes('software') || s.includes('tech'));
+                  } else if (cat === 'translation') {
+                    matchCategory = serviceCat.includes('transla') || serviceCat.includes('sign') || serviceCat.includes('language') || serviceCat.includes('interpret') ||
+                                    serviceTitle.includes('transla') || serviceTitle.includes('sign') || serviceTitle.includes('language') || serviceTitle.includes('interpret') || serviceTitle.includes('braille') ||
+                                    serviceDesc.includes('transla') || serviceDesc.includes('sign') || serviceDesc.includes('language') ||
+                                    serviceSkills.some((s: string) => s.includes('transla') || s.includes('sign') || s.includes('language') || s.includes('braille') || s.includes('interpreter'));
+                  } else {
+                    matchCategory = serviceCat.includes(cat) || serviceTitle.includes(cat) || serviceDesc.includes(cat) || serviceSkills.some((s: string) => s.includes(cat));
+                  }
+
+                  if (!matchCategory) return false;
+                }
+
+                // Search query filter
                 if (!serviceSearch.trim()) return true;
                 const q = serviceSearch.toLowerCase().trim();
                 const matchTitle = srv.title.toLowerCase().includes(q);
