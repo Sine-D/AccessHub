@@ -1,4 +1,5 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
+import { interpretQuery } from '../../../services/queryService';
 import { useAccessibility } from '../../../core/hooks/useAccessibility';
 import { useAppState } from '../../../core/hooks/useAppState';
 import { useSpeechRecognition } from '../../../core/hooks/useSpeechRecognition';
@@ -25,7 +26,13 @@ import { normalizeTranscript } from '../../../core/utils/normalizeTranscript';
 
 export const AiAssistantModal: React.FC = () => {
   const { aiModalOpen, setAiModalOpen, speakText } = useAccessibility();
-  const { setActiveScreen } = useAppState();
+  const { setActiveScreen, setSearchQuery } = useAppState();
+  const requestRef = useRef<AbortController | null>(null);
+  const [isInterpreting, setIsInterpreting] = useState(false);
+  useEffect(() => {
+    if (!aiModalOpen) { requestRef.current?.abort(); setIsInterpreting(false); }
+    return () => requestRef.current?.abort();
+  }, [aiModalOpen]);
 
   const [activeTab, setActiveTab] = useState<'voice' | 'camera' | 'fraud'>('voice');
   const [speechLanguage, setSpeechLanguageState] =
@@ -78,41 +85,33 @@ export const AiAssistantModal: React.FC = () => {
     resetTranscript();
   };
 
- const handleVoiceCommand = (command: string) => {
-  const cleanCommand = normalizeTranscript(command);
-  const normalizedCommand =
-    cleanCommand.toLocaleLowerCase(speechLanguage);
-
-  setTranscript(cleanCommand);
-  setAiResponse(`Processing: “${cleanCommand}”`);
-  speakText(`Processing command: ${cleanCommand}`);
-
-    setTimeout(() => {
-      if (normalizedCommand.includes('wheelchair') || normalizedCommand.includes('marketplace')) {
-        setAiResponse('Found 4 nearby accessible marketplace items. Navigating to Marketplace...');
-        speakText('Found nearby items. Navigating to Marketplace.');
-        setTimeout(() => {
-          setAiModalOpen(false);
-          setActiveScreen('marketplace');
-        }, 1500);
-      } else if (normalizedCommand.includes('job')) {
-        setAiResponse('Filtering 100% remote screen-reader friendly job postings...');
-        speakText('Filtering accessible job postings.');
-        setTimeout(() => {
-          setAiModalOpen(false);
-          setActiveScreen('jobs');
-        }, 1500);
-      } else if (normalizedCommand.includes('scan')) {
-        setActiveTab('camera');
-        setAiResponse('AI Vision active. Point camera at product or document.');
-      } else {
-        setAiResponse(`Processed command: "${cleanCommand}". I am here to help you navigate AccessLink seamlessly.`);
-        speakText(`Processed command ${cleanCommand}`);
+ const handleVoiceCommand = async (command: string) => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setIsInterpreting(true);
+    setAiResponse('Interpreting your search…');
+    try {
+      const result = await interpretQuery(normalizeTranscript(command), speechLanguage, controller.signal);
+      if (controller.signal.aborted) return;
+      if (result.query.needsClarification) {
+        const message = result.query.clarification || 'Please clarify your search.';
+        setAiResponse(message); speakText(message); return;
       }
-    }, 1200);
+      setSearchQuery(result.query);
+      speakText(result.source === 'keyword' ? 'Using keyword search. Results ready.' : 'Search results ready.');
+      stopListening();
+      setAiModalOpen(false);
+      setActiveScreen('search_results');
+    } catch {
+      if (!controller.signal.aborted) setAiResponse('Please enter a valid search of up to 500 characters.');
+    } finally {
+      if (!controller.signal.aborted) setIsInterpreting(false);
+    }
   };
 
   const closeModal = () => {
+    requestRef.current?.abort();
     if (isListening) stopListening();
     setAiModalOpen(false);
   };
@@ -297,7 +296,7 @@ export const AiAssistantModal: React.FC = () => {
                   className="mt-1 w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
                 <button
-                  disabled={!transcript.trim() || isListening}
+                  disabled={!transcript.trim() || isListening || isInterpreting}
                   onClick={() => handleVoiceCommand(transcript.trim())}
                   className="mt-2 min-h-11 w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-extrabold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
                 >
