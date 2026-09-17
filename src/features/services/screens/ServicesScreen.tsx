@@ -14,10 +14,13 @@ import {
   Search
 } from 'lucide-react';
 
+const CATEGORIES = ['All', 'HandCraft', 'Designing', 'Development', 'Translation'];
+
 export const ServicesScreen: React.FC = () => {
   const { servicesList, setActiveScreen, setFreelancerModalOpen } = useAppState();
   const { speakText } = useAccessibility();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [bookingSuccess, setBookingSuccess] = useState(false);
 
   const handleBookService = (serviceTitle: string) => {
@@ -30,6 +33,44 @@ export const ServicesScreen: React.FC = () => {
   };
 
   const filteredServices = servicesList.filter((service) => {
+    // Category Pill Filter
+    if (selectedCategory !== 'All') {
+      const cat = selectedCategory.toLowerCase();
+      const serviceCat = service.category?.toLowerCase() || '';
+      const serviceTitle = service.title?.toLowerCase() || '';
+      const serviceDesc = service.description?.toLowerCase() || '';
+      const serviceSkills = (service.skills || []).map(s => s.toLowerCase());
+
+      let matchCategory = false;
+
+      if (cat === 'handcraft') {
+        matchCategory = serviceCat.includes('handcraft') || serviceCat.includes('craft') || serviceCat.includes('handbag') || serviceCat.includes('tailor') ||
+                        serviceTitle.includes('handcraft') || serviceTitle.includes('craft') || serviceTitle.includes('making') || serviceTitle.includes('handbag') || serviceTitle.includes('tailor') ||
+                        serviceDesc.includes('craft') || serviceDesc.includes('hand') ||
+                        serviceSkills.some(s => s.includes('craft') || s.includes('hand') || s.includes('making') || s.includes('tailor'));
+      } else if (cat === 'designing') {
+        matchCategory = serviceCat.includes('design') || 
+                        serviceTitle.includes('design') || serviceTitle.includes('ux') || serviceTitle.includes('ui') || serviceTitle.includes('graphic') ||
+                        serviceDesc.includes('design') || serviceDesc.includes('ux') ||
+                        serviceSkills.some(s => s.includes('design') || s.includes('ux') || s.includes('ui'));
+      } else if (cat === 'development') {
+        matchCategory = serviceCat.includes('dev') || serviceCat.includes('code') || serviceCat.includes('software') || serviceCat.includes('web') ||
+                        serviceTitle.includes('dev') || serviceTitle.includes('code') || serviceTitle.includes('software') || serviceTitle.includes('web') || serviceTitle.includes('tech') ||
+                        serviceDesc.includes('dev') || serviceDesc.includes('code') || serviceDesc.includes('software') ||
+                        serviceSkills.some(s => s.includes('dev') || s.includes('code') || s.includes('web') || s.includes('react') || s.includes('software') || s.includes('tech'));
+      } else if (cat === 'translation') {
+        matchCategory = serviceCat.includes('transla') || serviceCat.includes('sign') || serviceCat.includes('language') || serviceCat.includes('interpret') ||
+                        serviceTitle.includes('transla') || serviceTitle.includes('sign') || serviceTitle.includes('language') || serviceTitle.includes('interpret') || serviceTitle.includes('braille') ||
+                        serviceDesc.includes('transla') || serviceDesc.includes('sign') || serviceDesc.includes('language') ||
+                        serviceSkills.some(s => s.includes('transla') || s.includes('sign') || s.includes('language') || s.includes('braille') || s.includes('interpreter'));
+      } else {
+        matchCategory = serviceCat.includes(cat) || serviceTitle.includes(cat) || serviceDesc.includes(cat) || serviceSkills.some(s => s.includes(cat));
+      }
+
+      if (!matchCategory) return false;
+    }
+
+    // Search query filter
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     const matchTitle = service.title.toLowerCase().includes(q);
@@ -92,6 +133,29 @@ export const ServicesScreen: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-teal-500 outline-none shadow-xs"
           />
+        </div>
+
+        {/* Category Filter Pills */}
+        <div className="flex items-center space-x-2 overflow-x-auto pb-1 no-scrollbar">
+          {CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  speakText(`Filter by ${cat}`);
+                }}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center space-x-1 border ${
+                  isSelected
+                    ? 'bg-teal-600 text-white border-teal-600 shadow-md'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span>{cat}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Services List */}
