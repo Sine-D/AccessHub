@@ -9,4 +9,3 @@ export function matchesSearch(record:{title:string;description?:string;address?:
  if(query.maxPrice!==null && (record.price===undefined || record.price>query.maxPrice)) return false;
  return query.keywords.split(/\s+/).filter(Boolean).every(word=>haystack.includes(normalize(word)));
 }
-

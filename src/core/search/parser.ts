@@ -57,3 +57,4 @@ export function parseKeywords(text: string, locale='en-LK'): SearchQuery {
  q.needsClarification=false;q.clarification=null;
  return q;
 }
+
