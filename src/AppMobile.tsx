@@ -209,7 +209,7 @@ export default function AppMobile() {
       title: appToApprove.serviceTitle,
       hourlyRate: Number(appToApprove.hourlyRate),
       providerName: appToApprove.name,
-      providerAvatar: appToApprove.ratingImages[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+      providerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
       disabilityBadge: (appToApprove.disabilityBadge || 'Verified Freelancer') as any,
       rating: appToApprove.rating,
       reviewsCount: 1,
@@ -1447,20 +1447,6 @@ export default function AppMobile() {
                 >
                   🤝 Inclusive Services
                 </Text>
-
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: accentColor,
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 12,
-                  }}
-                  onPress={() => setIsFreelancerFormOpen(true)}
-                >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
-                    + Register Form
-                  </Text>
-                </TouchableOpacity>
               </View>
 
               {/* SEARCH BAR FOR SERVICES */}
@@ -1489,39 +1475,51 @@ export default function AppMobile() {
                 </View>
               </View>
 
+              {/* CATEGORY FILTERS TITLE */}
+              <Text style={{ fontSize: 15, fontWeight: 'bold', color: textColor, marginTop: 4, marginBottom: 8 }}>
+                Category Filters
+              </Text>
+
               {/* CATEGORY FILTER PILLS FOR SERVICES */}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ gap: 8, paddingBottom: 8 }}
-                style={{ marginBottom: 8 }}
+                style={{ marginBottom: 14 }}
               >
-                {['All', 'HandCraft', 'Designing', 'Development', 'Translation'].map((cat) => {
-                  const isSelected = serviceCategory === cat;
+                {[
+                  { id: 'All', label: '[All]' },
+                  { id: 'HandCraft', label: '[Handicrafts]' },
+                  { id: 'Development', label: '[Web Development]' },
+                  { id: 'Designing', label: '[Design]' },
+                  { id: 'Translation', label: '[Translation]' },
+                  { id: 'Editing', label: '[Editing]' }
+                ].map((cat) => {
+                  const isSelected = serviceCategory === cat.id;
                   return (
                     <TouchableOpacity
-                      key={cat}
+                      key={cat.id}
                       onPress={() => {
-                        setServiceCategory(cat);
-                        speakText(`Filter by ${cat}`);
+                        setServiceCategory(cat.id);
+                        speakText(`Filter by ${cat.id}`);
                       }}
                       style={{
-                        paddingHorizontal: 16,
-                        paddingVertical: 8,
-                        borderRadius: 20,
-                        backgroundColor: isSelected ? accentColor : cardBg,
-                        borderWidth: 1,
-                        borderColor: isSelected ? accentColor : '#334155',
+                        paddingHorizontal: 22,
+                        paddingVertical: 10,
+                        borderRadius: 24,
+                        backgroundColor: isSelected ? '#f59e0b' : '#1b1436',
+                        borderWidth: 1.5,
+                        borderColor: isSelected ? '#f59e0b' : '#4c1d95',
                       }}
                     >
                       <Text
                         style={{
                           fontSize: 12,
                           fontWeight: 'bold',
-                          color: isSelected ? '#ffffff' : subTextColor,
+                          color: isSelected ? '#000000' : '#e9d5ff',
                         }}
                       >
-                        {cat}
+                        {cat.label}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -1536,7 +1534,7 @@ export default function AppMobile() {
                     borderWidth: 1,
                     padding: 12,
                     borderRadius: 16,
-                    marginBottom: 12,
+                    marginBottom: 14,
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -1557,172 +1555,195 @@ export default function AppMobile() {
                 </TouchableOpacity>
               )}
 
-              {mobileServices.filter((srv) => {
-                // Category Pill Filter
-                if (serviceCategory !== 'All') {
-                  const cat = serviceCategory.toLowerCase();
-                  const serviceCat = srv.category?.toLowerCase() || '';
-                  const serviceTitle = srv.title?.toLowerCase() || '';
-                  const serviceDesc = srv.description?.toLowerCase() || '';
-                  const serviceSkills = (srv.skills || []).map((s: string) => s.toLowerCase());
+              {/* SERVICES CARDS GRID (3-COLUMN RESPONSIVE LAYOUT MATCHING SCREENSHOT 1) */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
+                {mobileServices.filter((srv) => {
+                  // Category Pill Filter
+                  if (serviceCategory !== 'All') {
+                    const cat = serviceCategory.toLowerCase();
+                    const serviceCat = srv.category?.toLowerCase() || '';
+                    const serviceTitle = srv.title?.toLowerCase() || '';
+                    const serviceDesc = srv.description?.toLowerCase() || '';
+                    const serviceSkills = (srv.skills || []).map((s: string) => s.toLowerCase());
 
-                  let matchCategory = false;
+                    let matchCategory = false;
 
-                  if (cat === 'handcraft') {
-                    matchCategory = serviceCat.includes('handcraft') || serviceCat.includes('craft') || serviceCat.includes('handbag') || serviceCat.includes('tailor') ||
-                                    serviceTitle.includes('handcraft') || serviceTitle.includes('craft') || serviceTitle.includes('making') || serviceTitle.includes('handbag') || serviceTitle.includes('tailor') ||
-                                    serviceDesc.includes('craft') || serviceDesc.includes('hand') ||
-                                    serviceSkills.some((s: string) => s.includes('craft') || s.includes('hand') || s.includes('making') || s.includes('tailor'));
-                  } else if (cat === 'designing') {
-                    matchCategory = serviceCat.includes('design') || 
-                                    serviceTitle.includes('design') || serviceTitle.includes('ux') || serviceTitle.includes('ui') || serviceTitle.includes('graphic') ||
-                                    serviceDesc.includes('design') || serviceDesc.includes('ux') ||
-                                    serviceSkills.some((s: string) => s.includes('design') || s.includes('ux') || s.includes('ui'));
-                  } else if (cat === 'development') {
-                    matchCategory = serviceCat.includes('dev') || serviceCat.includes('code') || serviceCat.includes('software') || serviceCat.includes('web') ||
-                                    serviceTitle.includes('dev') || serviceTitle.includes('code') || serviceTitle.includes('software') || serviceTitle.includes('web') || serviceTitle.includes('tech') ||
-                                    serviceDesc.includes('dev') || serviceDesc.includes('code') || serviceDesc.includes('software') ||
-                                    serviceSkills.some((s: string) => s.includes('dev') || s.includes('code') || s.includes('web') || s.includes('react') || s.includes('software') || s.includes('tech'));
-                  } else if (cat === 'translation') {
-                    matchCategory = serviceCat.includes('transla') || serviceCat.includes('sign') || serviceCat.includes('language') || serviceCat.includes('interpret') ||
-                                    serviceTitle.includes('transla') || serviceTitle.includes('sign') || serviceTitle.includes('language') || serviceTitle.includes('interpret') || serviceTitle.includes('braille') ||
-                                    serviceDesc.includes('transla') || serviceDesc.includes('sign') || serviceDesc.includes('language') ||
-                                    serviceSkills.some((s: string) => s.includes('transla') || s.includes('sign') || s.includes('language') || s.includes('braille') || s.includes('interpreter'));
-                  } else {
-                    matchCategory = serviceCat.includes(cat) || serviceTitle.includes(cat) || serviceDesc.includes(cat) || serviceSkills.some((s: string) => s.includes(cat));
+                    if (cat === 'handcraft') {
+                      matchCategory = serviceCat.includes('handcraft') || serviceCat.includes('craft') || serviceCat.includes('handbag') || serviceCat.includes('tailor') ||
+                                      serviceTitle.includes('handcraft') || serviceTitle.includes('craft') || serviceTitle.includes('making') || serviceTitle.includes('handbag') || serviceTitle.includes('tailor') ||
+                                      serviceDesc.includes('craft') || serviceDesc.includes('hand') ||
+                                      serviceSkills.some((s: string) => s.includes('craft') || s.includes('hand') || s.includes('making') || s.includes('tailor'));
+                    } else if (cat === 'designing') {
+                      matchCategory = serviceCat.includes('design') || 
+                                      serviceTitle.includes('design') || serviceTitle.includes('ux') || serviceTitle.includes('ui') || serviceTitle.includes('graphic') ||
+                                      serviceDesc.includes('design') || serviceDesc.includes('ux') ||
+                                      serviceSkills.some((s: string) => s.includes('design') || s.includes('ux') || s.includes('ui'));
+                    } else if (cat === 'development') {
+                      matchCategory = serviceCat.includes('dev') || serviceCat.includes('code') || serviceCat.includes('software') || serviceCat.includes('web') ||
+                                      serviceTitle.includes('dev') || serviceTitle.includes('code') || serviceTitle.includes('software') || serviceTitle.includes('web') || serviceTitle.includes('tech') ||
+                                      serviceDesc.includes('dev') || serviceDesc.includes('code') || serviceDesc.includes('software') ||
+                                      serviceSkills.some((s: string) => s.includes('dev') || s.includes('code') || s.includes('web') || s.includes('react') || s.includes('software') || s.includes('tech'));
+                    } else if (cat === 'translation') {
+                      matchCategory = serviceCat.includes('transla') || serviceCat.includes('sign') || serviceCat.includes('language') || serviceCat.includes('interpret') ||
+                                      serviceTitle.includes('transla') || serviceTitle.includes('sign') || serviceTitle.includes('language') || serviceTitle.includes('interpret') || serviceTitle.includes('braille') ||
+                                      serviceDesc.includes('transla') || serviceDesc.includes('sign') || serviceDesc.includes('language') ||
+                                      serviceSkills.some((s: string) => s.includes('transla') || s.includes('sign') || s.includes('language') || s.includes('braille') || s.includes('interpreter'));
+                    } else if (cat === 'editing') {
+                      matchCategory = serviceCat.includes('edit') || serviceCat.includes('video') || serviceCat.includes('audio') || serviceCat.includes('media') ||
+                                      serviceTitle.includes('edit') || serviceTitle.includes('video') || serviceTitle.includes('audio') || serviceTitle.includes('media') ||
+                                      serviceDesc.includes('edit') || serviceDesc.includes('video') || serviceDesc.includes('audio') ||
+                                      serviceSkills.some((s: string) => s.includes('edit') || s.includes('video') || s.includes('audio') || s.includes('media'));
+                    } else {
+                      matchCategory = serviceCat.includes(cat) || serviceTitle.includes(cat) || serviceDesc.includes(cat) || serviceSkills.some((s: string) => s.includes(cat));
+                    }
+
+                    if (!matchCategory) return false;
                   }
 
-                  if (!matchCategory) return false;
-                }
+                  // Search query filter
+                  if (!serviceSearch.trim()) return true;
+                  const q = serviceSearch.toLowerCase().trim();
+                  const matchTitle = srv.title.toLowerCase().includes(q);
+                  const matchProvider = srv.providerName.toLowerCase().includes(q);
+                  const matchDesc = srv.description ? srv.description.toLowerCase().includes(q) : false;
+                  const matchSkills = srv.skills ? srv.skills.some(s => s.toLowerCase().includes(q)) : false;
+                  const matchBadge = srv.disabilityBadge ? srv.disabilityBadge.toLowerCase().includes(q) : false;
+                  return matchTitle || matchProvider || matchDesc || matchSkills || matchBadge;
+                }).map((srv, idx) => (
+                  <View
+                    key={srv.id}
+                    style={{
+                      flex: 1,
+                      minWidth: 260,
+                      maxWidth: '100%',
+                      margin: 6,
+                      backgroundColor: '#1b1436',
+                      borderRadius: 18,
+                      borderWidth: 1.5,
+                      borderColor: '#4c1d95',
+                      padding: 14,
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <View>
+                      {/* Provider Header */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                        <Image
+                          source={{
+                            uri: srv.providerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+                          }}
+                          style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 22,
+                            borderWidth: 2,
+                            borderColor: '#8b5cf6',
+                          }}
+                        />
 
-                // Search query filter
-                if (!serviceSearch.trim()) return true;
-                const q = serviceSearch.toLowerCase().trim();
-                const matchTitle = srv.title.toLowerCase().includes(q);
-                const matchProvider = srv.providerName.toLowerCase().includes(q);
-                const matchDesc = srv.description ? srv.description.toLowerCase().includes(q) : false;
-                const matchSkills = srv.skills ? srv.skills.some(s => s.toLowerCase().includes(q)) : false;
-                const matchBadge = srv.disabilityBadge ? srv.disabilityBadge.toLowerCase().includes(q) : false;
-                return matchTitle || matchProvider || matchDesc || matchSkills || matchBadge;
-              }).map((srv) => (
-                <View
-                  key={srv.id}
-                  style={[
-                    styles.serviceCard,
-                    {
-                      backgroundColor: cardBg,
-                    },
-                  ]}
-                >
-                  <View style={styles.rowAlign}>
-                    <Image
-                      source={{
-                        uri: srv.providerAvatar,
-                      }}
-                      style={styles.avatarMini}
-                    />
+                        <View style={{ marginLeft: 10, flex: 1 }}>
+                          <Text
+                            style={{
+                              color: '#ffffff',
+                              fontWeight: 'bold',
+                              fontSize: 14,
+                            }}
+                          >
+                            {srv.providerName}
+                          </Text>
 
-                    <View
-                      style={{
-                        flex: 1,
-                        marginLeft: 10,
-                      }}
-                    >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                            <Text style={{ fontSize: 10, color: '#f59e0b', fontWeight: 'bold' }}>
+                              ✔ Verified Freelancer
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Service Title */}
                       <Text
-                        style={[
-                          styles.providerName,
-                          dynamicText(14),
-                          {
-                            color: textColor,
-                          },
-                        ]}
+                        style={{
+                          color: '#ffffff',
+                          fontWeight: 'bold',
+                          fontSize: 14,
+                          marginBottom: 4,
+                        }}
                       >
-                        {srv.providerName}
+                        {srv.title}
                       </Text>
 
+                      {/* Description */}
                       <Text
-                        style={[
-                          styles.badgeTag,
-                          {
-                            color: accentColor,
-                          },
-                        ]}
+                        style={{
+                          color: '#94a3b8',
+                          fontSize: 11,
+                          lineHeight: 16,
+                          marginBottom: 10,
+                        }}
+                        numberOfLines={2}
                       >
-                        ♿ {srv.disabilityBadge}
+                        {srv.description || 'Professional freelancer service offered through AccessHub.'}
                       </Text>
+
+                      {/* Price & Rating */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 13 }}>
+                          LKR {srv.hourlyRate.toLocaleString()} / hour
+                        </Text>
+
+                        <Text style={{ color: '#fbbf24', fontSize: 12, fontWeight: 'bold' }}>
+                          ★ {srv.rating || 4.9}
+                        </Text>
+                      </View>
+
+                      {/* Uploaded Portfolio / Work Proof Photos */}
+                      {srv.portfolioImages && srv.portfolioImages.length > 0 && (
+                        <View style={{ marginBottom: 12 }}>
+                          <Text style={{ fontSize: 10, color: '#94a3b8', fontWeight: 'bold', marginBottom: 4 }}>
+                            📷 Work Proof Photos ({srv.portfolioImages.length}):
+                          </Text>
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                            {srv.portfolioImages.map((img, i) => (
+                              <Image
+                                key={i}
+                                source={{ uri: img }}
+                                style={{
+                                  width: 52,
+                                  height: 40,
+                                  borderRadius: 8,
+                                  borderWidth: 1,
+                                  borderColor: '#4c1d95',
+                                }}
+                              />
+                            ))}
+                          </ScrollView>
+                        </View>
+                      )}
                     </View>
-                  </View>
 
-                  <Text
-                    style={[
-                      styles.serviceTitle,
-                      dynamicText(13),
-                      {
-                        color: textColor,
-                        marginTop: 8,
-                      },
-                    ]}
-                  >
-                    {srv.title}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.serviceRate,
-                      dynamicText(14),
-                      {
-                        color: accentColor,
-                        marginTop: 4,
-                      },
-                    ]}
-                  >
-                    LKR {srv.hourlyRate.toLocaleString()} /
-                    hour
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.serviceDesc,
-                      dynamicText(11),
-                      {
-                        color: subTextColor,
-                        marginTop: 6,
-                      },
-                    ]}
-                  >
-                    {srv.description}
-                  </Text>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.buyBtn,
-                      {
-                        backgroundColor:
-                          primaryButtonBg,
-                        marginTop: 10,
-                      },
-                    ]}
-                    onPress={() =>
-                      Alert.alert(
-                        'Booked',
-                        `Service request sent to ${srv.providerName}!`,
-                      )
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.buyBtnText,
-                        {
-                          color:
-                            primaryButtonText,
-                        },
-                      ]}
+                    {/* Action Button */}
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: idx % 2 === 0 ? '#2563eb' : '#f59e0b',
+                        paddingVertical: 10,
+                        borderRadius: 12,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      onPress={() =>
+                        Alert.alert(
+                          'Booked',
+                          `Service request sent to ${srv.providerName}!`,
+                        )
+                      }
                     >
-                      Book Provider
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
+                      <Text style={{ color: idx % 2 === 0 ? '#ffffff' : '#000000', fontWeight: 'bold', fontSize: 12 }}>
+                        Book Provider
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
             </View>
           )}
 
