@@ -211,7 +211,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
       title: appToApprove.serviceTitle,
       hourlyRate: Number(appToApprove.hourlyRate),
       providerName: appToApprove.name,
-      providerAvatar: appToApprove.ratingImages[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+      providerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
       disabilityBadge: (appToApprove.disabilityBadge || 'Verified Freelancer') as any,
       rating: appToApprove.rating,
       reviewsCount: 1,

@@ -14,7 +14,7 @@ import {
   Search
 } from 'lucide-react';
 
-const CATEGORIES = ['All', 'HandCraft', 'Designing', 'Development', 'Translation'];
+const CATEGORIES = ['All', 'HandCraft', 'Designing', 'Development', 'Translation', 'Editing'];
 
 export const ServicesScreen: React.FC = () => {
   const { servicesList, setActiveScreen, setFreelancerModalOpen } = useAppState();
@@ -63,6 +63,11 @@ export const ServicesScreen: React.FC = () => {
                         serviceTitle.includes('transla') || serviceTitle.includes('sign') || serviceTitle.includes('language') || serviceTitle.includes('interpret') || serviceTitle.includes('braille') ||
                         serviceDesc.includes('transla') || serviceDesc.includes('sign') || serviceDesc.includes('language') ||
                         serviceSkills.some(s => s.includes('transla') || s.includes('sign') || s.includes('language') || s.includes('braille') || s.includes('interpreter'));
+      } else if (cat === 'editing') {
+        matchCategory = serviceCat.includes('edit') || serviceCat.includes('video') || serviceCat.includes('audio') || serviceCat.includes('media') ||
+                        serviceTitle.includes('edit') || serviceTitle.includes('video') || serviceTitle.includes('audio') || serviceTitle.includes('media') ||
+                        serviceDesc.includes('edit') || serviceDesc.includes('video') || serviceDesc.includes('audio') ||
+                        serviceSkills.some(s => s.includes('edit') || s.includes('video') || s.includes('audio') || s.includes('media'));
       } else {
         matchCategory = serviceCat.includes(cat) || serviceTitle.includes(cat) || serviceDesc.includes(cat) || serviceSkills.some(s => s.includes(cat));
       }
@@ -105,18 +110,7 @@ export const ServicesScreen: React.FC = () => {
             Hire verified disabled experts for UX audits, sign language translation, tailoring, and technical design.
           </p>
 
-          <div className="pt-1 flex items-center justify-between">
-            <button
-              onClick={() => {
-                speakText('Opening Freelancer Registration Form');
-                setFreelancerModalOpen(true);
-              }}
-              className="px-3.5 py-2 rounded-xl bg-white text-teal-800 font-extrabold text-xs shadow-md hover:bg-teal-50 flex items-center space-x-1.5 transition-all"
-            >
-              <Plus className="w-4 h-4 text-teal-700" />
-              <span>Register as Freelancer Form</span>
-            </button>
-
+          <div className="pt-1 flex items-center justify-end">
             <span className="text-[10px] font-semibold text-teal-200">
               {filteredServices.length} Providers Found
             </span>
@@ -158,97 +152,85 @@ export const ServicesScreen: React.FC = () => {
           })}
         </div>
 
-        {/* Services List */}
-        <div className="space-y-4">
+        {/* Services List Grid (3-column responsive layout) */}
+        <div>
           {filteredServices.length === 0 ? (
             <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2">
               <p className="font-extrabold text-sm text-slate-700 dark:text-slate-300">No services found matching "{searchQuery}"</p>
               <p className="text-xs text-slate-400">Try searching for other keywords like "UX", "Braille", "Design", or provider names.</p>
             </div>
           ) : (
-            filteredServices.map((service) => (
-            <div 
-              key={service.id}
-              className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 shadow-sm hover:border-teal-500 transition-all"
-            >
-              {/* Provider Info */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <img src={service.providerAvatar} alt={service.providerName} className="w-12 h-12 rounded-full object-cover ring-2 ring-teal-500/20" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {filteredServices.map((service, idx) => (
+                <div 
+                  key={service.id}
+                  className="bg-[#1b1436] rounded-2xl border border-purple-900/60 p-4 flex flex-col justify-between shadow-lg hover:border-purple-600 transition-all space-y-3"
+                >
                   <div>
-                    <div className="flex items-center space-x-1">
-                      <h4 className="font-bold text-xs text-slate-900 dark:text-white">{service.providerName}</h4>
-                      <ShieldCheck className="w-3.5 h-3.5 text-teal-500" />
+                    {/* Provider Info */}
+                    <div className="flex items-center space-x-3 mb-2">
+                      <img src={service.providerAvatar} alt={service.providerName} className="w-11 h-11 rounded-full object-cover ring-2 ring-purple-500/40" />
+                      <div>
+                        <h4 className="font-bold text-sm text-white">{service.providerName}</h4>
+                        <span className="text-[10px] font-bold text-amber-400 block">
+                          ✔ Verified Freelancer
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 block">
-                      ♿ {service.disabilityBadge}
-                    </span>
-                    {service.availability && (
-                      <span className="text-[9px] text-slate-400 font-medium block">
-                        📍 {service.availability}
+
+                    {/* Title & Desc */}
+                    <div className="space-y-1 mb-2">
+                      <h3 className="font-bold text-sm text-white">{service.title}</h3>
+                      <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                        {service.description || 'Professional freelancer service offered through AccessHub.'}
+                      </p>
+                    </div>
+
+                    {/* Price & Rating */}
+                    <div className="flex items-center justify-between text-xs font-bold pt-1">
+                      <span className="text-sky-400 font-extrabold">
+                        LKR {service.hourlyRate.toLocaleString()} / hr
                       </span>
+                      <div className="flex items-center space-x-1 text-amber-400">
+                        <Star className="w-3.5 h-3.5 fill-amber-400" />
+                        <span>{service.rating}</span>
+                      </div>
+                    </div>
+
+                    {/* Uploaded Portfolio / Work Proof Photos */}
+                    {service.portfolioImages && service.portfolioImages.length > 0 && (
+                      <div className="mt-2">
+                        <span className="text-[10px] text-slate-400 font-bold block mb-1">
+                          📷 Work Proof Photos ({service.portfolioImages.length}):
+                        </span>
+                        <div className="flex space-x-1.5 overflow-x-auto">
+                          {service.portfolioImages.map((img, i) => (
+                            <img
+                              key={i}
+                              src={img}
+                              alt="proof"
+                              className="w-12 h-10 rounded-lg object-cover border border-purple-900 shrink-0"
+                            />
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
+
+                  {/* Booking Action */}
+                  <button
+                    onClick={() => handleBookService(service.title)}
+                    className={`w-full py-2.5 rounded-xl font-bold text-xs shadow-md transition-all ${
+                      idx % 2 === 0 ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+                    }`}
+                  >
+                    Book Provider
+                  </button>
+
                 </div>
-                
-                <div className="text-right">
-                  <span className="font-extrabold text-sm text-blue-600 dark:text-blue-400">
-                    LKR {service.hourlyRate.toLocaleString()} / hr
-                  </span>
-                  <div className="flex items-center justify-end space-x-0.5 text-[10px] font-bold text-amber-500">
-                    <Star className="w-3 h-3 fill-amber-500" />
-                    <span>{service.rating} ({service.reviewsCount})</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Title & Desc */}
-              <div className="space-y-1">
-                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">{service.title}</h3>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  {service.description}
-                </p>
-              </div>
-
-              {/* Skills Tags */}
-              <div className="flex flex-wrap gap-1.5">
-                {service.skills.map((skill: string, idx: number) => (
-                  <span key={idx} className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-teal-50 dark:bg-slate-700 text-teal-700 dark:text-slate-300">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-
-              {/* Portfolio Preview Images */}
-              {service.portfolioImages && service.portfolioImages.length > 0 && (
-                <div className="flex space-x-2 overflow-x-auto pt-1">
-                  {service.portfolioImages.map((img: string, i: number) => (
-                    <img key={i} src={img} alt="portfolio" className="w-20 h-16 rounded-xl object-cover shrink-0 border border-slate-100 dark:border-slate-700" />
-                  ))}
-                </div>
-              )}
-
-              {/* Booking Action */}
-              <div className="flex items-center space-x-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-                <button
-                  onClick={() => setActiveScreen('chat')}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center space-x-1"
-                >
-                  <MessageSquare className="w-4 h-4 text-blue-500" />
-                  <span>Chat Provider</span>
-                </button>
-
-                <button
-                  onClick={() => handleBookService(service.title)}
-                  className="flex-1 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-extrabold shadow-md flex items-center justify-center space-x-1"
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span>Book Service</span>
-                </button>
-              </div>
-
+              ))}
             </div>
-          )))}
+          )}
         </div>
 
         {bookingSuccess && (
