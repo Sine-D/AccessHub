@@ -1,7 +1,6 @@
 import React from 'react';
 import { useAppState } from '../hooks/useAppState';
 
-// Feature Modules Imports (Feature-First Clean Architecture)
 import { SplashScreen, OnboardingScreen, AuthScreen } from '../../features/auth';
 import { HomeScreen } from '../../features/home';
 import { MarketplaceScreen, ProductDetailScreen } from '../../features/marketplace';
@@ -12,7 +11,13 @@ import { MapScreen } from '../../features/map';
 import { ChatScreen } from '../../features/chat';
 import { PaymentScreen, OrderTrackingScreen } from '../../features/orders';
 import { AdminScreen } from '../../features/admin';
-import { ProfileScreen, SettingsScreen, AccessibilitySettingsScreen, NotificationsScreen } from '../../features/profile';
+import {
+  ProfileScreen,
+  SettingsScreen,
+  AccessibilitySettingsScreen,
+  NotificationsScreen,
+} from '../../features/profile';
+import { SearchResultsScreen } from '../../features/ai-assistant/screens/SearchResultsScreen';
 
 export const AppNavigator: React.FC = () => {
   const { activeScreen } = useAppState();
@@ -54,6 +59,8 @@ export const AppNavigator: React.FC = () => {
       return <NotificationsScreen />;
     case 'admin':
       return <AdminScreen />;
+    case 'search_results':
+      return <SearchResultsScreen />;
     default:
       return <HomeScreen />;
   }

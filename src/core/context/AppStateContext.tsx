@@ -2,8 +2,10 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { UserRole, Product, User, ServiceItem, FreelancerServiceApplication } from '../types';
 import { mockCurrentUser, mockProducts, mockServices, mockPendingServiceApplications } from '../../mock/data';
 import { supabase } from '../supabase';
+import type { SearchQuery } from '../search/contracts.ts';
 
 export type ScreenView = 
+  | 'search_results'
   | 'splash'
   | 'onboarding'
   | 'auth'
@@ -24,6 +26,8 @@ export type ScreenView =
   | 'admin';
 
 interface AppStateContextType {
+  searchQuery: SearchQuery | null;
+  setSearchQuery: React.Dispatch<React.SetStateAction<SearchQuery | null>>;
   activeScreen: ScreenView;
   setActiveScreen: (screen: ScreenView) => void;
   currentUser: User;
@@ -54,6 +58,7 @@ interface AppStateContextType {
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
 
 export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [searchQuery, setSearchQuery] = useState<SearchQuery | null>(null);
   const [activeScreen, setActiveScreen] = useState<ScreenView>('splash');
   const [currentUser, setCurrentUser] = useState<User>(mockCurrentUser);
   const [userRole, setUserRole] = useState<UserRole>('seller');
@@ -263,6 +268,8 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
   return (
     <AppStateContext.Provider
       value={{
+        searchQuery,
+        setSearchQuery,
         activeScreen,
         setActiveScreen,
         currentUser,
@@ -302,3 +309,4 @@ export const useAppState = () => {
   }
   return context;
 };
+

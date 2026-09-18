@@ -67,8 +67,8 @@ export const useSpeechRecognition = ({
    */
   const setTranscript = useCallback(
     (value: string) => {
-      const normalizedValue =
-        normalizeTranscript(value);
+      // Preserve spaces while typing; normalize when submitting or recognizing speech.
+      const normalizedValue = value;
 
       committedTranscriptRef.current =
         normalizedValue;
