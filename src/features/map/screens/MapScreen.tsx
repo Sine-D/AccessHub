@@ -32,10 +32,13 @@ import { BottomNav } from '../../../core/navigation/BottomNav';
 import { getAccessiblePlaces } from '../../../services/placesService';
 
 import { MapPin } from '../../../core/types/models';
+import type { Feature } from '../../../core/search/contracts.ts';
+import { matchesSearch } from '../../../core/search/matchSearch.ts';
 
 import {
   AccessiblePlaceSearch,
 } from '../components/AccessiblePlaceSearch';
+import { AccessibilityFilterPanel } from '../components/AccessibilityFilterPanel';
 
 import {
   MapPoint,
@@ -45,6 +48,7 @@ import {
 import {
   sortPlacesByDistance,
 } from '../utils/mapSearch';
+import { filterPlaces } from '../utils/accessibilityFilters.ts';
 
 /* =========================================================
    MAP CAMERA CONTROLLER
@@ -164,6 +168,8 @@ const AccessiblePlacesMap: React.FC<
 export const MapScreen:
 React.FC = () => {
   const {
+    searchQuery,
+    setSearchQuery,
     setActiveScreen,
   } = useAppState();
 
@@ -217,6 +223,30 @@ React.FC = () => {
     setReloadKey,
   ] =
     useState(0);
+
+  /* -----------------------------
+     AC-188 accessibility filters
+     ----------------------------- */
+
+  const placeSearchQuery =
+    searchQuery?.intent === 'places'
+      ? searchQuery
+      : null;
+
+  const [
+    selectedFeatures,
+    setSelectedFeatures,
+  ] = useState<Feature[]>(
+    placeSearchQuery?.features ?? [],
+  );
+
+  useEffect(() => {
+    setSelectedFeatures(
+      searchQuery?.intent === 'places'
+        ? searchQuery.features
+        : [],
+    );
+  }, [searchQuery]);
 
   /* -----------------------------
      AC-179 / AC-182 search state
@@ -276,6 +306,7 @@ React.FC = () => {
 
     getAccessiblePlaces(
       controller.signal,
+      selectedFeatures,
     )
       .then(
         (
@@ -349,7 +380,10 @@ React.FC = () => {
 
       controller.abort();
     };
-  }, [reloadKey]);
+  }, [
+    reloadKey,
+    selectedFeatures,
+  ]);
 
   /* =========================================================
      SORT PLACES BY SEARCH DISTANCE
@@ -357,42 +391,72 @@ React.FC = () => {
      ========================================================= */
 
   const displayedPlaces =
-    useMemo(
-      () =>
-        searchOrigin
-          ? sortPlacesByDistance(
-              places,
-              searchOrigin,
-            )
-          : places,
-      [
-        places,
-        searchOrigin,
-      ],
-    );
+    useMemo(() => {
+      /*
+        The map markers and the accessible list must consume
+        this same collection. The service applies the filter
+        remotely when available; this local pass keeps mock
+        and defensive fallback data consistent.
+      */
+      let nextPlaces =
+        filterPlaces(
+          places,
+          selectedFeatures,
+        );
+
+      if (placeSearchQuery) {
+        nextPlaces =
+          nextPlaces.filter(
+            (place) =>
+              matchesSearch(
+                place,
+                {
+                  ...placeSearchQuery,
+                  features: [],
+                },
+              ),
+          );
+      }
+
+      return searchOrigin
+        ? sortPlacesByDistance(
+            nextPlaces,
+            searchOrigin,
+          )
+        : nextPlaces;
+    }, [
+      places,
+      selectedFeatures,
+      placeSearchQuery,
+      searchOrigin,
+    ]);
 
   /*
-    When user searches a new
-    location automatically select
-    the nearest accessible place.
+    Keep selection synchronized with the visible results.
+    If a selected place is filtered out, select the first
+    remaining result. If there are no results, clear it.
   */
 
   useEffect(() => {
-    if (
-      !searchOrigin ||
-      displayedPlaces.length ===
-        0
-    ) {
-      return;
-    }
-
     setSelectedPlace(
-      displayedPlaces[0],
+      (currentPlace) => {
+        const visibleSelection =
+          currentPlace
+            ? displayedPlaces.find(
+                (place) =>
+                  place.id ===
+                  currentPlace.id,
+              )
+            : undefined;
+
+        return (
+          visibleSelection ??
+          displayedPlaces[0] ??
+          null
+        );
+      },
     );
-  }, [
-    displayedPlaces,
-    searchOrigin,
-  ]);
+  }, [displayedPlaces]);
 
   /* =========================================================
      SEARCH RESULT HANDLERS
@@ -544,6 +608,56 @@ React.FC = () => {
           </p>
         </div>
 
+        {/* AC-188 ACCESSIBILITY FILTERS */}
+
+        <section
+          aria-label="Accessibility feature filters"
+          className="space-y-3"
+        >
+          <AccessibilityFilterPanel
+            value={
+              selectedFeatures
+            }
+            onChange={
+              setSelectedFeatures
+            }
+          />
+
+          {placeSearchQuery && (
+            <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100">
+              Interpreted search:{' '}
+              {[
+                placeSearchQuery.category,
+                placeSearchQuery.location,
+                placeSearchQuery.keywords,
+              ]
+                .filter(Boolean)
+                .join(' · ') ||
+                'Accessible places'}
+            </p>
+          )}
+
+          {(selectedFeatures.length >
+            0 ||
+            placeSearchQuery) && (
+            <button
+              className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
+              onClick={() => {
+                setSelectedFeatures(
+                  [],
+                );
+                setSearchQuery(
+                  null,
+                );
+              }}
+              type="button"
+            >
+              Clear all search
+              and filters
+            </button>
+          )}
+        </section>
+
         {/* LOADING */}
 
         {isLoading && (
@@ -615,6 +729,25 @@ React.FC = () => {
                 </div>
 
               </div>
+            </div>
+          )}
+
+        {/* AC-188 EMPTY FILTER RESULT */}
+
+        {!isLoading &&
+          !placesError &&
+          displayedPlaces.length ===
+            0 && (
+            <div
+              className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
+              role="status"
+            >
+              No places match
+              every selected
+              accessibility
+              feature. Clear a
+              filter or try a
+              different search.
             </div>
           )}
 
