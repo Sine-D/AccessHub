@@ -29,6 +29,7 @@ export interface Product {
   image: string;
   gallery?: string[];
   sellerName: string;
+  sellerPhone?: string;
   sellerAvatar: string;
   disabilityBadge?: DisabilityBadge;
   sellerRating: number;
@@ -58,28 +59,6 @@ export interface Service {
 }
 
 export type ServiceItem = Service;
-
-export interface FreelancerServiceApplication {
-  id: string;
-  name: string;
-  age: number | string;
-  district: string;
-  address: string;
-  guardianName: string;
-  guardianPhone: string;
-  phone: string;
-  isFreelancer: boolean;
-  rating: number;
-  ratingImages: string[];
-  serviceTitle: string;
-  hourlyRate: number;
-  category: string;
-  description: string;
-  skills: string[];
-  disabilityBadge?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-}
 
 export interface Job {
   id: string;
