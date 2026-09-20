@@ -1,5 +1,7 @@
 import { mockMapPins } from '../mock/data';
 import { MapPin } from '../core/types/models';
+import type { Feature } from '../core/search/contracts.ts';
+import { filterPlaces } from '../features/map/utils/accessibilityFilters.ts';
 
 const apiBaseUrl = import.meta.env.VITE_ACCESSIBLE_PLACES_API_URL?.replace(/\/$/, '');
 
@@ -22,15 +24,17 @@ const isMapPin = (value: unknown): value is MapPin => {
  * The checked-in mock data keeps local development and classroom demos usable
  * until the shared backend URL is available.
  */
-export const getAccessiblePlaces = async (signal?: AbortSignal): Promise<MapPin[]> => {
+export const getAccessiblePlaces = async (signal?: AbortSignal, features: Feature[] = []): Promise<MapPin[]> => {
   if (!apiBaseUrl) {
-    return mockMapPins.map((place) => ({
+    return filterPlaces(mockMapPins, features).map((place) => ({
       ...place,
       accessibilityFeatures: [...place.accessibilityFeatures],
     }));
   }
 
-  const response = await fetch(`${apiBaseUrl}/accessible-places`, {
+  const params = new URLSearchParams();
+  features.forEach(feature => params.append('feature', feature));
+  const response = await fetch(`${apiBaseUrl}/accessible-places?${params}`, {
     headers: { Accept: 'application/json' },
     signal,
   });
@@ -44,5 +48,5 @@ export const getAccessiblePlaces = async (signal?: AbortSignal): Promise<MapPin[
     throw new Error('The accessible places response has an invalid format.');
   }
 
-  return payload;
+  return filterPlaces(payload, features);
 };
