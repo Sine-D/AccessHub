@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { UserRole, Product, User, ServiceItem, FreelancerServiceApplication } from '../types';
+import { UserRole, Product, User, ServiceItem, FreelancerServiceApplication, ServiceBookingRequest } from '../types';
 import { mockCurrentUser, mockProducts, mockServices, mockPendingServiceApplications } from '../../mock/data';
 import { supabase } from '../supabase';
 import type { SearchQuery } from '../search/contracts.ts';
@@ -55,6 +55,11 @@ interface AppStateContextType {
   addFreelancerServiceApplication: (appData: Omit<FreelancerServiceApplication, 'id' | 'status' | 'createdAt'>) => void;
   approveServiceApplication: (id: string) => void;
   rejectServiceApplication: (id: string) => void;
+  bookingRequests: ServiceBookingRequest[];
+  addBookingRequest: (req: ServiceBookingRequest) => void;
+  approveBookingEscrow: (id: string) => void;
+  acceptBookingByFreelancer: (id: string) => void;
+  rejectBookingEscrow: (id: string) => void;
   unreadNotifications: number;
 }
 
@@ -78,6 +83,27 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
   // Dynamic Services & Approvals Queue State (REAL SUPABASE DATA ONLY)
   const [servicesList, setServicesList] = useState<ServiceItem[]>([]);
   const [pendingServiceApplications, setPendingServiceApplications] = useState<FreelancerServiceApplication[]>([]);
+  const [bookingRequests, setBookingRequests] = useState<ServiceBookingRequest[]>([]);
+
+  const addBookingRequest = (req: ServiceBookingRequest) => {
+    setBookingRequests(prev => [req, ...prev]);
+  };
+
+  const approveBookingEscrow = (id: string) => {
+    setBookingRequests(prev =>
+      prev.map(r => r.id === id ? { ...r, status: 'in_progress' } : r)
+    );
+  };
+
+  const acceptBookingByFreelancer = (id: string) => {
+    setBookingRequests(prev =>
+      prev.map(r => r.id === id ? { ...r, status: 'accepted' } : r)
+    );
+  };
+
+  const rejectBookingEscrow = (id: string) => {
+    setBookingRequests(prev => prev.filter(r => r.id !== id));
+  };
 
   const unreadNotifications = 2;
 
@@ -300,6 +326,11 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
         addFreelancerServiceApplication,
         approveServiceApplication,
         rejectServiceApplication,
+        bookingRequests,
+        addBookingRequest,
+        approveBookingEscrow,
+        acceptBookingByFreelancer,
+        rejectBookingEscrow,
         unreadNotifications,
       }}
     >

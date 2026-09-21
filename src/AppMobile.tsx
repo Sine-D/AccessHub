@@ -40,7 +40,7 @@ import {
 import { saveRatingWithVerification } from './services/ratingsService';
 import { CreateAccountScreen } from './features/auth';
 import { supabase } from './core/supabase';
-import { JobPosting, ServiceItem, FreelancerServiceApplication } from './core/types';
+import { JobPosting, ServiceItem, FreelancerServiceApplication, ServiceBookingRequest } from './core/types';
 
 type MobileTab =
   | 'splash'
@@ -92,6 +92,79 @@ export default function AppMobile() {
   const [serviceCategory, setServiceCategory] = useState('All');
   const [isFreelancerFormOpen, setIsFreelancerFormOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+
+  // Booking & Escrow Modal State
+  const [selectedMobileBookingService, setSelectedMobileBookingService] = useState<ServiceItem | null>(null);
+  const [bookingProjectTitle, setBookingProjectTitle] = useState('');
+  const [bookingDescription, setBookingDescription] = useState('');
+  const [bookingHours, setBookingHours] = useState('2');
+  const [bookingPaymentOption, setBookingPaymentOption] = useState<'50_50' | '30_70' | 'full'>('50_50');
+  const [bookingSuccessAlert, setBookingSuccessAlert] = useState(false);
+  const [adminTab, setAdminTab] = useState<'freelancers' | 'accounts' | 'bookings'>('freelancers');
+  const [mobileUsers, setMobileUsers] = useState<any[]>([]);
+  const [selectedMobileProfile, setSelectedMobileProfile] = useState<any | null>(null);
+
+  const [mobileBookingRequests, setMobileBookingRequests] = useState<ServiceBookingRequest[]>([]);
+
+  useEffect(() => {
+    const fetchMobileData = async () => {
+      try {
+        const { data: uData } = await supabase.from('users').select('*');
+        if (uData && uData.length > 0) {
+          setMobileUsers(uData);
+        }
+
+        const { data: sData } = await supabase.from('services').select('*');
+        if (sData) {
+          const formattedServices: ServiceItem[] = sData.map(item => ({
+            id: item.id,
+            title: item.title,
+            hourlyRate: Number(item.hourly_rate),
+            providerName: item.provider_name,
+            providerAvatar: item.provider_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+            disabilityBadge: item.disability_badge || 'Verified Freelancer',
+            rating: item.rating || 5.0,
+            reviewsCount: item.reviews_count || 1,
+            category: item.category || 'Services',
+            availability: item.availability || 'Sri Lanka',
+            portfolioImages: item.portfolio_images || [],
+            description: item.description || '',
+            skills: item.skills || ['Freelancer']
+          }));
+          setMobileServices(formattedServices);
+        }
+
+        const { data: aData } = await supabase.from('freelancer_applications').select('*').eq('status', 'pending');
+        if (aData) {
+          const formattedApps: FreelancerServiceApplication[] = aData.map(item => ({
+            id: item.id,
+            name: item.name,
+            age: item.age,
+            district: item.district,
+            address: item.address,
+            guardianName: item.guardian_name,
+            guardianPhone: item.guardian_phone,
+            phone: item.phone,
+            isFreelancer: item.is_freelancer,
+            rating: item.rating,
+            ratingImages: item.rating_images || [],
+            serviceTitle: item.service_title,
+            hourlyRate: Number(item.hourly_rate),
+            category: item.category || 'Tech & Accessibility',
+            description: item.description || '',
+            skills: item.skills || [],
+            disabilityBadge: item.disability_badge,
+            status: item.status,
+            createdAt: new Date(item.created_at || Date.now()).toLocaleString()
+          }));
+          setMobilePendingApps(formattedApps);
+        }
+      } catch (err) {
+        console.warn('Error fetching Supabase data on mobile:', err);
+      }
+    };
+    fetchMobileData();
+  }, [adminTab, activeTab]);
 
   // Freelancer Form Fields State
   const [formName, setFormName] = useState('');
@@ -1730,12 +1803,13 @@ export default function AppMobile() {
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
-                      onPress={() =>
-                        Alert.alert(
-                          'Booked',
-                          `Service request sent to ${srv.providerName}!`,
-                        )
-                      }
+                      onPress={() => {
+                        setSelectedMobileBookingService(srv);
+                        setBookingProjectTitle(`${srv.title} Project`);
+                        setBookingDescription('');
+                        setBookingHours('2');
+                        setBookingPaymentOption('50_50');
+                      }}
                     >
                       <Text style={{ color: idx % 2 === 0 ? '#ffffff' : '#000000', fontWeight: 'bold', fontSize: 12 }}>
                         Book Provider
@@ -1744,6 +1818,353 @@ export default function AppMobile() {
                   </View>
                 ))}
               </View>
+            </View>
+          )}
+
+          {/* Service Booking & Milestone Escrow Payment Modal Overlay */}
+          {selectedMobileBookingService && (
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: 'rgba(15, 23, 42, 0.90)',
+                zIndex: 9999,
+                justifyContent: 'center',
+                alignItems: 'center',
+                padding: 16,
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: cardBg,
+                  borderRadius: 24,
+                  padding: 20,
+                  width: '100%',
+                  maxWidth: 520,
+                  borderColor: '#334155',
+                  borderWidth: 1,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 10 },
+                  shadowOpacity: 0.5,
+                  shadowRadius: 20,
+                  elevation: 10,
+                }}
+              >
+                {/* Modal Header */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 16,
+                    paddingBottom: 12,
+                    borderBottomWidth: 1,
+                    borderBottomColor: 'rgba(255,255,255,0.1)',
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <Image
+                      source={{ uri: selectedMobileBookingService.providerAvatar }}
+                      style={{ width: 46, height: 46, borderRadius: 23, borderWidth: 2, borderColor: '#fbbf24' }}
+                    />
+                    <View>
+                      <Text style={{ color: '#fbbf24', fontSize: 10, fontWeight: 'bold' }}>
+                        ✔ VERIFIED FREELANCER
+                      </Text>
+                      <Text style={{ color: textColor, fontSize: 16, fontWeight: 'bold' }}>
+                        {selectedMobileBookingService.providerName}
+                      </Text>
+                      <Text style={{ color: '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>
+                        LKR {selectedMobileBookingService.hourlyRate.toLocaleString()} / hr
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setSelectedMobileBookingService(null)}
+                    style={{
+                      padding: 6,
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                      borderRadius: 16,
+                      width: 32,
+                      height: 32,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: 'bold' }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={{ maxHeight: 400 }}>
+                  {/* Project Title */}
+                  <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 12, marginBottom: 4 }}>
+                    Project Title / Brief *
+                  </Text>
+                  <TextInput
+                    value={bookingProjectTitle}
+                    onChangeText={setBookingProjectTitle}
+                    placeholder="e.g. Accessible Video Subtitling & Audio Edit"
+                    placeholderTextColor="#94a3b8"
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.05)',
+                      color: textColor,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      borderColor: '#334155',
+                      borderWidth: 1,
+                      marginBottom: 12,
+                      fontSize: 12,
+                    }}
+                  />
+
+                  {/* Task Instructions */}
+                  <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 12, marginBottom: 4 }}>
+                    Task Instructions & Requirements
+                  </Text>
+                  <TextInput
+                    value={bookingDescription}
+                    onChangeText={setBookingDescription}
+                    multiline
+                    numberOfLines={3}
+                    placeholder="Detailed requirements, file links, specifications..."
+                    placeholderTextColor="#94a3b8"
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.05)',
+                      color: textColor,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      borderColor: '#334155',
+                      borderWidth: 1,
+                      marginBottom: 12,
+                      fontSize: 12,
+                    }}
+                  />
+
+                  {/* Estimated Hours */}
+                  <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 12, marginBottom: 4 }}>
+                    Estimated Hours Needed
+                  </Text>
+                  <TextInput
+                    value={bookingHours}
+                    onChangeText={setBookingHours}
+                    keyboardType="numeric"
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.05)',
+                      color: textColor,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      borderColor: '#334155',
+                      borderWidth: 1,
+                      marginBottom: 16,
+                      fontSize: 12,
+                      fontWeight: 'bold',
+                    }}
+                  />
+
+                  {/* Payment Terms Section */}
+                  <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 13, marginBottom: 6 }}>
+                    🔒 Escrow Payment Terms (කොටස් වශයෙන් ගෙවීම)
+                  </Text>
+                  <Text style={{ color: subTextColor, fontSize: 11, marginBottom: 10 }}>
+                    Client ට මුළු මුදලම එකපාර ගෙවන්නේ නැතුව කොටස් වශයෙන් Escrow එකට තැන්පත් කර වැඩේ අවසන් වූ පසු නිදහස් කළ හැක.
+                  </Text>
+
+                  {/* Milestone Split Options */}
+                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
+                    <TouchableOpacity
+                      onPress={() => setBookingPaymentOption('50_50')}
+                      style={{
+                        flex: 1,
+                        padding: 10,
+                        borderRadius: 12,
+                        backgroundColor:
+                          bookingPaymentOption === '50_50' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
+                        borderColor: bookingPaymentOption === '50_50' ? '#10b981' : '#334155',
+                        borderWidth: 1,
+                      }}
+                    >
+                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 11 }}>50% / 50% Split</Text>
+                      <Text style={{ color: subTextColor, fontSize: 9, marginTop: 2 }}>
+                        50% Upfront{"\n"}50% Delivery
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => setBookingPaymentOption('30_70')}
+                      style={{
+                        flex: 1,
+                        padding: 10,
+                        borderRadius: 12,
+                        backgroundColor:
+                          bookingPaymentOption === '30_70' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
+                        borderColor: bookingPaymentOption === '30_70' ? '#10b981' : '#334155',
+                        borderWidth: 1,
+                      }}
+                    >
+                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 11 }}>30% / 70% Split</Text>
+                      <Text style={{ color: subTextColor, fontSize: 9, marginTop: 2 }}>
+                        30% Upfront{"\n"}70% Delivery
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => setBookingPaymentOption('full')}
+                      style={{
+                        flex: 1,
+                        padding: 10,
+                        borderRadius: 12,
+                        backgroundColor:
+                          bookingPaymentOption === 'full' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
+                        borderColor: bookingPaymentOption === 'full' ? '#10b981' : '#334155',
+                        borderWidth: 1,
+                      }}
+                    >
+                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 11 }}>100% Upfront</Text>
+                      <Text style={{ color: subTextColor, fontSize: 9, marginTop: 2 }}>
+                        Full Escrow{"\n"}Hold
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Calculations */}
+                  {(() => {
+                    const hrs = Math.max(1, Number(bookingHours) || 1);
+                    const total = hrs * selectedMobileBookingService.hourlyRate;
+                    const pct = bookingPaymentOption === '30_70' ? 30 : bookingPaymentOption === 'full' ? 100 : 50;
+                    const deposit = Math.round((total * pct) / 100);
+                    const remaining = total - deposit;
+
+                    return (
+                      <View style={{ backgroundColor: '#0f172a', padding: 14, borderRadius: 16, marginBottom: 16 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <Text style={{ color: '#94a3b8', fontSize: 12 }}>
+                            Total Estimated Budget ({hrs} hrs)
+                          </Text>
+                          <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 14 }}>
+                            LKR {total.toLocaleString()}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={{
+                            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                            padding: 10,
+                            borderRadius: 10,
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            marginBottom: 6,
+                          }}
+                        >
+                          <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 12 }}>
+                            💳 Due Now (Escrow Deposit {pct}%):
+                          </Text>
+                          <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 13 }}>
+                            LKR {deposit.toLocaleString()}
+                          </Text>
+                        </View>
+
+                        {bookingPaymentOption !== 'full' && (
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 }}>
+                            <Text style={{ color: '#94a3b8', fontSize: 11 }}>
+                              ⏳ Remaining Balance on Delivery Approval:
+                            </Text>
+                            <Text style={{ color: '#cbd5e1', fontWeight: 'bold', fontSize: 12 }}>
+                              LKR {remaining.toLocaleString()}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })()}
+                </ScrollView>
+
+                {/* Form Buttons */}
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                  <TouchableOpacity
+                    onPress={() => setSelectedMobileBookingService(null)}
+                    style={{ flex: 1, paddingVertical: 12, borderRadius: 14, backgroundColor: '#334155', alignItems: 'center' }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>Cancel</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (selectedMobileBookingService) {
+                        const hours = Number(bookingHours) || 2;
+                        const rate = selectedMobileBookingService.hourlyRate || 4500;
+                        const total = hours * rate;
+                        let pct = 50;
+                        if (bookingPaymentOption === '30_70') pct = 30;
+                        if (bookingPaymentOption === 'full') pct = 100;
+                        const deposit = Math.round((total * pct) / 100);
+                        const remaining = total - deposit;
+
+                        const newBooking: ServiceBookingRequest = {
+                          id: `bk-${Date.now()}`,
+                          serviceId: selectedMobileBookingService.id,
+                          serviceTitle: selectedMobileBookingService.title,
+                          providerName: selectedMobileBookingService.providerName,
+                          providerAvatar: selectedMobileBookingService.providerAvatar,
+                          clientName: 'Saman Kumara (Buyer)',
+                          projectTitle: bookingProjectTitle || `${selectedMobileBookingService.title} Task`,
+                          description: bookingDescription || 'Detailed task instructions and requirements.',
+                          totalBudget: total,
+                          paymentType: bookingPaymentOption === 'full' ? 'full_upfront' : 'milestone',
+                          milestones: [],
+                          upfrontDeposit: deposit,
+                          remainingBalance: remaining,
+                          deliveryDate: new Date().toISOString().split('T')[0],
+                          status: 'pending',
+                          createdAt: new Date().toISOString()
+                        };
+
+                        setMobileBookingRequests(prev => [newBooking, ...prev]);
+                      }
+
+                      setBookingSuccessAlert(true);
+                      setTimeout(() => {
+                        setBookingSuccessAlert(false);
+                        setSelectedMobileBookingService(null);
+                      }, 2000);
+                    }}
+                    style={{ flex: 2, paddingVertical: 12, borderRadius: 14, backgroundColor: '#10b981', alignItems: 'center' }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>Confirm Deposit & Book</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Success Notification */}
+              {bookingSuccessAlert && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding: 24,
+                    zIndex: 10000,
+                  }}
+                >
+                  <Text style={{ fontSize: 44, marginBottom: 12 }}>🎉</Text>
+                  <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 20, marginBottom: 6 }}>
+                    Booking & Escrow Deposit Confirmed!
+                  </Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', lineHeight: 20 }}>
+                    Initial Escrow Deposit logged into Vault. Freelancer {selectedMobileBookingService.providerName} has been notified via AccessLink Messages!
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -2485,16 +2906,366 @@ export default function AppMobile() {
                 >
                   🛡️ Admin Dashboard
                 </Text>
-                <View style={{ backgroundColor: '#0284c7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
-                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
-                    {mobilePendingApps.length} Pending
-                  </Text>
+                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                  <TouchableOpacity
+                    onPress={() => setAdminTab(adminTab === 'accounts' ? 'freelancers' : 'accounts')}
+                    style={{
+                      backgroundColor: adminTab === 'accounts' ? '#f59e0b' : 'rgba(245, 158, 11, 0.2)',
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 12,
+                      borderColor: '#f59e0b',
+                      borderWidth: 1,
+                    }}
+                  >
+                    <Text style={{ color: adminTab === 'accounts' ? '#000' : '#f59e0b', fontSize: 11, fontWeight: 'bold' }}>
+                      📊 Account Dashboard
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={{ backgroundColor: '#0284c7', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }}>
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
+                      {mobilePendingApps.length} Pending
+                    </Text>
+                  </View>
                 </View>
               </View>
 
-              <Text style={{ color: subTextColor, fontSize: 12, marginBottom: 16 }}>
-                Review and approve freelancer applications. Approved services immediately display on the Navbar Services tab.
-              </Text>
+              {/* Sub-Tab Navigation Bar */}
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
+                <TouchableOpacity
+                  onPress={() => setAdminTab('freelancers')}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    backgroundColor: adminTab === 'freelancers' ? '#0284c7' : cardBg,
+                    alignItems: 'center',
+                    borderColor: '#0284c7',
+                    borderWidth: 1,
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                    🛠️ Freelancers ({mobilePendingApps.length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setAdminTab('bookings')}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    backgroundColor: adminTab === 'bookings' ? '#10b981' : cardBg,
+                    alignItems: 'center',
+                    borderColor: '#10b981',
+                    borderWidth: 1,
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                    💳 Bookings ({mobileBookingRequests.length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setAdminTab('accounts')}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    backgroundColor: adminTab === 'accounts' ? '#f59e0b' : cardBg,
+                    alignItems: 'center',
+                    borderColor: '#f59e0b',
+                    borderWidth: 1,
+                  }}
+                >
+                  <Text style={{ color: adminTab === 'accounts' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                    📊 Account Dashboard
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* ACCOUNT DASHBOARD VIEW */}
+              {adminTab === 'accounts' && (
+                <View style={{ gap: 14 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 12 }}>
+                    Financial & Account Management Overview (Live Supabase Sync)
+                  </Text>
+
+                  {/* Financial Stats Grid */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                    <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
+                      <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Total Buyers</Text>
+                      <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', marginTop: 2 }}>
+                        {mobileUsers.filter(u => (u.role || '').toLowerCase() === 'buyer').length || mobileUsers.length}
+                      </Text>
+                      <Text style={{ color: '#34d399', fontSize: 10, marginTop: 2 }}>● Supabase Synced</Text>
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
+                      <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Verified Freelancers</Text>
+                      <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', marginTop: 2 }}>
+                        {mobileServices.length}
+                      </Text>
+                      <Text style={{ color: '#38bdf8', fontSize: 10, marginTop: 2 }}>✔ Live Verified Services</Text>
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
+                      <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Escrow Volume</Text>
+                      <Text style={{ color: '#fbbf24', fontSize: 16, fontWeight: 'bold', marginTop: 2 }}>
+                        LKR {mobileServices.reduce((acc, s) => acc + (s.hourlyRate * 3), 0).toLocaleString()}
+                      </Text>
+                      <Text style={{ color: '#94a3b8', fontSize: 10, marginTop: 2 }}>🔒 Protected in Vault</Text>
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
+                      <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Platform Revenue</Text>
+                      <Text style={{ color: '#34d399', fontSize: 16, fontWeight: 'bold', marginTop: 2 }}>
+                        LKR {Math.round(mobileServices.reduce((acc, s) => acc + (s.hourlyRate * 3), 0) * 0.10).toLocaleString()}
+                      </Text>
+                      <Text style={{ color: '#34d399', fontSize: 10, marginTop: 2 }}>10% Service Fee</Text>
+                    </View>
+                  </View>
+
+                  {/* Orders Sent to Freelancers Section */}
+                  <View style={{ backgroundColor: cardBg, padding: 14, borderRadius: 18, borderColor: '#334155', borderWidth: 1 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>
+                        📦 Orders Sent to Freelancers ({mobileBookingRequests.length})
+                      </Text>
+                      <TouchableOpacity onPress={() => setAdminTab('bookings')}>
+                        <Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold' }}>View Freelancer Queue ➔</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {mobileBookingRequests.length === 0 ? (
+                      <View style={{ padding: 16, alignItems: 'center', borderColor: '#334155', borderWidth: 1, borderRadius: 14, borderStyle: 'dashed' }}>
+                        <Text style={{ color: subTextColor, fontSize: 12 }}>No orders sent to freelancers yet.</Text>
+                      </View>
+                    ) : (
+                      mobileBookingRequests.map((req) => (
+                        <View key={req.id} style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 14, marginBottom: 10, borderColor: '#334155', borderWidth: 1 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ color: req.status === 'in_progress' || req.status === 'accepted' ? '#34d399' : '#fbbf24', fontSize: 10, fontWeight: 'bold' }}>
+                                ● {req.status === 'in_progress' || req.status === 'accepted' ? '✓ Accepted by Freelancer' : `Dispatched ➔ Awaiting Freelancer Acceptance (${req.providerName})`}
+                              </Text>
+                              <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13, marginTop: 2 }}>{req.projectTitle}</Text>
+                              <Text style={{ color: subTextColor, fontSize: 11, marginTop: 2 }}>
+                                Client: <Text style={{ color: textColor, fontWeight: 'bold' }}>{req.clientName}</Text> ➔ Target Freelancer: <Text style={{ color: '#38bdf8', fontWeight: 'bold' }}>{req.providerName}</Text> ({req.serviceTitle})
+                              </Text>
+                            </View>
+                            <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 12 }}>LKR {req.totalBudget.toLocaleString()}</Text>
+                          </View>
+
+                          <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: 8, borderRadius: 8, marginVertical: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
+                            <Text style={{ color: '#34d399', fontSize: 11, fontWeight: 'bold' }}>
+                              💳 Deposit: LKR {req.upfrontDeposit.toLocaleString()}
+                            </Text>
+                            <Text style={{ color: subTextColor, fontSize: 10 }}>
+                              Balance: LKR {req.remainingBalance.toLocaleString()}
+                            </Text>
+                          </View>
+
+                          {req.status === 'pending' ? (
+                            <View style={{ flexDirection: 'row', gap: 8 }}>
+                              <TouchableOpacity
+                                style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 8, borderRadius: 10, alignItems: 'center' }}
+                                onPress={() => {
+                                  setMobileBookingRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'in_progress' } : r));
+                                  Alert.alert('Order Accepted! 🎉', `Freelancer ${req.providerName} accepted order for ${req.projectTitle}. Work started.`);
+                                }}
+                              >
+                                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>Accept Order as Freelancer ({req.providerName}) (OK)</Text>
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={{ backgroundColor: '#7f1d1d', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, alignItems: 'center' }}
+                                onPress={() => {
+                                  setMobileBookingRequests(prev => prev.filter(r => r.id !== req.id));
+                                }}
+                              >
+                                <Text style={{ color: '#fca5a5', fontWeight: 'bold', fontSize: 11 }}>Decline</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ) : (
+                            <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', padding: 8, borderRadius: 10, alignItems: 'center' }}>
+                              <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 11 }}>✓ Order Accepted by Freelancer {req.providerName} & Work Started</Text>
+                            </View>
+                          )}
+                        </View>
+                      ))
+                    )}
+                  </View>
+
+                  {/* Registered Seller Profiles Section */}
+                  <View style={{ backgroundColor: cardBg, padding: 14, borderRadius: 18, borderColor: '#334155', borderWidth: 1 }}>
+                    <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 14, marginBottom: 10 }}>
+                      🛍️ Registered Sellers & Handicraft Creators ({mobileUsers.filter(u => (u.role || '').toLowerCase() === 'seller').length})
+                    </Text>
+
+                    {mobileUsers.filter(u => (u.role || '').toLowerCase() === 'seller').length === 0 ? (
+                      <View style={{ padding: 14, alignItems: 'center', borderColor: '#334155', borderWidth: 1, borderRadius: 14, borderStyle: 'dashed' }}>
+                        <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 12 }}>No Sellers registered in Supabase yet.</Text>
+                        <Text style={{ color: subTextColor, fontSize: 11, marginTop: 4, textAlign: 'center' }}>
+                          Run the SQL Query provided below to add a new Seller profile!
+                        </Text>
+                      </View>
+                    ) : (
+                      mobileUsers.filter(u => (u.role || '').toLowerCase() === 'seller').map((seller, idx) => (
+                        <View key={seller.id || idx} style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)', padding: 12, borderRadius: 14, marginBottom: 10, borderColor: '#a855f7', borderWidth: 1 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 14 }}>{seller.name || 'Kasun Kalhara'}</Text>
+                                <View style={{ backgroundColor: '#a855f7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>✓ Verified Seller</Text>
+                                </View>
+                              </View>
+                              <Text style={{ color: '#38bdf8', fontSize: 11, marginTop: 2 }}>📍 {seller.location || 'Sri Lanka'} • {seller.email}</Text>
+                            </View>
+                            <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 13 }}>★ {seller.rating || 5.0}</Text>
+                          </View>
+
+                          {seller.bio ? (
+                            <Text style={{ color: subTextColor, fontSize: 11, marginTop: 6, fontStyle: 'italic', backgroundColor: 'rgba(0,0,0,0.2)', padding: 6, borderRadius: 8 }}>
+                              "{seller.bio}"
+                            </Text>
+                          ) : null}
+
+                          <TouchableOpacity
+                            onPress={() => setSelectedMobileProfile({ ...seller, role: 'seller' })}
+                            style={{ marginTop: 8, backgroundColor: '#a855f7', paddingVertical: 10, borderRadius: 12, alignItems: 'center' }}
+                          >
+                            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>View Profile & Accept Orders</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))
+                    )}
+                  </View>
+
+                  {/* Registered Accounts Queue */}
+                  <View style={{ backgroundColor: cardBg, padding: 14, borderRadius: 18, borderColor: '#334155', borderWidth: 1 }}>
+                    <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 14, marginBottom: 10 }}>
+                      👥 Registered User Accounts (Supabase Database)
+                    </Text>
+
+                    {mobileUsers.length === 0 ? (
+                      <View style={{ padding: 16, alignItems: 'center', borderColor: '#334155', borderWidth: 1, borderRadius: 14, borderStyle: 'dashed' }}>
+                        <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>
+                          No users in Supabase <Text style={{ color: '#f59e0b' }}>public.users</Text> table yet.
+                        </Text>
+                        <Text style={{ color: subTextColor, fontSize: 11, marginTop: 4, textAlign: 'center' }}>
+                          Run the SQL Query in Supabase or complete sign-up to populate real users.
+                        </Text>
+                      </View>
+                    ) : (
+                      mobileUsers.map((user, idx) => (
+                        <View key={user.id || idx} style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 10, borderRadius: 12, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <View>
+                            <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>{user.name || 'Registered User'}</Text>
+                            <Text style={{ color: '#38bdf8', fontSize: 11 }}>{user.role || 'Buyer'}</Text>
+                            <Text style={{ color: subTextColor, fontSize: 10 }}>{user.email || user.id}</Text>
+                          </View>
+                          <TouchableOpacity 
+                            onPress={() => setSelectedMobileProfile(user)}
+                            style={{ backgroundColor: '#9333ea', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, flexDirection: 'row', alignItems: 'center' }}
+                          >
+                            <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>View Profile & Accept Orders</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {/* ESCROW BOOKINGS / FREELANCER ORDERS QUEUE VIEW */}
+              {adminTab === 'bookings' && (
+                <View style={{ gap: 14 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 12 }}>
+                    Client Orders Dispatched to Freelancers ({mobileBookingRequests.length})
+                  </Text>
+
+                  {mobileBookingRequests.length === 0 ? (
+                    <View style={{ backgroundColor: cardBg, padding: 24, borderRadius: 20, alignItems: 'center', borderColor: '#334155', borderWidth: 1 }}>
+                      <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 15 }}>No Orders Sent to Freelancers</Text>
+                      <Text style={{ color: subTextColor, fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+                        When a client books a freelancer through the form, the order details will appear here for freelancer acceptance.
+                      </Text>
+                    </View>
+                  ) : (
+                    mobileBookingRequests.map((req) => (
+                      <View key={req.id} style={{ backgroundColor: cardBg, padding: 16, borderRadius: 20, marginBottom: 12, borderColor: '#334155', borderWidth: 1 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: req.status === 'in_progress' || req.status === 'accepted' ? '#34d399' : '#fbbf24', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>
+                              ● {req.status === 'in_progress' || req.status === 'accepted' ? '✓ Accepted by Freelancer' : `Dispatched ➔ Awaiting Freelancer Acceptance (${req.providerName})`}
+                            </Text>
+                            <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 15, marginTop: 2 }}>{req.projectTitle}</Text>
+                            <Text style={{ color: subTextColor, fontSize: 12, marginTop: 2 }}>
+                              Client: <Text style={{ color: textColor, fontWeight: 'bold' }}>{req.clientName}</Text> ➔ Target Freelancer: <Text style={{ color: '#38bdf8', fontWeight: 'bold' }}>{req.providerName}</Text> ({req.serviceTitle})
+                            </Text>
+                          </View>
+                          <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 14 }}>LKR {req.totalBudget.toLocaleString()}</Text>
+                        </View>
+
+                        <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: 10, borderRadius: 12, marginVertical: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
+                          <View>
+                            <Text style={{ color: '#94a3b8', fontSize: 10 }}>Payment Option: {req.paymentType === 'full_upfront' ? '100% Upfront' : 'Milestone Split'}</Text>
+                            <Text style={{ color: '#34d399', fontSize: 12, fontWeight: 'bold', marginTop: 2 }}>
+                              💳 Deposit: LKR {req.upfrontDeposit.toLocaleString()}
+                            </Text>
+                          </View>
+                          <Text style={{ color: subTextColor, fontSize: 11, alignSelf: 'flex-end' }}>
+                            Balance: LKR {req.remainingBalance.toLocaleString()}
+                          </Text>
+                        </View>
+
+                        {req.description ? (
+                          <Text style={{ color: subTextColor, fontSize: 11, fontStyle: 'italic', marginBottom: 10 }}>
+                            "{req.description}"
+                          </Text>
+                        ) : null}
+
+                        {req.status === 'pending' ? (
+                          <View style={{ flexDirection: 'row', gap: 8 }}>
+                            <TouchableOpacity
+                              style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 10, borderRadius: 12, alignItems: 'center' }}
+                              onPress={() => {
+                                setMobileBookingRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'in_progress' } : r));
+                                Alert.alert('Order Accepted! 🎉', `Freelancer ${req.providerName} accepted order for ${req.projectTitle}. Locked in Vault.`);
+                              }}
+                            >
+                              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>Accept Order as Freelancer ({req.providerName}) (OK)</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={{ backgroundColor: '#7f1d1d', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, alignItems: 'center' }}
+                              onPress={() => {
+                                setMobileBookingRequests(prev => prev.filter(r => r.id !== req.id));
+                              }}
+                            >
+                              <Text style={{ color: '#fca5a5', fontWeight: 'bold', fontSize: 12 }}>Decline</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', padding: 10, borderRadius: 12, alignItems: 'center' }}>
+                            <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 12 }}>✓ Order Accepted by Freelancer {req.providerName} & Work Started</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))
+                  )}
+                </View>
+              )}
+
+              {/* FREELANCERS QUEUE VIEW */}
+              {adminTab === 'freelancers' && (
+                <>
+                  <Text style={{ color: subTextColor, fontSize: 12, marginBottom: 16 }}>
+                    Review and approve freelancer applications. Approved services immediately display on the Navbar Services tab.
+                  </Text>
 
               {mobilePendingApps.length === 0 ? (
                 <View style={{ backgroundColor: cardBg, padding: 24, borderRadius: 20, alignItems: 'center', borderColor: '#334155', borderWidth: 1 }}>
@@ -2548,9 +3319,91 @@ export default function AppMobile() {
                   </View>
                 ))
               )}
+                </>
+              )}
             </View>
           )}
         </ScrollView>
+
+        {/* USER PROFILE & ORDER ACCEPTANCE MODAL FOR MOBILE */}
+        <Modal
+          visible={selectedMobileProfile !== null}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setSelectedMobileProfile(null)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: 16 }}>
+            <View style={{ backgroundColor: cardBg, borderRadius: 24, padding: 20, borderColor: '#334155', borderWidth: 1 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 16 }}>
+                  👤 {selectedMobileProfile?.name || 'User'} - Profile & Orders
+                </Text>
+                <TouchableOpacity onPress={() => setSelectedMobileProfile(null)} style={{ backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                  <Text style={{ color: textColor, fontWeight: 'bold' }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ backgroundColor: 'rgba(15, 23, 42, 0.8)', padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1, marginBottom: 14 }}>
+                <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 15 }}>{selectedMobileProfile?.name}</Text>
+                <Text style={{ color: '#38bdf8', fontSize: 12, marginTop: 2 }}>
+                  📍 {selectedMobileProfile?.location || 'Sri Lanka'} • {selectedMobileProfile?.email}
+                </Text>
+                <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 12, marginTop: 4 }}>
+                  ★ {selectedMobileProfile?.rating || 5.0} / 5.0 Rating
+                </Text>
+                {selectedMobileProfile?.bio ? (
+                  <Text style={{ color: subTextColor, fontSize: 11, fontStyle: 'italic', marginTop: 6 }}>
+                    "{selectedMobileProfile?.bio}"
+                  </Text>
+                ) : null}
+              </View>
+
+              <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 14, marginBottom: 8 }}>
+                📦 Dispatched Orders ({mobileBookingRequests.length})
+              </Text>
+
+              {mobileBookingRequests.length === 0 ? (
+                <View style={{ padding: 16, alignItems: 'center', borderColor: '#334155', borderWidth: 1, borderRadius: 14, borderStyle: 'dashed', marginBottom: 14 }}>
+                  <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>No Client Orders Pending</Text>
+                  <Text style={{ color: subTextColor, fontSize: 11, marginTop: 2, textAlign: 'center' }}>
+                    Client booking requests for {selectedMobileProfile?.name} will appear here for one-click acceptance.
+                  </Text>
+                </View>
+              ) : (
+                mobileBookingRequests.map((req) => (
+                  <View key={req.id} style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 14, marginBottom: 10, borderColor: '#334155', borderWidth: 1 }}>
+                    <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>{req.projectTitle}</Text>
+                    <Text style={{ color: '#38bdf8', fontSize: 11 }}>Client: {req.clientName} ➔ Target: {req.providerName}</Text>
+                    <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 12, marginTop: 4 }}>Total: LKR {req.totalBudget.toLocaleString()} (Deposit: LKR {req.upfrontDeposit.toLocaleString()})</Text>
+
+                    {req.status === 'pending' ? (
+                      <TouchableOpacity
+                        style={{ backgroundColor: '#10b981', paddingVertical: 10, borderRadius: 10, alignItems: 'center', marginTop: 8 }}
+                        onPress={() => {
+                          setMobileBookingRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'in_progress' } : r));
+                          Alert.alert('Order Accepted! 🎉', `Accepted order for ${selectedMobileProfile?.name}. Work started.`);
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>Accept Order as {selectedMobileProfile?.name} (OK)</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', padding: 8, borderRadius: 8, alignItems: 'center', marginTop: 8 }}>
+                        <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 11 }}>✓ Order Accepted & Work Started</Text>
+                      </View>
+                    )}
+                  </View>
+                ))
+              )}
+
+              <TouchableOpacity
+                style={{ backgroundColor: '#334155', paddingVertical: 12, borderRadius: 14, alignItems: 'center', marginTop: 6 }}
+                onPress={() => setSelectedMobileProfile(null)}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Close Profile Window</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* AI Voice Hub Modal */}
         <Modal
