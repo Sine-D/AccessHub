@@ -39,6 +39,8 @@ export const saveRatingWithVerification = async (
   return data;
 };
 
+export const saveRating = saveRatingWithVerification;
+
 export const getAverageRatings = async (locationId: string) => {
   const { data, error } = await supabase
     .from('place_accessibility_ratings')
