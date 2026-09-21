@@ -98,7 +98,7 @@ export default function AppMobile() {
   const [bookingProjectTitle, setBookingProjectTitle] = useState('');
   const [bookingDescription, setBookingDescription] = useState('');
   const [bookingHours, setBookingHours] = useState('2');
-  const [bookingPaymentOption, setBookingPaymentOption] = useState<'50_50' | '30_70' | 'full'>('50_50');
+  const [bookingPaymentOption, setBookingPaymentOption] = useState<'50_50' | 'full'>('50_50');
   const [bookingSuccessAlert, setBookingSuccessAlert] = useState(false);
   const [adminTab, setAdminTab] = useState<'freelancers' | 'accounts' | 'bookings'>('freelancers');
   const [mobileUsers, setMobileUsers] = useState<any[]>([]);
@@ -1969,14 +1969,14 @@ export default function AppMobile() {
 
                   {/* Payment Terms Section */}
                   <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 13, marginBottom: 6 }}>
-                    🔒 Escrow Payment Terms (කොටස් වශයෙන් ගෙවීම)
+                    🔒 Escrow Payment Terms
                   </Text>
                   <Text style={{ color: subTextColor, fontSize: 11, marginBottom: 10 }}>
-                    Client ට මුළු මුදලම එකපාර ගෙවන්නේ නැතුව කොටස් වශයෙන් Escrow එකට තැන්පත් කර වැඩේ අවසන් වූ පසු නිදහස් කළ හැක.
+                    Payments are safely deposited into Escrow and held securely. Money is only released after work completion.
                   </Text>
 
-                  {/* Milestone Split Options */}
-                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
+                  {/* Milestone Split Options - 50/50 and 100% Upfront ONLY */}
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                     <TouchableOpacity
                       onPress={() => setBookingPaymentOption('50_50')}
                       style={{
@@ -1992,24 +1992,6 @@ export default function AppMobile() {
                       <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 11 }}>50% / 50% Split</Text>
                       <Text style={{ color: subTextColor, fontSize: 9, marginTop: 2 }}>
                         50% Upfront{"\n"}50% Delivery
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={() => setBookingPaymentOption('30_70')}
-                      style={{
-                        flex: 1,
-                        padding: 10,
-                        borderRadius: 12,
-                        backgroundColor:
-                          bookingPaymentOption === '30_70' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
-                        borderColor: bookingPaymentOption === '30_70' ? '#10b981' : '#334155',
-                        borderWidth: 1,
-                      }}
-                    >
-                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 11 }}>30% / 70% Split</Text>
-                      <Text style={{ color: subTextColor, fontSize: 9, marginTop: 2 }}>
-                        30% Upfront{"\n"}70% Delivery
                       </Text>
                     </TouchableOpacity>
 
@@ -2036,7 +2018,7 @@ export default function AppMobile() {
                   {(() => {
                     const hrs = Math.max(1, Number(bookingHours) || 1);
                     const total = hrs * selectedMobileBookingService.hourlyRate;
-                    const pct = bookingPaymentOption === '30_70' ? 30 : bookingPaymentOption === 'full' ? 100 : 50;
+                    const pct = bookingPaymentOption === 'full' ? 100 : 50;
                     const deposit = Math.round((total * pct) / 100);
                     const remaining = total - deposit;
 
@@ -2100,7 +2082,6 @@ export default function AppMobile() {
                         const rate = selectedMobileBookingService.hourlyRate || 4500;
                         const total = hours * rate;
                         let pct = 50;
-                        if (bookingPaymentOption === '30_70') pct = 30;
                         if (bookingPaymentOption === 'full') pct = 100;
                         const deposit = Math.round((total * pct) / 100);
                         const remaining = total - deposit;
