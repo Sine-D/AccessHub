@@ -98,7 +98,7 @@ export default function AppMobile() {
   const [bookingProjectTitle, setBookingProjectTitle] = useState('');
   const [bookingDescription, setBookingDescription] = useState('');
   const [bookingHours, setBookingHours] = useState('2');
-  const [bookingPaymentOption, setBookingPaymentOption] = useState<'50_50' | '30_70' | 'full'>('50_50');
+  const [bookingPaymentOption, setBookingPaymentOption] = useState<'50_50' | 'full'>('50_50');
   const [bookingSuccessAlert, setBookingSuccessAlert] = useState(false);
   const [adminTab, setAdminTab] = useState<'freelancers' | 'accounts' | 'bookings'>('freelancers');
   const [mobileUsers, setMobileUsers] = useState<any[]>([]);
@@ -1844,6 +1844,7 @@ export default function AppMobile() {
                   padding: 20,
                   width: '100%',
                   maxWidth: 520,
+                  maxHeight: '90%',
                   borderColor: '#334155',
                   borderWidth: 1,
                   shadowColor: '#000',
@@ -1898,7 +1899,37 @@ export default function AppMobile() {
                   </TouchableOpacity>
                 </View>
 
-                <ScrollView style={{ maxHeight: 400 }}>
+                <ScrollView style={{ flexShrink: 1 }}>
+                  {/* AC-125 Voice Confirmation Control */}
+                  <View style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)', padding: 12, borderRadius: 14, borderColor: '#6366f1', borderWidth: 1, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ flex: 1, marginRight: 8 }}>
+                      <Text style={{ color: '#a5b4fc', fontWeight: 'bold', fontSize: 12 }}>🔊 Voice Reader</Text>
+                      <Text style={{ color: '#c7d2fe', fontSize: 10, marginTop: 2 }}>Listen to order total & deposit text out loud</Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => {
+                        const hrs = Math.max(1, Number(bookingHours) || 1);
+                        const rate = selectedMobileBookingService.hourlyRate || 4500;
+                        const total = hrs * rate;
+                        const pct = bookingPaymentOption === 'full' ? 100 : 50;
+                        const deposit = Math.round((total * pct) / 100);
+                        const msg = `Voice confirmation for checkout. Provider: ${selectedMobileBookingService.providerName}. Service: ${selectedMobileBookingService.title}. Total budget LKR ${total.toLocaleString()} for ${hrs} hours. Escrow deposit required now is LKR ${deposit.toLocaleString()} under ${bookingPaymentOption === 'full' ? '100 percent upfront' : '50 50 split'}.`;
+                        
+                        if (Platform.OS === 'web' && 'speechSynthesis' in window) {
+                          window.speechSynthesis.cancel();
+                          const utterance = new SpeechSynthesisUtterance(msg);
+                          utterance.rate = 0.95;
+                          window.speechSynthesis.speak(utterance);
+                        } else {
+                          Alert.alert('🔊 Voice Order Confirmation', msg);
+                        }
+                      }}
+                      style={{ backgroundColor: '#4f46e5', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10 }}
+                    >
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>Read Aloud</Text>
+                    </TouchableOpacity>
+                  </View>
+
                   {/* Project Title */}
                   <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 12, marginBottom: 4 }}>
                     Project Title / Brief *
@@ -1969,14 +2000,14 @@ export default function AppMobile() {
 
                   {/* Payment Terms Section */}
                   <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 13, marginBottom: 6 }}>
-                    🔒 Escrow Payment Terms (කොටස් වශයෙන් ගෙවීම)
+                    🔒 Escrow Payment Terms
                   </Text>
                   <Text style={{ color: subTextColor, fontSize: 11, marginBottom: 10 }}>
-                    Client ට මුළු මුදලම එකපාර ගෙවන්නේ නැතුව කොටස් වශයෙන් Escrow එකට තැන්පත් කර වැඩේ අවසන් වූ පසු නිදහස් කළ හැක.
+                    Payments are safely deposited into Escrow and held securely. Money is only released after work completion.
                   </Text>
 
-                  {/* Milestone Split Options */}
-                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
+                  {/* Milestone Split Options - 50/50 and 100% Upfront ONLY */}
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                     <TouchableOpacity
                       onPress={() => setBookingPaymentOption('50_50')}
                       style={{
@@ -1992,24 +2023,6 @@ export default function AppMobile() {
                       <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 11 }}>50% / 50% Split</Text>
                       <Text style={{ color: subTextColor, fontSize: 9, marginTop: 2 }}>
                         50% Upfront{"\n"}50% Delivery
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={() => setBookingPaymentOption('30_70')}
-                      style={{
-                        flex: 1,
-                        padding: 10,
-                        borderRadius: 12,
-                        backgroundColor:
-                          bookingPaymentOption === '30_70' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
-                        borderColor: bookingPaymentOption === '30_70' ? '#10b981' : '#334155',
-                        borderWidth: 1,
-                      }}
-                    >
-                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 11 }}>30% / 70% Split</Text>
-                      <Text style={{ color: subTextColor, fontSize: 9, marginTop: 2 }}>
-                        30% Upfront{"\n"}70% Delivery
                       </Text>
                     </TouchableOpacity>
 
@@ -2036,7 +2049,7 @@ export default function AppMobile() {
                   {(() => {
                     const hrs = Math.max(1, Number(bookingHours) || 1);
                     const total = hrs * selectedMobileBookingService.hourlyRate;
-                    const pct = bookingPaymentOption === '30_70' ? 30 : bookingPaymentOption === 'full' ? 100 : 50;
+                    const pct = bookingPaymentOption === 'full' ? 100 : 50;
                     const deposit = Math.round((total * pct) / 100);
                     const remaining = total - deposit;
 
@@ -2100,7 +2113,6 @@ export default function AppMobile() {
                         const rate = selectedMobileBookingService.hourlyRate || 4500;
                         const total = hours * rate;
                         let pct = 50;
-                        if (bookingPaymentOption === '30_70') pct = 30;
                         if (bookingPaymentOption === 'full') pct = 100;
                         const deposit = Math.round((total * pct) / 100);
                         const remaining = total - deposit;
