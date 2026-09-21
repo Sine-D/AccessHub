@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {parseVoiceIntent,validSellerPhone} from '../src/features/ai-assistant/utils/voiceIntent.ts';
+import {recordIntent,ANALYTICS_KEY} from '../src/features/ai-assistant/utils/voiceAnalytics.ts';
+test('story quick actions map correctly',()=>{for(const [text,intent] of [['Open Cart','open_cart'],['Find Ramps','find_ramps'],['Call Seller','call_seller'],['Confirm Call','confirm_call'],['Cancel','cancel'],['Open accessibility settings','settings'],['Clear filters','clear_filters']])assert.equal(parseVoiceIntent(text).intent,intent);});
+test('explicit categories and supported local-language phrases',()=>{assert.equal(parseVoiceIntent('Show home goods').category,'Home Goods');assert.equal(parseVoiceIntent('වෙළඳපොළ විවෘත කරන්න').intent,'marketplace');assert.equal(parseVoiceIntent('சந்தையைத் திற').intent,'marketplace');});
+test('unsafe and negated commands do not trigger actions',()=>{for(const text of ['do not call seller','Open Cart and Call Seller','call 0771234567','', 'x'.repeat(501)])assert.equal(parseVoiceIntent(text).intent,'unknown');assert.equal(validSellerPhone('javascript:alert(1)'),null);assert.equal(validSellerPhone(undefined),null);assert.equal(validSellerPhone('+94 77 123 4567'),'+94771234567');});
+test('analytics bounded and storage errors tolerated',()=>{const map=new Map();const storage={getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v)};for(let i=0;i<110;i++)recordIntent('open_cart',true,storage);const events=JSON.parse(map.get(ANALYTICS_KEY));assert.equal(events.length,100);assert.deepEqual(Object.keys(events[0]).sort(),['intent','success','time']);assert.doesNotThrow(()=>recordIntent('unknown',false,{getItem(){throw Error('denied');},setItem(){}}));});
+

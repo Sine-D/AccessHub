@@ -16,10 +16,9 @@ import {
 import { AccessibleCheckoutModal } from '../components/AccessibleCheckoutModal';
 
 export const MarketplaceScreen: React.FC = () => {
-  const { setSelectedProduct, setActiveScreen, wishlist, toggleWishlist } = useAppState();
+  const { setSelectedProduct, setActiveScreen, wishlist, toggleWishlist, marketplaceCategory: activeCategory, setMarketplaceCategory: setActiveCategory } = useAppState();
   const { setAiModalOpen } = useAccessibility();
 
-  const [activeCategory, setActiveCategory] = useState<string>('All');
   const [sortBy, setSortBy] = useState<'nearby' | 'rating' | 'price'>('nearby');
   const [search, setSearch] = useState('');
   

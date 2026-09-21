@@ -5,6 +5,7 @@ import { supabase } from '../supabase';
 import type { SearchQuery } from '../search/contracts.ts';
 
 export type ScreenView = 
+  | 'cart'
   | 'search_results'
   | 'splash'
   | 'onboarding'
@@ -26,6 +27,8 @@ export type ScreenView =
   | 'admin';
 
 interface AppStateContextType {
+  marketplaceCategory: string;
+  setMarketplaceCategory: React.Dispatch<React.SetStateAction<string>>;
   searchQuery: SearchQuery | null;
   setSearchQuery: React.Dispatch<React.SetStateAction<SearchQuery | null>>;
   activeScreen: ScreenView;
@@ -58,6 +61,7 @@ interface AppStateContextType {
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
 
 export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [marketplaceCategory, setMarketplaceCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState<SearchQuery | null>(null);
   const [activeScreen, setActiveScreen] = useState<ScreenView>('splash');
   const [currentUser, setCurrentUser] = useState<User>(mockCurrentUser);
@@ -268,6 +272,8 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
   return (
     <AppStateContext.Provider
       value={{
+        marketplaceCategory,
+        setMarketplaceCategory,
         searchQuery,
         setSearchQuery,
         activeScreen,
@@ -309,4 +315,5 @@ export const useAppState = () => {
   }
   return context;
 };
+
 
