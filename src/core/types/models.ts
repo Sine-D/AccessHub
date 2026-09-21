@@ -29,6 +29,7 @@ export interface Product {
   image: string;
   gallery?: string[];
   sellerName: string;
+  sellerPhone?: string;
   sellerAvatar: string;
   disabilityBadge?: DisabilityBadge;
   sellerRating: number;
@@ -91,7 +92,7 @@ export interface ServiceBookingRequest {
 export interface FreelancerServiceApplication {
   id: string;
   name: string;
-  age: number | string;
+  age: number;
   district: string;
   address: string;
   guardianName: string;

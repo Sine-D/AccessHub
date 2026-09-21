@@ -1,6 +1,9 @@
 import React from 'react';
+import { CartScreen } from '../../features/orders/screens/CartScreen';
+import { SearchResultsScreen } from '../../features/ai-assistant/screens/SearchResultsScreen';
 import { useAppState } from '../hooks/useAppState';
 
+// Feature Modules Imports (Feature-First Clean Architecture)
 import { SplashScreen, OnboardingScreen, AuthScreen } from '../../features/auth';
 import { HomeScreen } from '../../features/home';
 import { MarketplaceScreen, ProductDetailScreen } from '../../features/marketplace';
@@ -11,18 +14,16 @@ import { MapScreen } from '../../features/map';
 import { ChatScreen } from '../../features/chat';
 import { PaymentScreen, OrderTrackingScreen } from '../../features/orders';
 import { AdminScreen } from '../../features/admin';
-import {
-  ProfileScreen,
-  SettingsScreen,
-  AccessibilitySettingsScreen,
-  NotificationsScreen,
-} from '../../features/profile';
-import { SearchResultsScreen } from '../../features/ai-assistant/screens/SearchResultsScreen';
+import { ProfileScreen, SettingsScreen, AccessibilitySettingsScreen, NotificationsScreen } from '../../features/profile';
 
 export const AppNavigator: React.FC = () => {
   const { activeScreen } = useAppState();
 
   switch (activeScreen) {
+    case 'cart':
+      return <CartScreen />;
+    case 'search_results':
+      return <SearchResultsScreen />;
     case 'splash':
       return <SplashScreen />;
     case 'onboarding':
@@ -59,8 +60,6 @@ export const AppNavigator: React.FC = () => {
       return <NotificationsScreen />;
     case 'admin':
       return <AdminScreen />;
-    case 'search_results':
-      return <SearchResultsScreen />;
     default:
       return <HomeScreen />;
   }
