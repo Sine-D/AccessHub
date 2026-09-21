@@ -14,7 +14,8 @@ import {
   Lock,
   Sparkles,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Volume2
 } from 'lucide-react';
 
 interface ServiceBookingModalProps {
@@ -53,6 +54,45 @@ export const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
     }
   }, [service]);
 
+  // AC-125 / AC-127: Robust Speech Synthesis audio engine with browser fallbacks
+  const speakOrderSummary = (customText?: string) => {
+    const text = customText || generateVoiceSummary();
+    
+    // Direct Web Speech API execution for 100% browser audio playback
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        utterance.pitch = 1.0;
+        utterance.lang = 'en-US';
+
+        const voices = window.speechSynthesis.getVoices();
+        const englishVoice = voices.find(v => v.lang.startsWith('en'));
+        if (englishVoice) {
+          utterance.voice = englishVoice;
+        }
+
+        window.speechSynthesis.speak(utterance);
+        return; // Skip fallback if direct call succeeds to avoid overlap
+      } catch (e) {
+        console.warn('Speech synthesis error fallback:', e);
+      }
+    }
+    // Fallback to trigger accessibility context speakText
+    speakText(text);
+  };
+
+  useEffect(() => {
+    if (isOpen && service) {
+      // Small timeout to ensure DOM is ready and voice doesn't clip
+      setTimeout(() => {
+        speakOrderSummary(`Booking deposit checkout for ${service.providerName}. Service rate LKR ${service.hourlyRate?.toLocaleString() || '4,500'} per hour. Click Read Summary Aloud for voice confirmation.`);
+      }, 300);
+    }
+  }, [isOpen, service]);
+
   if (!isOpen || !service) return null;
 
   const hourlyRate = service.hourlyRate || 4500;
@@ -63,6 +103,15 @@ export const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
 
   const upfrontDeposit = Math.round((totalBudget * upfrontPercent) / 100);
   const remainingBalance = totalBudget - upfrontDeposit;
+
+  // AC-125 / AC-127: Voice summary string generator for speech synthesis
+  function generateVoiceSummary(): string {
+    if (!service) return '';
+    const termsText = paymentOption === 'full' 
+      ? '100 percent upfront escrow deposit' 
+      : '50 50 milestone split';
+    return `Voice confirmation for checkout. Provider: ${service.providerName}. Service: ${service.title}. Total budget LKR ${totalBudget.toLocaleString()} for ${estimatedHours} hours. Escrow deposit required now is LKR ${upfrontDeposit.toLocaleString()} under ${termsText}.`;
+  }
 
   const handleBookingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +170,7 @@ export const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSuccess(true);
-      speakText(`Booking request submitted for ${service.providerName}. Initial Escrow deposit of LKR ${upfrontDeposit.toLocaleString()} initiated.`);
+      speakOrderSummary(`Escrow deposit of LKR ${upfrontDeposit.toLocaleString()} confirmed for ${service.providerName}. Booking request submitted successfully.`);
 
       addBookingRequest(bookingRequest);
       if (onConfirmBooking) {
@@ -138,26 +187,26 @@ export const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="booking-modal-title"
     >
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-slate-900 border border-slate-700 dark:border-slate-800 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden relative">
         
-        {/* Header */}
-        <div className="p-5 sm:p-6 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-4">
+        {/* Sticky Top Header - Always 100% Visible */}
+        <div className="p-4 sm:p-5 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between shrink-0 sticky top-0 z-20">
+          <div className="flex items-center space-x-3.5">
             <img 
               src={service.providerAvatar} 
               alt={service.providerName} 
-              className="w-14 h-14 rounded-full object-cover ring-2 ring-amber-400 shadow-md" 
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover ring-2 ring-amber-400 shadow-md shrink-0" 
             />
             <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-400/30 inline-block mb-1">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-400/30 inline-block mb-0.5">
                 Verified Freelancer Booking
               </span>
-              <h2 id="booking-modal-title" className="font-extrabold text-lg sm:text-xl text-white line-clamp-1">
+              <h2 id="booking-modal-title" className="font-extrabold text-base sm:text-lg text-white line-clamp-1">
                 {service.providerName}
               </h2>
               <p className="text-xs text-slate-300 font-medium">
@@ -168,14 +217,34 @@ export const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
           <button
             onClick={onClose}
             aria-label="Close booking modal"
-            className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            className="p-2 sm:p-2.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Body / Form */}
-        <form onSubmit={handleBookingSubmit} className="p-5 sm:p-7 overflow-y-auto space-y-6 text-slate-900 dark:text-white">
+        {/* Scrollable Form Body */}
+        <form onSubmit={handleBookingSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-5 text-white flex-1">
+          
+          {/* AC-125 / AC-127: Voice Confirmation Action Bar */}
+          <div className="p-3.5 rounded-2xl bg-indigo-950/60 border border-indigo-500/40 flex items-center justify-between shadow-sm" role="region" aria-label="Voice confirmation text to speech">
+            <div className="flex items-center space-x-2.5">
+              <Volume2 className="w-5 h-5 text-indigo-400 shrink-0 animate-pulse" />
+              <div>
+                <span className="text-xs font-extrabold text-indigo-200 block">Voice Reader</span>
+                <span className="text-[11px] text-indigo-300/80 block">Listen to order total & escrow deposit summary text out loud</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => speakOrderSummary()}
+              aria-label="Hear order summary text to speech voice confirmation"
+              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold flex items-center space-x-1.5 shadow-md active:scale-95 transition-all shrink-0"
+            >
+              <Volume2 className="w-4 h-4" />
+              <span>🔊 Read Summary Aloud</span>
+            </button>
+          </div>
           
           {/* Section 1: Project Details */}
           <div className="space-y-4">
