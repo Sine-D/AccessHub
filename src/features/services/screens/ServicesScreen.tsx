@@ -3,6 +3,8 @@ import { useAppState } from '../../../core/hooks/useAppState';
 import { useAccessibility } from '../../../core/hooks/useAccessibility';
 import { TopHeader } from '../../../core/navigation/TopHeader';
 import { BottomNav } from '../../../core/navigation/BottomNav';
+import { ServiceItem } from '../../../core/types/models';
+import { ServiceBookingModal } from '../components/ServiceBookingModal';
 import { 
   Star, 
   Calendar, 
@@ -21,15 +23,13 @@ export const ServicesScreen: React.FC = () => {
   const { speakText } = useAccessibility();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [selectedBookingService, setSelectedBookingService] = useState<ServiceItem | null>(null);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
 
-  const handleBookService = (serviceTitle: string) => {
-    setBookingSuccess(true);
-    speakText(`Booking confirmed for ${serviceTitle}. Provider has been notified via AccessLink Messages.`);
-    setTimeout(() => {
-      setBookingSuccess(false);
-      setActiveScreen('chat');
-    }, 1800);
+  const handleBookService = (service: ServiceItem) => {
+    setSelectedBookingService(service);
+    setBookingModalOpen(true);
+    speakText(`Opening booking and milestone payment modal for ${service.providerName}`);
   };
 
   const filteredServices = servicesList.filter((service) => {
@@ -219,7 +219,7 @@ export const ServicesScreen: React.FC = () => {
 
                   {/* Booking Action */}
                   <button
-                    onClick={() => handleBookService(service.title)}
+                    onClick={() => handleBookService(service)}
                     className={`w-full py-2.5 rounded-xl font-bold text-xs shadow-md transition-all ${
                       idx % 2 === 0 ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-slate-950'
                     }`}
@@ -233,15 +233,12 @@ export const ServicesScreen: React.FC = () => {
           )}
         </div>
 
-        {bookingSuccess && (
-          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 text-center space-y-3 max-w-xs shadow-2xl">
-              <CheckCircle2 className="w-12 h-12 text-teal-500 mx-auto animate-bounce" />
-              <h4 className="font-extrabold text-base text-slate-900 dark:text-white">Booking Confirmed!</h4>
-              <p className="text-xs text-slate-500">Redirecting to Messenger Chat to discuss date & requirements...</p>
-            </div>
-          </div>
-        )}
+        {/* Service Booking & Milestone Escrow Payment Modal */}
+        <ServiceBookingModal
+          service={selectedBookingService}
+          isOpen={bookingModalOpen}
+          onClose={() => setBookingModalOpen(false)}
+        />
 
       </div>
 

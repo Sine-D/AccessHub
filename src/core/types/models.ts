@@ -59,6 +59,35 @@ export interface Service {
 
 export type ServiceItem = Service;
 
+export interface ServiceMilestone {
+  id: string;
+  title: string;
+  percentage: number;
+  amount: number;
+  status: 'pending_deposit' | 'funded' | 'in_progress' | 'submitted' | 'released';
+  description?: string;
+  dueDate?: string;
+}
+
+export interface ServiceBookingRequest {
+  id: string;
+  serviceId: string;
+  serviceTitle: string;
+  providerName: string;
+  providerAvatar: string;
+  clientName: string;
+  projectTitle: string;
+  description: string;
+  totalBudget: number;
+  paymentType: 'milestone' | 'full_upfront';
+  milestones: ServiceMilestone[];
+  upfrontDeposit: number;
+  remainingBalance: number;
+  deliveryDate: string;
+  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'disputed';
+  createdAt: string;
+}
+
 export interface FreelancerServiceApplication {
   id: string;
   name: string;
