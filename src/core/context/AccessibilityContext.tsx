@@ -31,8 +31,12 @@ const AccessibilityContext = createContext<AccessibilityContextType | undefined>
 
 export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<AccessibilitySettings>(() => {
-    const saved = localStorage.getItem('accesslink_a11y_settings');
-    return saved ? JSON.parse(saved) : defaultSettings;
+    try {
+      const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('accesslink_a11y_settings') : null;
+      return saved ? JSON.parse(saved) : defaultSettings;
+    } catch {
+      return defaultSettings;
+    }
   });
 
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -40,28 +44,33 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
   const [aiModalOpen, setAiModalOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('accesslink_a11y_settings', JSON.stringify(settings));
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('accesslink_a11y_settings', JSON.stringify(settings));
+      }
+    } catch {}
 
-    // Update body classes for dynamic styles
-    document.documentElement.classList.remove('font-scale-sm', 'font-scale-md', 'font-scale-lg', 'font-scale-xl');
-    document.documentElement.classList.add(`font-scale-${settings.fontScale}`);
+    if (typeof document !== 'undefined' && document.documentElement) {
+      document.documentElement.classList.remove('font-scale-sm', 'font-scale-md', 'font-scale-lg', 'font-scale-xl');
+      document.documentElement.classList.add(`font-scale-${settings.fontScale}`);
 
-    if (settings.highContrast) {
-      document.documentElement.classList.add('high-contrast');
-    } else {
-      document.documentElement.classList.remove('high-contrast');
-    }
+      if (settings.highContrast) {
+        document.documentElement.classList.add('high-contrast');
+      } else {
+        document.documentElement.classList.remove('high-contrast');
+      }
 
-    if (settings.darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+      if (settings.darkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
 
-    if (settings.largeTapTargets) {
-      document.documentElement.classList.add('large-tap-targets');
-    } else {
-      document.documentElement.classList.remove('large-tap-targets');
+      if (settings.largeTapTargets) {
+        document.documentElement.classList.add('large-tap-targets');
+      } else {
+        document.documentElement.classList.remove('large-tap-targets');
+      }
     }
   }, [settings]);
 
@@ -70,7 +79,7 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
   };
 
   const speakText = (text: string) => {
-    if (!('speechSynthesis' in window)) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     
     const utterance = new SpeechSynthesisUtterance(text);
@@ -85,7 +94,7 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
   };
 
   const stopSpeaking = () => {
-    if ('speechSynthesis' in window) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
     }

@@ -5,6 +5,8 @@ import { supabase } from '../../../core/supabase';
 import { AdminLayout } from '../components/AdminLayout';
 import { AdminFeatureCard } from '../components/AdminFeatureCard';
 import { AdminEmptyState } from '../components/AdminStates';
+import { VendorVerificationQueue } from '../components/VendorVerificationQueue';
+import { SubmitVerificationModal } from '../../vendor/components/SubmitVerificationModal';
 import { AdminTab, AdminFeature } from '../types/admin';
 import { 
   UserCheck, 
@@ -15,18 +17,7 @@ import {
   BarChart3, 
   Wrench, 
   Users, 
-  CreditCard,
-  Building2,
-  Star,
-  Check,
-  MapPin,
-  Phone,
-  ExternalLink,
-  User,
-  Wallet,
-  TrendingUp,
-  FileCheck,
-  ShieldCheck
+  ExternalLink
 } from 'lucide-react';
 
 export const AdminScreen: React.FC = () => {
@@ -36,9 +27,6 @@ export const AdminScreen: React.FC = () => {
     approveServiceApplication, 
     rejectServiceApplication,
     bookingRequests,
-    approveBookingEscrow,
-    acceptBookingByFreelancer,
-    rejectBookingEscrow,
     setActiveScreen
   } = useAppState();
 
@@ -50,7 +38,7 @@ export const AdminScreen: React.FC = () => {
 
   const [justApprovedName, setJustApprovedName] = useState<string | null>(null);
   const [realUsers, setRealUsers] = useState<any[]>([]);
-  const [selectedUserProfile, setSelectedUserProfile] = useState<any | null>(null);
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
 
   const fetchSupabaseUsers = async () => {
     setIsLoading(true);
@@ -83,7 +71,6 @@ export const AdminScreen: React.FC = () => {
     }, 4000);
   };
 
-  // List of 6 required feature module definitions for future plug-in implementation
   const featureModules: AdminFeature[] = [
     {
       id: 'vendor_verification',
@@ -92,7 +79,8 @@ export const AdminScreen: React.FC = () => {
       iconName: 'UserCheck',
       acReference: 'AC-51–56',
       badgeCount: 2,
-      status: 'ready'
+      badgeText: 'Live Workflow Active',
+      status: 'active'
     },
     {
       id: 'listing_moderation',
@@ -149,7 +137,7 @@ export const AdminScreen: React.FC = () => {
       case 'CheckCircle2': return CheckCircle2;
       case 'Award': return Award;
       case 'BarChart3': return BarChart3;
-      default: return ShieldCheck;
+      default: return UserCheck;
     }
   };
 
@@ -190,9 +178,9 @@ export const AdminScreen: React.FC = () => {
             </div>
 
             <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Pending Applications</span>
-              <p className="font-extrabold text-lg text-amber-500">{pendingServiceApplications.length}</p>
-              <span className="text-[10px] text-amber-500 font-semibold">Requires Review</span>
+              <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Pending Verifications</span>
+              <p className="font-extrabold text-lg text-amber-500">2</p>
+              <span className="text-[10px] text-amber-500 font-semibold">Requires Inspection</span>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-1">
@@ -212,9 +200,9 @@ export const AdminScreen: React.FC = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="font-extrabold text-xs text-slate-400 uppercase tracking-wider">
-                Admin Feature Modules (6 Pluggable Sub-Systems)
+                Admin Feature Modules
               </h3>
-              <span className="text-[10px] font-bold text-teal-500">Foundation Ready</span>
+              <span className="text-[10px] font-bold text-teal-500">Vendor Verification Live</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -227,6 +215,7 @@ export const AdminScreen: React.FC = () => {
                   icon={getIconComponent(module.iconName)}
                   acReference={module.acReference}
                   badgeCount={module.badgeCount}
+                  badgeText={module.badgeText}
                   status={module.status}
                   onOpen={setActiveTab}
                 />
@@ -236,14 +225,10 @@ export const AdminScreen: React.FC = () => {
         </div>
       )}
 
-      {/* VENDOR VERIFICATION PLACEHOLDER (AC-51–56) */}
+      {/* VENDOR VERIFICATION WORKFLOW TAB (AC-51–56) */}
       {activeTab === 'vendor_verification' && (
-        <AdminEmptyState
-          title="Vendor Verification Module (AC-51–56)"
-          message="This workspace foundation is prepared for the Vendor Verification module. Future implementation will connect disabled vendor credentials, medical certificates, and approval workflows here."
-          icon={UserCheck}
-          actionLabel="Return to Overview"
-          onAction={() => setActiveTab('overview')}
+        <VendorVerificationQueue
+          onOpenSubmitModal={() => setIsSubmitModalOpen(true)}
         />
       )}
 
@@ -397,6 +382,12 @@ export const AdminScreen: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* VENDOR VERIFICATION SUBMIT MODAL (AC-52) */}
+      <SubmitVerificationModal
+        isOpen={isSubmitModalOpen}
+        onClose={() => setIsSubmitModalOpen(false)}
+      />
     </AdminLayout>
   );
 };
