@@ -70,7 +70,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [searchQuery, setSearchQuery] = useState<SearchQuery | null>(null);
   const [activeScreen, setActiveScreen] = useState<ScreenView>('splash');
   const [currentUser, setCurrentUser] = useState<User>(mockCurrentUser);
-  const [userRole, setUserRole] = useState<UserRole>('seller');
+  const [userRole, setUserRole] = useState<UserRole>('admin');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(mockProducts[0]);
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([
     { product: mockProducts[0], quantity: 1 }

@@ -13,7 +13,7 @@ export const mockPendingServiceApplications: FreelancerServiceApplication[] = []
 export const mockCurrentUser: User = {
   id: 'u1',
   name: 'Kavindi Perera',
-  role: 'seller',
+  role: 'admin',
   avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300',
   coverImage: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&q=80&w=1000',
   bio: 'Artisan craft maker & customized wooden decor specialist. Passionate about empowering disabled entrepreneurs through inclusive trade.',
