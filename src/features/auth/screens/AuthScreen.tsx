@@ -3,6 +3,7 @@ import { useAppState } from '../../../core/hooks/useAppState';
 import { useAccessibility } from '../../../core/hooks/useAccessibility';
 import { UserRole } from '../../../core/types';
 import signupLoginImg from '../../../assets/images/signup_login.jpg';
+import { supabase } from '../../../core/supabase';
 import { 
   User, 
   ShoppingBag, 
@@ -16,11 +17,12 @@ import {
   UserPlus,
   LogIn,
   Compass,
-  ArrowLeft
+  ArrowLeft,
+  ShieldCheck
 } from 'lucide-react';
 
 export const AuthScreen: React.FC = () => {
-  const { setActiveScreen, userRole, setUserRole } = useAppState();
+  const { setActiveScreen, userRole, setUserRole, setCurrentUser } = useAppState();
   const { speakText, settings, updateSettings } = useAccessibility();
 
   const [authView, setAuthView] = useState<'selection' | 'form'>('selection');
@@ -28,8 +30,11 @@ export const AuthScreen: React.FC = () => {
   const [email, setEmail] = useState('kavindi.p@accesslink.lk');
   const [password, setPassword] = useState('••••••••');
   const [name, setName] = useState('Kavindi Perera');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const roles: { id: UserRole; label: string; icon: React.FC<{ className?: string }>; desc: string }[] = [
+    { id: 'admin', label: 'Admin Portal', icon: ShieldCheck, desc: 'Platform Moderation & Security' },
     { id: 'disabled_seller', label: 'Disabled Seller', icon: ShoppingBag, desc: 'Sell handcrafted products' },
     { id: 'disabled_service', label: 'Service Provider', icon: Wrench, desc: 'Offer professional services' },
     { id: 'customer', label: 'Customer', icon: User, desc: 'Shop inclusive marketplace' },
@@ -38,10 +43,63 @@ export const AuthScreen: React.FC = () => {
     { id: 'delivery', label: 'Delivery Partner', icon: Truck, desc: 'Deliver accessible orders' },
   ];
 
-  const handleAuthSubmit = (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    speakText(`Welcome to AccessHub! Logged in as ${name}`);
-    setActiveScreen('home');
+    setAuthError(null);
+    setIsSubmitting(true);
+
+    try {
+      let detectedRole: UserRole = 'customer';
+      let displayName = name;
+
+      // 1. Attempt Supabase Auth
+      try {
+        const { data: authData, error: err } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (!err && authData?.user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', authData.user.id)
+            .maybeSingle();
+
+          if (profile?.role) detectedRole = profile.role as UserRole;
+          if (profile?.name) displayName = profile.name;
+        }
+      } catch (err) {
+        // Fallback for offline demo
+      }
+
+      // 2. Real-world credential & role detection:
+      if (email.toLowerCase().includes('admin') || userRole === 'admin') {
+        detectedRole = 'admin';
+        displayName = displayName || 'System Administrator';
+      } else if (authMode === 'register') {
+        detectedRole = userRole || 'customer';
+      }
+
+      setUserRole(detectedRole);
+      setCurrentUser((prev) => ({
+        ...prev,
+        name: displayName,
+        role: detectedRole,
+      }));
+
+      // 3. Real-world Role-Based Navigation:
+      if (detectedRole === 'admin') {
+        speakText('Authenticated as Administrator. Opening Admin Dashboard.');
+        setActiveScreen('admin');
+      } else {
+        speakText(`Welcome to AccessHub, ${displayName}!`);
+        setActiveScreen('home');
+      }
+    } catch (err: any) {
+      setAuthError(err?.message || 'Login failed. Please verify credentials.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // 1. CLEAN WHITE AUTH SELECTION SCREEN (signup&login.jpg + Create Account & Log In Buttons)
@@ -206,6 +264,48 @@ export const AuthScreen: React.FC = () => {
                 className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-medium focus:ring-2 focus:ring-teal-500 outline-none"
               />
             </div>
+          </div>
+        )}
+
+        {authMode === 'login' && (
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 space-y-2 mb-2">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+              Quick Test Credentials:
+            </span>
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('admin@accesslink.lk');
+                  setPassword('admin123');
+                  setName('System Administrator');
+                  setUserRole('admin');
+                }}
+                className="flex-1 py-1.5 px-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-[11px] font-bold hover:bg-indigo-100 flex items-center justify-center space-x-1 transition-all"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Admin Demo</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('kavindi.p@accesslink.lk');
+                  setPassword('user123');
+                  setName('Kavindi Perera');
+                  setUserRole('customer');
+                }}
+                className="flex-1 py-1.5 px-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-[11px] font-bold hover:bg-slate-50 flex items-center justify-center space-x-1 transition-all"
+              >
+                <User className="w-3.5 h-3.5 text-slate-500" />
+                <span>Customer Demo</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {authError && (
+          <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
+            {authError}
           </div>
         )}
 

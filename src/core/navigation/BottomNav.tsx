@@ -11,16 +11,18 @@ import {
 } from 'lucide-react';
 
 export const BottomNav: React.FC = () => {
-  const { activeScreen, setActiveScreen, setSellModalOpen, pendingServiceApplications } = useAppState();
+  const { 
+    activeScreen, 
+    setActiveScreen, 
+    setSellModalOpen, 
+    pendingServiceApplications, 
+    userRole, 
+    currentUser 
+  } = useAppState();
   const { settings, speakText } = useAccessibility();
 
-  const navItems: { id: ScreenView; label: string; icon: React.FC<{ className?: string }>; badge?: number }[] = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'services', label: 'Services', icon: Wrench },
-    { id: 'marketplace', label: 'Shop', icon: ShoppingBag },
-    { id: 'admin', label: 'Admin', icon: ShieldCheck, badge: pendingServiceApplications.length },
-    { id: 'profile', label: 'Profile', icon: User },
-  ];
+  // Integrated Authorization Check: Dedicated Admin Portal Navigation for ADMIN role
+  const isAdmin = userRole === 'admin' || currentUser?.role === 'admin';
 
   const handleNavClick = (id: ScreenView, label: string) => {
     if (settings.screenReader) {
@@ -28,6 +30,52 @@ export const BottomNav: React.FC = () => {
     }
     setActiveScreen(id);
   };
+
+  if (isAdmin) {
+    const adminNavItems: { id: ScreenView; label: string; icon: React.FC<{ className?: string }>; badge?: number }[] = [
+      { id: 'admin', label: 'Admin Hub 🛡️', icon: ShieldCheck, badge: pendingServiceApplications.length },
+      { id: 'profile', label: 'Admin Profile 👤', icon: User },
+    ];
+
+    return (
+      <div className="sticky bottom-0 z-40 bg-slate-900 border-t border-slate-800 px-4 py-2.5 shadow-xl">
+        <div className="flex items-center justify-around max-w-md mx-auto">
+          {adminNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeScreen === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item.id, item.label)}
+                className={`flex items-center space-x-2 py-2 px-4 rounded-xl font-bold text-xs transition-all ${
+                  isActive
+                    ? 'bg-teal-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <div className="relative">
+                  <Icon className="w-4 h-4" />
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-amber-500 text-slate-950 font-extrabold text-[8px] flex items-center justify-center">
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  const navItems: { id: ScreenView; label: string; icon: React.FC<{ className?: string }>; badge?: number }[] = [
+    { id: 'home', label: 'Home', icon: Home },
+    { id: 'services', label: 'Services', icon: Wrench },
+    { id: 'marketplace', label: 'Shop', icon: ShoppingBag },
+    { id: 'profile', label: 'Profile', icon: User },
+  ];
 
   return (
     <div className="sticky bottom-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 px-2 py-2 shadow-lg">
