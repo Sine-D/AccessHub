@@ -54,7 +54,12 @@ export const mockProducts: Product[] = [
       'Finish': 'Natural Non-Toxic Polish'
     },
     accessibilityFeatures: ['Tactile Marking', 'Easy Grip Edges', 'Wheelchair Delivered'],
-    inStock: true
+    inStock: true,
+    moderationStatus: 'approved',
+    altText: 'Handcrafted light-brown bamboo desk organizer with 3 storage slots placed on a wooden table.',
+    submittedAt: '2026-09-10T08:30:00.000Z',
+    reviewedAt: '2026-09-11T10:15:00.000Z',
+    reviewedBy: 'Admin Team',
   },
   {
     id: 'p2',
@@ -77,7 +82,12 @@ export const mockProducts: Product[] = [
       'Contrast': 'High Contrast Yellow on Black'
     },
     accessibilityFeatures: ['Braille Dots', 'Audible Chime Option', 'High Contrast Yellow'],
-    inStock: true
+    inStock: true,
+    moderationStatus: 'approved',
+    altText: 'Round black wall clock with bright yellow high-contrast numerals and tactile Braille markings.',
+    submittedAt: '2026-09-12T09:00:00.000Z',
+    reviewedAt: '2026-09-13T14:20:00.000Z',
+    reviewedBy: 'Admin Team',
   },
   {
     id: 'p3',
@@ -100,7 +110,10 @@ export const mockProducts: Product[] = [
       'Certification': '100% Organic USDA'
     },
     accessibilityFeatures: ['Sign Language QR Video', 'Easy Tear Pouches'],
-    inStock: true
+    inStock: true,
+    moderationStatus: 'pending',
+    altText: 'Assorted herbal tea bags and glass teapot with organic dried herbs on wooden tray.',
+    submittedAt: '2026-09-20T11:45:00.000Z',
   },
   {
     id: 'p4',
@@ -122,7 +135,60 @@ export const mockProducts: Product[] = [
       'Fit': 'Adaptive Relaxed Fit'
     },
     accessibilityFeatures: ['Magnetic Fasteners', 'Seamless Back', 'One-Handed Wear'],
-    inStock: true
+    inStock: true,
+    moderationStatus: 'pending',
+    altText: 'Navy blue collared dress shirt with hidden magnetic snap closures for easy dressing.',
+    submittedAt: '2026-09-21T14:10:00.000Z',
+  },
+  {
+    id: 'p5',
+    title: 'Handmade Palm-Leaf Tactile Sensory Tote Bag',
+    price: 2900,
+    category: 'Crafts & Decor',
+    image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=600',
+    sellerName: 'Malkanthi Silva',
+    sellerAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300',
+    disabilityBadge: 'Visually Impaired',
+    sellerRating: 4.7,
+    reviewsCount: 32,
+    distanceKm: 3.2,
+    isWishlisted: false,
+    description: 'Woven from natural palmyra leaves with embossed tactile patterns for easy orientation and touch recognition.',
+    specifications: {
+      'Material': '100% Natural Palmyra Leaf',
+      'Capacity': '15 Liters',
+      'Handle': 'Padded Soft-Grip Cotton'
+    },
+    accessibilityFeatures: ['High-Contrast Handles', 'Tactile Ridge Pattern', 'Soft-Grip Handles'],
+    inStock: true,
+    moderationStatus: 'pending',
+    altText: 'Woven beige tote bag with intricate geometric tactile textures and durable handles.',
+    submittedAt: '2026-09-22T16:00:00.000Z',
+  },
+  {
+    id: 'p6',
+    title: 'Unverified Non-Compliant Walking Cane',
+    price: 1500,
+    category: 'Home Goods',
+    image: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&q=80&w=600',
+    sellerName: 'Unknown Reseller',
+    sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300',
+    sellerRating: 2.1,
+    reviewsCount: 4,
+    distanceKm: 8.0,
+    isWishlisted: false,
+    description: 'Basic walking stick with no safety certification or grip testing.',
+    specifications: {
+      'Material': 'Plastic',
+      'Safety': 'Uncertified'
+    },
+    accessibilityFeatures: [],
+    inStock: false,
+    moderationStatus: 'rejected',
+    rejectionReason: 'Missing certified anti-slip grip test and no image alt-text provided.',
+    submittedAt: '2026-09-18T10:00:00.000Z',
+    reviewedAt: '2026-09-19T11:00:00.000Z',
+    reviewedBy: 'Admin Team',
   }
 ];
 
