@@ -6,6 +6,7 @@ import { AdminLayout } from '../components/AdminLayout';
 import { AdminFeatureCard } from '../components/AdminFeatureCard';
 import { AdminEmptyState } from '../components/AdminStates';
 import { VendorVerificationQueue } from '../components/VendorVerificationQueue';
+import { ListingModerationQueue } from '../components/ListingModerationQueue';
 import { SubmitVerificationModal } from '../../vendor/components/SubmitVerificationModal';
 import { AdminTab, AdminFeature } from '../types/admin';
 import { 
@@ -88,8 +89,9 @@ export const AdminScreen: React.FC = () => {
       description: 'Review submitted product listings, inspect accessibility attributes and alt text, approve or request revisions.',
       iconName: 'ShoppingBag',
       acReference: 'AC-57–62',
-      badgeCount: 0,
-      status: 'ready'
+      badgeCount: 3,
+      badgeText: 'Live Workflow Active',
+      status: 'active'
     },
     {
       id: 'review_moderation',
@@ -232,15 +234,9 @@ export const AdminScreen: React.FC = () => {
         />
       )}
 
-      {/* LISTING MODERATION PLACEHOLDER (AC-57–62) */}
+      {/* LISTING MODERATION QUEUE (AC-57–62) */}
       {activeTab === 'listing_moderation' && (
-        <AdminEmptyState
-          title="Marketplace Listing Moderation (AC-57–62)"
-          message="This workspace foundation is prepared for Marketplace Listing Moderation. Future implementation will connect listing submission inspection, accessibility alt-text validation, and approval workflows here."
-          icon={ShoppingBag}
-          actionLabel="Return to Overview"
-          onAction={() => setActiveTab('overview')}
-        />
+        <ListingModerationQueue />
       )}
 
       {/* REVIEW MODERATION PLACEHOLDER (AC-252–263) */}

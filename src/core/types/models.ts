@@ -20,6 +20,8 @@ export interface UserProfile {
 
 export type User = UserProfile;
 
+export type ListingModerationStatus = 'pending' | 'approved' | 'rejected';
+
 export interface Product {
   id: string;
   title: string;
@@ -40,6 +42,13 @@ export interface Product {
   specifications: Record<string, string>;
   accessibilityFeatures: string[];
   inStock: boolean;
+  // Marketplace Listing Moderation (AC-57 to AC-62)
+  moderationStatus?: ListingModerationStatus;
+  rejectionReason?: string;
+  submittedAt?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  altText?: string;
 }
 
 export interface Service {

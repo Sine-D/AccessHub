@@ -40,6 +40,7 @@ import {
 import { saveRatingWithVerification } from './services/ratingsService';
 import { CreateAccountScreen } from './features/auth/screens/CreateAccountScreen';
 import { MobileVendorVerificationQueue } from './features/admin/components/MobileVendorVerificationQueue';
+import { MobileListingModerationQueue } from './features/admin/components/MobileListingModerationQueue';
 import { supabase } from './core/supabase';
 import { JobPosting, ServiceItem, FreelancerServiceApplication, ServiceBookingRequest } from './core/types';
 
@@ -101,7 +102,7 @@ export default function AppMobile() {
   const [bookingHours, setBookingHours] = useState('2');
   const [bookingPaymentOption, setBookingPaymentOption] = useState<'50_50' | 'full'>('50_50');
   const [bookingSuccessAlert, setBookingSuccessAlert] = useState(false);
-  const [adminTab, setAdminTab] = useState<'vendors' | 'freelancers' | 'accounts' | 'bookings'>('vendors');
+  const [adminTab, setAdminTab] = useState<'vendors' | 'listings' | 'freelancers' | 'accounts' | 'bookings'>('vendors');
   const [mobileUsers, setMobileUsers] = useState<any[]>([]);
   const [selectedMobileProfile, setSelectedMobileProfile] = useState<any | null>(null);
 
@@ -2964,6 +2965,23 @@ export default function AppMobile() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  onPress={() => setAdminTab('listings')}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    backgroundColor: adminTab === 'listings' ? '#38bdf8' : cardBg,
+                    alignItems: 'center',
+                    borderColor: '#38bdf8',
+                    borderWidth: 1,
+                  }}
+                >
+                  <Text style={{ color: adminTab === 'listings' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                    🛍️ Listings
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
                   onPress={() => setAdminTab('freelancers')}
                   style={{
                     flex: 1,
@@ -2976,7 +2994,7 @@ export default function AppMobile() {
                   }}
                 >
                   <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
-                    🛠️ Freelancers ({mobilePendingApps.length})
+                    🛠️ Freelancers
                   </Text>
                 </TouchableOpacity>
 
@@ -2993,7 +3011,7 @@ export default function AppMobile() {
                   }}
                 >
                   <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
-                    💳 Bookings ({mobileBookingRequests.length})
+                    💳 Bookings
                   </Text>
                 </TouchableOpacity>
 
@@ -3018,6 +3036,11 @@ export default function AppMobile() {
               {/* VENDOR VERIFICATION QUEUE VIEW */}
               {adminTab === 'vendors' && (
                 <MobileVendorVerificationQueue />
+              )}
+
+              {/* MARKETPLACE LISTING MODERATION VIEW (AC-57 to AC-62) */}
+              {adminTab === 'listings' && (
+                <MobileListingModerationQueue />
               )}
 
               {/* ACCOUNT DASHBOARD VIEW */}
