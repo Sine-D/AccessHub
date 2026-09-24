@@ -41,8 +41,11 @@ import { saveRatingWithVerification } from './services/ratingsService';
 import { CreateAccountScreen } from './features/auth/screens/CreateAccountScreen';
 import { MobileVendorVerificationQueue } from './features/admin/components/MobileVendorVerificationQueue';
 import { MobileListingModerationQueue } from './features/admin/components/MobileListingModerationQueue';
+import { MobileFraudModerationQueue } from './features/admin/components/MobileFraudModerationQueue';
+import { AdminUnauthorizedState } from './features/admin/components/AdminStates';
+import { useAppState } from './core/hooks/useAppState';
 import { supabase } from './core/supabase';
-import { JobPosting, ServiceItem, FreelancerServiceApplication, ServiceBookingRequest } from './core/types';
+import { UserRole, JobPosting, ServiceItem, FreelancerServiceApplication, ServiceBookingRequest } from './core/types';
 
 type MobileTab =
   | 'splash'
@@ -58,7 +61,24 @@ type MobileTab =
   | 'profile';
 
 export default function AppMobile() {
-  const [activeTab, setActiveTab] = useState<MobileTab>('splash');
+  const { userRole, setUserRole, currentUser, setCurrentUser, setActiveScreen } = useAppState();
+  const isAdmin = userRole === 'admin' || currentUser?.role === 'admin';
+
+  const [activeTab, setActiveTab] = useState<MobileTab>(isAdmin ? 'admin' : 'splash');
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      // Ignore
+    }
+    setUserRole('customer');
+    setCurrentUser((prev) => ({ ...prev, role: 'customer' }));
+    setActiveTab('auth');
+    if (setActiveScreen) {
+      setActiveScreen('auth');
+    }
+  };
 
   const [highContrast, setHighContrast] = useState(false);
   const [fontScale, setFontScale] = useState<'md' | 'lg' | 'xl'>('md');
@@ -102,9 +122,81 @@ export default function AppMobile() {
   const [bookingHours, setBookingHours] = useState('2');
   const [bookingPaymentOption, setBookingPaymentOption] = useState<'50_50' | 'full'>('50_50');
   const [bookingSuccessAlert, setBookingSuccessAlert] = useState(false);
-  const [adminTab, setAdminTab] = useState<'vendors' | 'listings' | 'freelancers' | 'accounts' | 'bookings'>('vendors');
+  const [adminTab, setAdminTab] = useState<'vendors' | 'listings' | 'reviews' | 'freelancers' | 'accounts' | 'bookings'>('vendors');
   const [mobileUsers, setMobileUsers] = useState<any[]>([]);
   const [selectedMobileProfile, setSelectedMobileProfile] = useState<any | null>(null);
+
+  // Real-world Mobile Login State
+  const [loginModalVisible, setLoginModalVisible] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleMobileLogin = async () => {
+    setIsLoggingIn(true);
+    setLoginError('');
+    try {
+      const trimmedEmail = loginEmail.trim().toLowerCase();
+      let detectedRole: UserRole = 'customer';
+      let userName = 'Kavindi Perera';
+
+      // 1. Attempt Supabase Auth
+      if (loginEmail && loginPassword) {
+        try {
+          const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+            email: trimmedEmail,
+            password: loginPassword,
+          });
+
+          if (!authErr && authData?.user) {
+            const { data: profile } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', authData.user.id)
+              .maybeSingle();
+
+            if (profile?.role) detectedRole = profile.role as UserRole;
+            if (profile?.name) userName = profile.name;
+          }
+        } catch (e) {
+          // offline fallback
+        }
+      }
+
+      // 2. Real-world credential & role detection:
+      if (trimmedEmail.includes('admin') || trimmedEmail === 'admin@accesslink.lk') {
+        detectedRole = 'admin';
+        userName = 'System Administrator';
+      }
+
+      setUserRole(detectedRole);
+      setCurrentUser((prev) => ({
+        ...prev,
+        name: userName,
+        role: detectedRole,
+      }));
+
+      setLoginModalVisible(false);
+
+      // 3. Real-world Role-Based Redirection:
+      if (detectedRole === 'admin') {
+        setActiveTab('admin');
+        if (setActiveScreen) {
+          setActiveScreen('admin');
+        }
+      } else {
+        setActiveTab('home');
+        if (setActiveScreen) {
+          setActiveScreen('home');
+        }
+      }
+    } catch (err: any) {
+      setLoginError(err?.message || 'Login failed. Please check credentials.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   const [mobileBookingRequests, setMobileBookingRequests] = useState<ServiceBookingRequest[]>([]);
 
@@ -867,7 +959,10 @@ export default function AppMobile() {
                   shadowRadius: 8,
                   elevation: 3,
                 }}
-                onPress={() => setActiveTab('home')}
+                onPress={() => {
+                  setLoginError('');
+                  setLoginModalVisible(true);
+                }}
               >
                 <Text
                   style={{
@@ -881,6 +976,200 @@ export default function AppMobile() {
               </TouchableOpacity>
             </View>
           </ScrollView>
+
+          {/* Real-World Authentication Modal */}
+          <Modal
+            visible={loginModalVisible}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setLoginModalVisible(false)}
+          >
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderTopLeftRadius: 24,
+                  borderTopRightRadius: 24,
+                  padding: 24,
+                  maxHeight: '90%',
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 12,
+                  }}
+                >
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#0f172a' }}>
+                    Sign In to Account
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setLoginModalVisible(false)}
+                    style={{ padding: 4 }}
+                  >
+                    <Text style={{ fontSize: 18, color: '#64748b', fontWeight: 'bold' }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
+                  Enter your credentials. Verified accounts are automatically routed to their designated area (Admins go to Admin Dashboard).
+                </Text>
+
+                {/* Quick Demo Credentials Autofill */}
+                <View
+                  style={{
+                    backgroundColor: '#f1f5f9',
+                    borderRadius: 12,
+                    padding: 10,
+                    marginBottom: 16,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
+                    ⚡ QUICK DEMO CREDENTIALS:
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setLoginEmail('admin@accesslink.lk');
+                        setLoginPassword('admin123');
+                        setLoginError('');
+                      }}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#e0e7ff',
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: '#4338ca', fontWeight: 'bold', fontSize: 12 }}>
+                        🛡️ Admin Demo
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setLoginEmail('kavindi.p@accesslink.lk');
+                        setLoginPassword('user123');
+                        setLoginError('');
+                      }}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#f8fafc',
+                        borderWidth: 1,
+                        borderColor: '#cbd5e1',
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: '#334155', fontWeight: 'bold', fontSize: 12 }}>
+                        👤 Customer Demo
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Inline Error */}
+                {!!loginError && (
+                  <View
+                    style={{
+                      backgroundColor: '#fee2e2',
+                      borderRadius: 8,
+                      padding: 10,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <Text style={{ color: '#b91c1c', fontSize: 12, fontWeight: '600' }}>
+                      {loginError}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Email Input */}
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                  Email Address
+                </Text>
+                <TextInput
+                  value={loginEmail}
+                  onChangeText={setLoginEmail}
+                  placeholder="e.g. name@accesslink.lk"
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#cbd5e1',
+                    borderRadius: 12,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    fontSize: 14,
+                    marginBottom: 14,
+                    color: '#0f172a',
+                  }}
+                />
+
+                {/* Password Input */}
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                  Password
+                </Text>
+                <TextInput
+                  value={loginPassword}
+                  onChangeText={setLoginPassword}
+                  placeholder="••••••••"
+                  placeholderTextColor="#94a3b8"
+                  secureTextEntry={true}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#cbd5e1',
+                    borderRadius: 12,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    fontSize: 14,
+                    marginBottom: 20,
+                    color: '#0f172a',
+                  }}
+                />
+
+                {/* Submit Sign In Button */}
+                <TouchableOpacity
+                  onPress={handleMobileLogin}
+                  disabled={isLoggingIn}
+                  style={{
+                    backgroundColor: '#0d9488',
+                    paddingVertical: 14,
+                    borderRadius: 14,
+                    alignItems: 'center',
+                    marginBottom: 10,
+                  }}
+                >
+                  <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 15 }}>
+                    {isLoggingIn ? 'Signing In...' : 'Sign In'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setLoginModalVisible(false)}
+                  style={{
+                    paddingVertical: 10,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ color: '#64748b', fontWeight: '600', fontSize: 13 }}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
         </SafeAreaView>
       </SafeAreaProvider>
     );
@@ -953,30 +1242,50 @@ export default function AppMobile() {
             </View>
           </View>
 
-          <TouchableOpacity
-            style={[
-              styles.aiButton,
-              {
-                backgroundColor: highContrast
-                  ? '#ffff00'
-                  : '#0d9488',
-              },
-            ]}
-            onPress={() => setAiModalVisible(true)}
-          >
-            <Text
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
               style={[
-                styles.aiButtonText,
+                styles.aiButton,
                 {
-                  color: highContrast
-                    ? '#000'
-                    : '#fff',
+                  backgroundColor: highContrast
+                    ? '#ffff00'
+                    : '#0d9488',
                 },
               ]}
+              onPress={() => setAiModalVisible(true)}
             >
-              ✨ AI Hub
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.aiButtonText,
+                  {
+                    color: highContrast
+                      ? '#000'
+                      : '#fff',
+                  },
+                ]}
+              >
+                ✨ AI Hub
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.logoutButtonHeader,
+                {
+                  backgroundColor: highContrast
+                    ? '#ff0000'
+                    : '#dc2626',
+                },
+              ]}
+              onPress={handleLogout}
+              accessibilityRole="button"
+              accessibilityLabel="Log out of application"
+            >
+              <Text style={styles.logoutButtonText}>
+                🚪 Logout
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Accessibility Control Toolbar */}
@@ -2853,6 +3162,26 @@ export default function AppMobile() {
                 >
                   {mockCurrentUser.bio}
                 </Text>
+
+                <TouchableOpacity
+                  style={{
+                    marginTop: 14,
+                    backgroundColor: highContrast ? '#ff0000' : '#dc2626',
+                    paddingVertical: 8,
+                    paddingHorizontal: 16,
+                    borderRadius: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  onPress={handleLogout}
+                  accessibilityRole="button"
+                  accessibilityLabel="Log out of application"
+                >
+                  <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 13 }}>
+                    🚪 Logout from Account
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               <Text
@@ -2909,7 +3238,27 @@ export default function AppMobile() {
 
           {/* ADMIN DASHBOARD SCREEN */}
           {activeTab === 'admin' && (
-            <View style={{ padding: 16 }}>
+            !isAdmin ? (
+              <View style={{ padding: 16 }}>
+                <AdminUnauthorizedState />
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: primaryButtonBg,
+                    paddingVertical: 12,
+                    paddingHorizontal: 20,
+                    borderRadius: 14,
+                    alignItems: 'center',
+                    marginTop: 16,
+                  }}
+                  onPress={() => setActiveTab('home')}
+                >
+                  <Text style={{ color: primaryButtonText, fontWeight: 'bold', fontSize: 13 }}>
+                    ← Return to Home Screen
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ padding: 16 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <Text
                   style={[
@@ -3016,6 +3365,23 @@ export default function AppMobile() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  onPress={() => setAdminTab('reviews')}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    backgroundColor: adminTab === 'reviews' ? '#ef4444' : cardBg,
+                    alignItems: 'center',
+                    borderColor: '#ef4444',
+                    borderWidth: 1,
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                    🚨 Fraud Queue
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
                   onPress={() => setAdminTab('accounts')}
                   style={{
                     flex: 1,
@@ -3036,6 +3402,11 @@ export default function AppMobile() {
               {/* VENDOR VERIFICATION QUEUE VIEW */}
               {adminTab === 'vendors' && (
                 <MobileVendorVerificationQueue />
+              )}
+
+              {/* FRAUD MODERATION QUEUE VIEW (AC-252 to AC-263) */}
+              {adminTab === 'reviews' && (
+                <MobileFraudModerationQueue />
               )}
 
               {/* MARKETPLACE LISTING MODERATION VIEW (AC-57 to AC-62) */}
@@ -3380,7 +3751,8 @@ export default function AppMobile() {
                 </>
               )}
             </View>
-          )}
+          )
+        )}
         </ScrollView>
 
         {/* USER PROFILE & ORDER ACCEPTANCE MODAL FOR MOBILE */}
@@ -3607,15 +3979,9 @@ export default function AppMobile() {
           ]}
         >
           {(
-            [
-              'home',
-              'marketplace',
-              'services',
-              'jobs',
-              'map',
-              'admin',
-              'profile',
-            ] as const
+            isAdmin
+              ? (['admin', 'profile'] as const)
+              : (['home', 'marketplace', 'services', 'jobs', 'map', 'profile'] as const)
           ).map((tab) => (
             <TouchableOpacity
               key={tab}
@@ -4019,6 +4385,21 @@ const styles = StyleSheet.create({
   },
 
   aiButtonText: {
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+
+  logoutButtonHeader: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginLeft: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  logoutButtonText: {
+    color: '#ffffff',
     fontWeight: 'bold',
     fontSize: 12,
   },

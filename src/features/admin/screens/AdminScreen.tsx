@@ -7,6 +7,7 @@ import { AdminFeatureCard } from '../components/AdminFeatureCard';
 import { AdminEmptyState } from '../components/AdminStates';
 import { VendorVerificationQueue } from '../components/VendorVerificationQueue';
 import { ListingModerationQueue } from '../components/ListingModerationQueue';
+import { FraudModerationQueue } from '../components/FraudModerationQueue';
 import { SubmitVerificationModal } from '../../vendor/components/SubmitVerificationModal';
 import { AdminTab, AdminFeature } from '../types/admin';
 import { 
@@ -99,8 +100,9 @@ export const AdminScreen: React.FC = () => {
       description: 'Moderate reported and flagged accessibility reviews, inspect rating anomalies, dismiss flags or remove fraudulent submissions.',
       iconName: 'ShieldAlert',
       acReference: 'AC-252–263',
-      badgeCount: 1,
-      status: 'ready'
+      badgeCount: 4,
+      badgeText: 'Live Workflow Active',
+      status: 'active',
     },
     {
       id: 'compliance',
@@ -239,15 +241,9 @@ export const AdminScreen: React.FC = () => {
         <ListingModerationQueue />
       )}
 
-      {/* REVIEW MODERATION PLACEHOLDER (AC-252–263) */}
+      {/* SUSPICIOUS & FRAUD REVIEW MODERATION QUEUE (AC-252–263) */}
       {activeTab === 'review_moderation' && (
-        <AdminEmptyState
-          title="Suspicious & Fraud Review Moderation (AC-252–263)"
-          message="This workspace foundation is prepared for Suspicious and Fraud Review Moderation. Future implementation will connect reported place/product ratings, verification notes from ratingsService.ts, and review removal tools here."
-          icon={ShieldAlert}
-          actionLabel="Return to Overview"
-          onAction={() => setActiveTab('overview')}
-        />
+        <FraudModerationQueue />
       )}
 
       {/* COMPLIANCE MONITORING PLACEHOLDER (AC-68–71) */}

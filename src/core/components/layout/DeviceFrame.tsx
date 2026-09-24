@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAppState, ScreenView } from '../../context/AppStateContext';
 import { useAccessibility } from '../../context/AccessibilityContext';
+import { supabase } from '../../supabase';
 import { 
   Smartphone, 
   Monitor, 
@@ -9,7 +10,8 @@ import {
   Moon, 
   Sun, 
   Layers,
-  Sparkles
+  Sparkles,
+  LogOut
 } from 'lucide-react';
 
 interface DeviceFrameProps {
@@ -21,8 +23,21 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
     deviceFrame, 
     setDeviceFrame, 
     activeScreen, 
-    setActiveScreen
+    setActiveScreen,
+    setUserRole,
+    setCurrentUser,
   } = useAppState();
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      // Ignore
+    }
+    setUserRole('customer');
+    setCurrentUser((prev) => ({ ...prev, role: 'customer' }));
+    setActiveScreen('auth');
+  };
 
   const { 
     settings, 
@@ -83,7 +98,14 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
             <Layers className="w-4 h-4 text-blue-400 ml-1" />
             <select
               value={activeScreen}
-              onChange={(e) => setActiveScreen(e.target.value as ScreenView)}
+              onChange={(e) => {
+                const selected = e.target.value as ScreenView;
+                if (selected === 'admin') {
+                  setUserRole('admin');
+                  setCurrentUser((prev) => ({ ...prev, role: 'admin' }));
+                }
+                setActiveScreen(selected);
+              }}
               className="bg-transparent text-xs font-semibold text-slate-200 outline-none cursor-pointer pr-2"
             >
               {screensList.map((s) => (
@@ -166,6 +188,16 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>AI Hub</span>
+            </button>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              title="Logout from account"
+              className="flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-700 text-white shadow-md transition-all cursor-pointer ml-1"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Logout</span>
             </button>
 
             {/* Frame Switcher */}

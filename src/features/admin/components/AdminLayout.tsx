@@ -1,9 +1,10 @@
 import React from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, LogOut } from 'lucide-react';
 import { TopHeader } from '../../../core/navigation/TopHeader';
 import { BottomNav } from '../../../core/navigation/BottomNav';
 import { useAppState } from '../../../core/hooks/useAppState';
 import { useAccessibility } from '../../../core/hooks/useAccessibility';
+import { supabase } from '../../../core/supabase';
 import { AdminNav } from './AdminNav';
 import { 
   AdminLoadingState, 
@@ -22,11 +23,25 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   title = 'Admin Management Hub 🛡️',
   subtitle = 'Central control center for vendor verification, marketplace moderation, compliance, and platform analytics.',
 }) => {
-  const { userRole, currentUser } = useAppState();
-  const { settings } = useAccessibility();
+  const { userRole, setUserRole, currentUser, setCurrentUser, setActiveScreen } = useAppState();
+  const { settings, speakText } = useAccessibility();
 
   // Integrated Authorization Check: Allow if userRole is 'admin' or currentUser role is 'admin'
   const isAuthorized = userRole === 'admin' || currentUser?.role === 'admin';
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      // Ignore
+    }
+    setUserRole('customer');
+    setCurrentUser((prev) => ({ ...prev, role: 'customer' }));
+    if (settings.screenReader) {
+      speakText('Logged out from Admin Dashboard');
+    }
+    setActiveScreen('auth');
+  };
 
   return (
     <div
@@ -46,9 +61,20 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
               <ShieldCheck className="w-4 h-4" />
               <span>AccessHub Administration System</span>
             </div>
-            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              Verified Role: {currentUser.role || userRole}
-            </span>
+            <div className="flex items-center space-x-2">
+              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Verified Role: {currentUser.role || userRole}
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-[11px] font-bold px-3 py-1 rounded-xl bg-rose-600 hover:bg-rose-700 text-white border border-rose-500/40 flex items-center space-x-1 shadow-sm transition-all cursor-pointer"
+                title="Logout from Admin Dashboard"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Logout</span>
+              </button>
+            </div>
           </div>
 
           <h2 className="font-extrabold text-base sm:text-lg tracking-tight">

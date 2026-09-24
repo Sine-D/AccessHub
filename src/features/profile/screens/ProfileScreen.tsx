@@ -4,6 +4,7 @@ import { useAccessibility } from '../../../core/hooks/useAccessibility';
 import { mockProducts } from '../../../mock/data';
 import { TopHeader } from '../../../core/navigation/TopHeader';
 import { BottomNav } from '../../../core/navigation/BottomNav';
+import { supabase } from '../../../core/supabase';
 import { 
   ShieldCheck, 
   Star, 
@@ -11,12 +12,27 @@ import {
   TrendingUp, 
   Award, 
   Settings, 
-  Edit3 
+  Edit3,
+  LogOut
 } from 'lucide-react';
 
 export const ProfileScreen: React.FC = () => {
-  const { currentUser, setActiveScreen } = useAppState();
-  const { speakText } = useAccessibility();
+  const { currentUser, setCurrentUser, setUserRole, setActiveScreen } = useAppState();
+  const { speakText, settings } = useAccessibility();
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      // Ignore
+    }
+    setUserRole('customer');
+    setCurrentUser((prev) => ({ ...prev, role: 'customer' }));
+    if (settings.screenReader) {
+      speakText('Logged out successfully');
+    }
+    setActiveScreen('auth');
+  };
 
   return (
     <div className="w-full h-full min-h-[800px] bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white flex flex-col justify-between overflow-y-auto">
@@ -57,6 +73,13 @@ export const ProfileScreen: React.FC = () => {
               >
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Edit Profile</span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="px-3.5 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-md flex items-center space-x-1 transition-all cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Logout</span>
               </button>
             </div>
           </div>
