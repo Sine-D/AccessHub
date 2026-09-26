@@ -42,6 +42,7 @@ import { CreateAccountScreen } from './features/auth/screens/CreateAccountScreen
 import { MobileVendorVerificationQueue } from './features/admin/components/MobileVendorVerificationQueue';
 import { MobileListingModerationQueue } from './features/admin/components/MobileListingModerationQueue';
 import { MobileFraudModerationQueue } from './features/admin/components/MobileFraudModerationQueue';
+import { MobileAccessibilityBadgeManager } from './features/admin/components/MobileAccessibilityBadgeManager';
 import { AdminUnauthorizedState } from './features/admin/components/AdminStates';
 import { useAppState } from './core/hooks/useAppState';
 import { supabase } from './core/supabase';
@@ -122,7 +123,7 @@ export default function AppMobile() {
   const [bookingHours, setBookingHours] = useState('2');
   const [bookingPaymentOption, setBookingPaymentOption] = useState<'50_50' | 'full'>('50_50');
   const [bookingSuccessAlert, setBookingSuccessAlert] = useState(false);
-  const [adminTab, setAdminTab] = useState<'vendors' | 'listings' | 'reviews' | 'freelancers' | 'accounts' | 'bookings'>('vendors');
+  const [adminTab, setAdminTab] = useState<'vendors' | 'listings' | 'reviews' | 'freelancers' | 'accounts' | 'bookings' | 'badges'>('vendors');
   const [mobileUsers, setMobileUsers] = useState<any[]>([]);
   const [selectedMobileProfile, setSelectedMobileProfile] = useState<any | null>(null);
 
@@ -3382,6 +3383,23 @@ export default function AppMobile() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  onPress={() => setAdminTab('badges')}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    backgroundColor: adminTab === 'badges' ? '#0d9488' : cardBg,
+                    alignItems: 'center',
+                    borderColor: '#0d9488',
+                    borderWidth: 1,
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                    🏅 Badges
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
                   onPress={() => setAdminTab('accounts')}
                   style={{
                     flex: 1,
@@ -3398,6 +3416,11 @@ export default function AppMobile() {
                   </Text>
                 </TouchableOpacity>
               </View>
+
+              {/* ACCESSIBILITY BADGES MANAGER (AC-86 to AC-90) */}
+              {adminTab === 'badges' && (
+                <MobileAccessibilityBadgeManager highContrast={highContrast} onSpeak={speakText} />
+              )}
 
               {/* VENDOR VERIFICATION QUEUE VIEW */}
               {adminTab === 'vendors' && (
