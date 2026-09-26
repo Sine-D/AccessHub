@@ -8,6 +8,7 @@ import { AdminEmptyState } from '../components/AdminStates';
 import { VendorVerificationQueue } from '../components/VendorVerificationQueue';
 import { ListingModerationQueue } from '../components/ListingModerationQueue';
 import { FraudModerationQueue } from '../components/FraudModerationQueue';
+import { AccessibilityBadgeManager } from '../components/AccessibilityBadgeManager';
 import { SubmitVerificationModal } from '../../vendor/components/SubmitVerificationModal';
 import { AdminTab, AdminFeature } from '../types/admin';
 import { 
@@ -119,8 +120,9 @@ export const AdminScreen: React.FC = () => {
       description: 'Evaluate multi-criteria accessibility ratings, calculate place and vendor badge tiers, manage automated badge awards.',
       iconName: 'Award',
       acReference: 'AC-86–90',
-      badgeCount: 0,
-      status: 'ready'
+      badgeCount: 4,
+      badgeText: 'Live Workflow Active',
+      status: 'active'
     },
     {
       id: 'analytics',
@@ -257,15 +259,9 @@ export const AdminScreen: React.FC = () => {
         />
       )}
 
-      {/* ACCESSIBILITY BADGES PLACEHOLDER (AC-86–90) */}
+      {/* ACCESSIBILITY BADGES SYSTEM (AC-86–90) */}
       {activeTab === 'badges' && (
-        <AdminEmptyState
-          title="Accessibility Badge System (AC-86–90)"
-          message="This workspace foundation is prepared for the Accessibility Badge System. Future implementation will connect criteria evaluation, badge tier calculation, and badge awarding/revocation workflows here."
-          icon={Award}
-          actionLabel="Return to Overview"
-          onAction={() => setActiveTab('overview')}
-        />
+        <AccessibilityBadgeManager />
       )}
 
       {/* SALES ANALYTICS PLACEHOLDER (AC-63–67) */}
