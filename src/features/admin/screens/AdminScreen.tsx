@@ -9,6 +9,7 @@ import { VendorVerificationQueue } from '../components/VendorVerificationQueue';
 import { ListingModerationQueue } from '../components/ListingModerationQueue';
 import { FraudModerationQueue } from '../components/FraudModerationQueue';
 import { AccessibilityBadgeManager } from '../components/AccessibilityBadgeManager';
+import { SalesAnalyticsDashboard } from '../components/SalesAnalyticsDashboard';
 import { SubmitVerificationModal } from '../../vendor/components/SubmitVerificationModal';
 import { AdminTab, AdminFeature } from '../types/admin';
 import { 
@@ -131,7 +132,8 @@ export const AdminScreen: React.FC = () => {
       iconName: 'BarChart3',
       acReference: 'AC-63–67',
       badgeCount: 0,
-      status: 'ready'
+      badgeText: 'Live Workflow Active',
+      status: 'active'
     }
   ];
 
@@ -264,15 +266,9 @@ export const AdminScreen: React.FC = () => {
         <AccessibilityBadgeManager />
       )}
 
-      {/* SALES ANALYTICS PLACEHOLDER (AC-63–67) */}
+      {/* SALES ANALYTICS DASHBOARD (AC-63–67) */}
       {activeTab === 'analytics' && (
-        <AdminEmptyState
-          title="Sales Analytics Dashboard (AC-63–67)"
-          message="This workspace foundation is prepared for Sales Analytics. Future implementation will connect time-series GMV charts, category sales metrics, and Sri Lanka district distribution reports here."
-          icon={BarChart3}
-          actionLabel="Return to Overview"
-          onAction={() => setActiveTab('overview')}
-        />
+        <SalesAnalyticsDashboard />
       )}
 
       {/* FREELANCER APPROVALS TAB */}
