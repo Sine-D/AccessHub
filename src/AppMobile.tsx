@@ -43,6 +43,7 @@ import { MobileVendorVerificationQueue } from './features/admin/components/Mobil
 import { MobileListingModerationQueue } from './features/admin/components/MobileListingModerationQueue';
 import { MobileFraudModerationQueue } from './features/admin/components/MobileFraudModerationQueue';
 import { MobileAccessibilityBadgeManager } from './features/admin/components/MobileAccessibilityBadgeManager';
+import { MobileSalesAnalyticsDashboard } from './features/admin/components/MobileSalesAnalyticsDashboard';
 import { AdminUnauthorizedState } from './features/admin/components/AdminStates';
 import { useAppState } from './core/hooks/useAppState';
 import { supabase } from './core/supabase';
@@ -123,7 +124,7 @@ export default function AppMobile() {
   const [bookingHours, setBookingHours] = useState('2');
   const [bookingPaymentOption, setBookingPaymentOption] = useState<'50_50' | 'full'>('50_50');
   const [bookingSuccessAlert, setBookingSuccessAlert] = useState(false);
-  const [adminTab, setAdminTab] = useState<'vendors' | 'listings' | 'reviews' | 'freelancers' | 'accounts' | 'bookings' | 'badges'>('vendors');
+  const [adminTab, setAdminTab] = useState<'vendors' | 'listings' | 'reviews' | 'freelancers' | 'accounts' | 'bookings' | 'badges' | 'analytics'>('vendors');
   const [mobileUsers, setMobileUsers] = useState<any[]>([]);
   const [selectedMobileProfile, setSelectedMobileProfile] = useState<any | null>(null);
 
@@ -3415,7 +3416,29 @@ export default function AppMobile() {
                     📊 Account
                   </Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setAdminTab('analytics')}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    backgroundColor: adminTab === 'analytics' ? '#0284c7' : cardBg,
+                    alignItems: 'center',
+                    borderColor: '#0284c7',
+                    borderWidth: 1,
+                  }}
+                >
+                  <Text style={{ color: adminTab === 'analytics' ? '#fff' : '#94a3b8', fontWeight: 'bold', fontSize: 11 }}>
+                    📈 Sales
+                  </Text>
+                </TouchableOpacity>
               </View>
+
+              {/* SALES ANALYTICS DASHBOARD (AC-63 to AC-67) */}
+              {adminTab === 'analytics' && (
+                <MobileSalesAnalyticsDashboard highContrast={highContrast} onSpeak={speakText} />
+              )}
 
               {/* ACCESSIBILITY BADGES MANAGER (AC-86 to AC-90) */}
               {adminTab === 'badges' && (
