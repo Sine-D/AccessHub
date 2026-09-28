@@ -10,6 +10,7 @@ import { ListingModerationQueue } from '../components/ListingModerationQueue';
 import { FraudModerationQueue } from '../components/FraudModerationQueue';
 import { AccessibilityBadgeManager } from '../components/AccessibilityBadgeManager';
 import { SalesAnalyticsDashboard } from '../components/SalesAnalyticsDashboard';
+import { AccessibilityComplianceDashboard } from '../components/AccessibilityComplianceDashboard';
 import { SubmitVerificationModal } from '../../vendor/components/SubmitVerificationModal';
 import { AdminTab, AdminFeature } from '../types/admin';
 import { 
@@ -113,7 +114,8 @@ export const AdminScreen: React.FC = () => {
       iconName: 'CheckCircle2',
       acReference: 'AC-68–71',
       badgeCount: 0,
-      status: 'ready'
+      badgeText: 'Live Compliance Active',
+      status: 'active'
     },
     {
       id: 'badges',
@@ -179,29 +181,45 @@ export const AdminScreen: React.FC = () => {
         <div className="space-y-5">
           {/* Quick Metrics Header */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-1">
+            <button
+              onClick={() => setActiveTab('accounts')}
+              className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-1 text-left transition-all hover:border-teal-500 cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500"
+              aria-label="Total Users: view registered user accounts"
+            >
               <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Total Users</span>
               <p className="font-extrabold text-lg text-slate-900 dark:text-white">{realUsers.length}</p>
               <span className="text-[10px] text-teal-500 font-semibold">● Live Supabase Synced</span>
-            </div>
+            </button>
 
-            <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-1">
+            <button
+              onClick={() => setActiveTab('vendor_verification')}
+              className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-1 text-left transition-all hover:border-amber-500 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500"
+              aria-label="Pending Verifications: view vendor verification queue"
+            >
               <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Pending Verifications</span>
               <p className="font-extrabold text-lg text-amber-500">2</p>
               <span className="text-[10px] text-amber-500 font-semibold">Requires Inspection</span>
-            </div>
+            </button>
 
-            <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-1">
+            <button
+              onClick={() => setActiveTab('listing_moderation')}
+              className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-1 text-left transition-all hover:border-emerald-500 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              aria-label="Active Services: view listing moderation queue"
+            >
               <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Active Services</span>
               <p className="font-extrabold text-lg text-slate-900 dark:text-white">{servicesList.length}</p>
               <span className="text-[10px] text-emerald-500 font-semibold">Published Services</span>
-            </div>
+            </button>
 
-            <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-1">
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-1 text-left transition-all hover:border-blue-500 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="Active Orders: view sales analytics dashboard"
+            >
               <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Active Orders</span>
               <p className="font-extrabold text-lg text-blue-500">{bookingRequests.length}</p>
               <span className="text-[10px] text-blue-500 font-semibold">Escrow Tracked</span>
-            </div>
+            </button>
           </div>
 
           {/* 6 Feature Module Placeholders Grid */}
@@ -250,15 +268,9 @@ export const AdminScreen: React.FC = () => {
         <FraudModerationQueue />
       )}
 
-      {/* COMPLIANCE MONITORING PLACEHOLDER (AC-68–71) */}
+      {/* ACCESSIBILITY COMPLIANCE MONITORING DASHBOARD (AC-68–71) */}
       {activeTab === 'compliance' && (
-        <AdminEmptyState
-          title="Accessibility Compliance Monitoring (AC-68–71)"
-          message="This workspace foundation is prepared for Accessibility Compliance Monitoring. Future implementation will connect platform WCAG scorecards, alt-text audits, and non-compliance flags here."
-          icon={CheckCircle2}
-          actionLabel="Return to Overview"
-          onAction={() => setActiveTab('overview')}
-        />
+        <AccessibilityComplianceDashboard onNavigateTab={setActiveTab} />
       )}
 
       {/* ACCESSIBILITY BADGES SYSTEM (AC-86–90) */}
