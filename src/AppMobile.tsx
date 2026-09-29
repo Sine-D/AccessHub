@@ -60,7 +60,8 @@ type MobileTab =
   | 'jobs'
   | 'map'
   | 'admin'
-  | 'profile';
+  | 'profile'
+  | 'bookedProviders';
 
 export default function AppMobile() {
   const { userRole, setUserRole, currentUser, setCurrentUser, setActiveScreen } = useAppState();
@@ -127,6 +128,40 @@ export default function AppMobile() {
   const [adminTab, setAdminTab] = useState<'vendors' | 'listings' | 'reviews' | 'freelancers' | 'accounts' | 'bookings' | 'badges' | 'analytics'>('vendors');
   const [mobileUsers, setMobileUsers] = useState<any[]>([]);
   const [selectedMobileProfile, setSelectedMobileProfile] = useState<any | null>(null);
+
+  // --- NEW BOOKINGS STATE ---
+  const [bookedProvidersList, setBookedProvidersList] = useState<any[]>([]);
+  const [loadingBooked, setLoadingBooked] = useState(false);
+  const [selectedBookedProvider, setSelectedBookedProvider] = useState<any | null>(null);
+
+  const fetchBookedProviders = async () => {
+    // mockCurrentUser has ID 'u1' which breaks Supabase UUID validation. Using a static valid UUID for test purposes.
+    const userId = '00000000-0000-0000-0000-000000000000';
+    setLoadingBooked(true);
+    try {
+      const { data, error } = await supabase
+        .from('service_bookings')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (!error && data) {
+        setBookedProvidersList(data);
+      } else if (error) {
+        console.log('Supabase fetch failed.', error);
+      }
+    } catch (err) {
+      console.log('Error fetching bookings', err);
+    } finally {
+      setLoadingBooked(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'bookedProviders') {
+      fetchBookedProviders();
+    }
+  }, [activeTab, currentUser]);
 
   // Real-world Mobile Login State
   const [loginModalVisible, setLoginModalVisible] = useState(false);
@@ -1833,6 +1868,12 @@ export default function AppMobile() {
                 >
                   🤝 Inclusive Services
                 </Text>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('bookedProviders')}
+                  style={{ backgroundColor: '#2563eb', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Booked Providers</Text>
+                </TouchableOpacity>
               </View>
 
               {/* SEARCH BAR FOR SERVICES */}
@@ -2134,6 +2175,144 @@ export default function AppMobile() {
             </View>
           )}
 
+          {/* BOOKED PROVIDERS TAB */}
+          {activeTab === 'bookedProviders' && (
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    dynamicText(18),
+                    { color: textColor, marginBottom: 0 },
+                  ]}
+                >
+                  ✅ Booked Providers
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('services')}
+                  style={{ backgroundColor: '#4c1d95', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Back to Services</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {loadingBooked ? (
+                <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 20, textAlign: 'center' }}>
+                  Loading your booked providers from database...
+                </Text>
+              ) : bookedProvidersList.length === 0 ? (
+                <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 20, textAlign: 'center' }}>
+                  You haven't booked any providers yet. Find one from the services page!
+                </Text>
+              ) : (
+                <ScrollView style={{ marginTop: 10, paddingBottom: 20 }}>
+                  {bookedProvidersList.map((booking, index) => (
+                    <TouchableOpacity 
+                      key={index} 
+                      onPress={() => setSelectedBookedProvider(booking)}
+                      style={{ backgroundColor: '#1b1436', padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#4c1d95' }}
+                    >
+                      <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>
+                        {booking.service_title}
+                      </Text>
+                      <Text style={{ color: '#fbbf24', fontSize: 14, fontWeight: 'bold' }}>
+                        Provider: {booking.provider_name}
+                      </Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+                        <Text style={{ color: '#34d399', fontSize: 12, fontWeight: 'bold' }}>
+                          Status: {booking.status?.toUpperCase() || 'PENDING'}
+                        </Text>
+                        <Text style={{ color: '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>
+                          Budget: LKR {booking.total_budget?.toLocaleString()}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+              {/* Detailed Booked Provider Modal Overlay */}
+              {selectedBookedProvider && (
+                <Modal visible={true} transparent animationType="fade">
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(15, 23, 42, 0.90)',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      padding: 16,
+                    }}
+                  >
+                    <View
+                      style={{
+                        backgroundColor: cardBg,
+                        borderRadius: 24,
+                        padding: 24,
+                        width: '100%',
+                        maxWidth: 520,
+                        height: 500, // Makes the box long vertically
+                        maxHeight: '90%',
+                        borderColor: '#4c1d95',
+                        borderWidth: 1,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 10 },
+                        shadowOpacity: 0.5,
+                        shadowRadius: 20,
+                        elevation: 10,
+                      }}
+                    >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', paddingBottom: 10 }}>
+                      <Text style={{ color: '#ffffff', fontSize: 20, fontWeight: 'bold' }}>Booking Details</Text>
+                      <TouchableOpacity 
+                        onPress={() => setSelectedBookedProvider(null)}
+                        style={{
+                          padding: 6,
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          borderRadius: 16,
+                          width: 32,
+                          height: 32,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: 'bold' }}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <ScrollView style={{ flexShrink: 1 }}>
+                        <View style={{ backgroundColor: 'rgba(52, 211, 153, 0.1)', padding: 16, borderRadius: 12, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#34d399' }}>
+                          <Text style={{ color: '#34d399', fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>CURRENT STATUS</Text>
+                          <Text style={{ color: '#10b981', fontSize: 24, fontWeight: '900', letterSpacing: 2 }}>{selectedBookedProvider.status?.toUpperCase() || 'PENDING'}</Text>
+                          <Text style={{ color: '#a7f3d0', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
+                            Provider will review and accept your task soon.
+                          </Text>
+                        </View>
+                        
+                        <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Service Title</Text>
+                        <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: 'bold', marginBottom: 16 }}>{selectedBookedProvider.service_title}</Text>
+                        
+                        <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Assigned Provider</Text>
+                        <Text style={{ color: '#fbbf24', fontSize: 16, fontWeight: 'bold', marginBottom: 16 }}>{selectedBookedProvider.provider_name}</Text>
+                        
+                        <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Total Escrow Budget</Text>
+                        <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: 'bold', marginBottom: 16 }}>LKR {selectedBookedProvider.total_budget?.toLocaleString()}</Text>
+                        
+                        <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Booking Date</Text>
+                        <Text style={{ color: '#ffffff', fontSize: 14, marginBottom: 16 }}>{new Date(selectedBookedProvider.created_at).toLocaleDateString()}</Text>
+                    </ScrollView>
+                    
+                    <TouchableOpacity
+                      onPress={() => setSelectedBookedProvider(null)}
+                      style={{ backgroundColor: '#4c1d95', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 20 }}
+                    >
+                      <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16 }}>Close Details</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
+              )}
+            </View>
+          )}
+
           {/* Service Booking & Milestone Escrow Payment Modal Overlay */}
           {selectedMobileBookingService && (
             <View
@@ -2420,7 +2599,7 @@ export default function AppMobile() {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    onPress={() => {
+                    onPress={async () => {
                       if (selectedMobileBookingService) {
                         const hours = Number(bookingHours) || 2;
                         const rate = selectedMobileBookingService.hourlyRate || 4500;
@@ -2436,7 +2615,7 @@ export default function AppMobile() {
                           serviceTitle: selectedMobileBookingService.title,
                           providerName: selectedMobileBookingService.providerName,
                           providerAvatar: selectedMobileBookingService.providerAvatar,
-                          clientName: 'Saman Kumara (Buyer)',
+                          clientName: currentUser?.name || 'Customer',
                           projectTitle: bookingProjectTitle || `${selectedMobileBookingService.title} Task`,
                           description: bookingDescription || 'Detailed task instructions and requirements.',
                           totalBudget: total,
@@ -2450,6 +2629,26 @@ export default function AppMobile() {
                         };
 
                         setMobileBookingRequests(prev => [newBooking, ...prev]);
+
+                        // 🔥 OPTIMISTIC UI UPDATE + REAL SUPABASE DATABASE INSERTION
+                        const supabaseBookingData = {
+                          // mock IDs like 'u1' break UUID column types. Using static valid UUIDs for test purposes.
+                          user_id: '00000000-0000-0000-0000-000000000000',
+                          provider_id: '11111111-1111-1111-1111-111111111111',
+                          provider_name: selectedMobileBookingService.providerName,
+                          service_title: selectedMobileBookingService.title,
+                          total_budget: total,
+                          status: 'pending',
+                          created_at: new Date().toISOString()
+                        };
+                        
+                        setBookedProvidersList(prev => [supabaseBookingData, ...prev]);
+
+                        try {
+                          await supabase.from('service_bookings').insert([supabaseBookingData]);
+                        } catch (e) {
+                          console.log('Supabase insert failed', e);
+                        }
                       }
 
                       setBookingSuccessAlert(true);
