@@ -1,5 +1,8 @@
 import { mockMapPins } from '../../mock/data';
+import type { MapPin } from '../../core/types';
 import type { PlaceDetails } from '../../features/map/types/placeDetails';
+import { isCommunityVerificationSummary } from '../../features/map/types/placeDetails';
+import { isSupabaseConfigured, supabase } from '../../core/supabase';
 
 const descriptions: Record<string, string> = {
   mp1: 'An inclusive craft studio with an accessible entrance and customer service area.',
@@ -13,15 +16,90 @@ const verification: Record<string, PlaceDetails['verification']> = {
   mp3: null,
 };
 
+const apiBase = () => process.env.EXPO_PUBLIC_ACCESSIBLE_PLACES_API_URL?.trim().replace(/\/$/, '');
+
+const toMapPin = (row: Record<string, any>): MapPin => ({
+  id: String(row.id),
+  title: String(row.title),
+  type: row.type as MapPin['type'],
+  lat: Number(row.lat),
+  lng: Number(row.lng),
+  address: String(row.address),
+  badge: row.badge ? String(row.badge) : undefined,
+  accessibilityFeatures: Array.isArray(row.accessibility_features)
+    ? row.accessibility_features.map(String)
+    : Array.isArray(row.accessibilityFeatures)
+      ? row.accessibilityFeatures.map(String)
+      : [],
+  accessibilityRating: Number(row.accessibility_rating ?? row.accessibilityRating ?? 0),
+  distance: String(row.distance ?? 'Distance not calculated'),
+  image: String(row.image ?? ''),
+});
+
+export async function listMobilePlaces(signal?: AbortSignal): Promise<MapPin[]> {
+  const base = apiBase();
+  if (base) {
+    const response = await fetch(`${base}/accessible-places`, { headers: { Accept: 'application/json' }, signal });
+    if (!response.ok) throw new Error('The accessible places directory could not be loaded.');
+    const body = await response.json();
+    if (!Array.isArray(body)) throw new Error('The places service returned invalid data.');
+    return body.map(toMapPin);
+  }
+
+  if (isSupabaseConfigured) {
+    const { data, error } = await supabase
+      .from('accesshub_places')
+      .select('id,title,type,lat,lng,address,badge,accessibility_features,accessibility_rating,image')
+      .eq('published', true)
+      .order('id');
+    if (error) throw new Error('The accessible places directory could not be loaded.');
+    if (data?.length) return data.map(toMapPin);
+  }
+
+  return mockMapPins.map((place) => ({ ...place, accessibilityFeatures: [...place.accessibilityFeatures] }));
+}
+
 export async function getMobilePlaceDetails(placeId: string, signal?: AbortSignal): Promise<PlaceDetails> {
-  const apiBase = process.env.EXPO_PUBLIC_ACCESSIBLE_PLACES_API_URL?.replace(/\/$/, '');
-  if (apiBase) {
-    const response = await fetch(`${apiBase}/api/places/${encodeURIComponent(placeId)}`, {
+  const base = apiBase();
+  if (base) {
+    const response = await fetch(`${base}/api/places/${encodeURIComponent(placeId)}`, {
       headers: { Accept: 'application/json' },
       signal,
     });
     if (!response.ok) throw new Error('Place details could not be loaded.');
     return response.json() as Promise<PlaceDetails>;
+  }
+
+  if (isSupabaseConfigured) {
+    const { data, error } = await supabase
+      .from('accesshub_places')
+      .select('id,title,type,lat,lng,address,badge,accessibility_features,accessibility_rating,image,description,contact_phone,website,opening_hours,community_rating,community_review_count,verification_badge,last_verified_at')
+      .eq('id', placeId)
+      .eq('published', true)
+      .maybeSingle();
+    if (error) throw new Error('Place details could not be loaded.');
+    if (data) {
+      const pin = toMapPin(data);
+      const candidateVerification = data.community_rating === null && !data.verification_badge && !data.last_verified_at
+        ? null
+        : {
+            status: data.last_verified_at ? 'verified' : 'unverified',
+            rating: typeof data.community_rating === 'number' ? data.community_rating : null,
+            reviewCount: Number(data.community_review_count ?? 0),
+            badge: data.verification_badge ? String(data.verification_badge) : null,
+            lastVerifiedAt: data.last_verified_at ? String(data.last_verified_at) : null,
+          };
+      return {
+        ...pin,
+        description: String(data.description ?? 'No additional description is available.'),
+        contactPhone: data.contact_phone ? String(data.contact_phone) : null,
+        website: data.website ? String(data.website) : null,
+        openingHours: Array.isArray(data.opening_hours) ? data.opening_hours.map(String) : [],
+        verification: candidateVerification && isCommunityVerificationSummary(candidateVerification)
+          ? candidateVerification
+          : null,
+      };
+    }
   }
 
   const place = mockMapPins.find((item) => item.id === placeId);
