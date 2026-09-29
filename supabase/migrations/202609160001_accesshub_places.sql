@@ -1,28 +1,34 @@
--- AC-185. New dedicated public-directory table: does not overwrite existing team tables.
+-- AC-142 / AC-143. Add public place details and Community Hub summary fields.
 begin;
-create table if not exists public.accesshub_places (
- id text primary key,
- title text not null,
- type text not null check (type in ('seller','ngo','company','delivery','service','event')),
- lat double precision not null check(lat between -90 and 90),
- lng double precision not null check(lng between -180 and 180),
- address text not null,
- badge text,
- category text,
- accessibility_features text[] not null default '{}',
- accessibility_rating double precision not null default 0 check(accessibility_rating between 0 and 5),
- image text not null default '',
- published boolean not null default false,
- constraint known_accessibility_features check(accessibility_features <@ array['wheelchair_ramp','step_free','accessible_parking','accessible_restroom','braille','sign_language','tactile_paving','elevator','high_contrast']::text[])
-);
-create index if not exists accesshub_places_features_gin on public.accesshub_places using gin(accessibility_features);
-alter table public.accesshub_places enable row level security;
-grant select on public.accesshub_places to anon,authenticated;
--- Idempotent creation; no mutation privileges granted to public clients.
+
+alter table public.accesshub_places
+  add column if not exists description text not null default '',
+  add column if not exists contact_phone text,
+  add column if not exists website text,
+  add column if not exists opening_hours text[] not null default '{}',
+  add column if not exists community_rating double precision,
+  add column if not exists community_review_count integer not null default 0,
+  add column if not exists verification_badge text,
+  add column if not exists last_verified_at timestamptz;
+
 do $$ begin
- if not exists(select 1 from pg_policies where schemaname='public' and tablename='accesshub_places' and policyname='Read published accesshub places') then
-  create policy "Read published accesshub places" on public.accesshub_places for select to anon,authenticated using(published=true);
- end if;
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'accesshub_places_community_rating_range'
+  ) then
+    alter table public.accesshub_places
+      add constraint accesshub_places_community_rating_range
+      check (community_rating is null or community_rating between 0 and 5);
+  end if;
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'accesshub_places_review_count_nonnegative'
+  ) then
+    alter table public.accesshub_places
+      add constraint accesshub_places_review_count_nonnegative
+      check (community_review_count >= 0);
+  end if;
 end $$;
+
 commit;
 
