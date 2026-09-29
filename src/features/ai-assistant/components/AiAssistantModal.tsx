@@ -23,6 +23,7 @@ import {
   SpeechLocale,
 } from '../../../core/constants/speechLanguages';
 import { normalizeTranscript } from '../../../core/utils/normalizeTranscript';
+import { routeForSearchQuery } from '../utils/searchRouting';
 
 export const AiAssistantModal: React.FC = () => {
   const { aiModalOpen, setAiModalOpen, speakText } = useAccessibility();
@@ -109,7 +110,7 @@ export const AiAssistantModal: React.FC = () => {
       speakText(result.source === 'keyword' ? 'Using keyword search. Results ready.' : 'Search results ready.');
       stopListening();
       setAiModalOpen(false);
-      setActiveScreen('search_results');
+      setActiveScreen(routeForSearchQuery(result.query));
     } catch {
       if (!controller.signal.aborted) setAiResponse('Please enter a valid search of up to 500 characters.');
     } finally {
