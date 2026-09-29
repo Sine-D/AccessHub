@@ -69,6 +69,24 @@ const mockDescriptions: Record<string, string> = {
   mp3: 'An inclusive technology workplace with step-free circulation and lift access.',
 };
 
+const mockVerification: Record<string, PlaceDetails['verification']> = {
+  mp1: {
+    status: 'verified',
+    rating: 4.8,
+    reviewCount: 24,
+    badge: 'Community verified',
+    lastVerifiedAt: '2026-09-18T09:30:00.000Z',
+  },
+  mp2: {
+    status: 'verified',
+    rating: 4.6,
+    reviewCount: 17,
+    badge: 'Recently reviewed',
+    lastVerifiedAt: '2026-09-12T06:00:00.000Z',
+  },
+  mp3: null,
+};
+
 export const getAccessiblePlaceDetails = async (
   placeId: string,
   signal?: AbortSignal,
@@ -83,7 +101,7 @@ export const getAccessiblePlaceDetails = async (
       contactPhone: null,
       website: null,
       openingHours: [],
-      verification: null,
+      verification: mockVerification[place.id] ?? null,
     };
   }
 

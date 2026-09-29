@@ -3,6 +3,7 @@ import type { MapPin } from '../../../core/types/models';
 import type { PlaceDetails } from '../types/placeDetails';
 import { AccessibilityFeatureList } from './AccessibilityFeatureList';
 import { AccessibleDirectionsLink } from './AccessibleDirectionsLink';
+import { CommunityVerificationCard } from './CommunityVerificationCard';
 
 interface PlaceDetailsPanelProps {
   details: PlaceDetails | null;
@@ -97,6 +98,12 @@ export function PlaceDetailsPanel({
       <div className="mt-5">
         <AccessibleDirectionsLink place={place} />
       </div>
+
+      {!loading && !error && (
+        <div className="mt-5">
+          <CommunityVerificationCard verification={details?.verification ?? null} />
+        </div>
+      )}
     </section>
   );
 }
