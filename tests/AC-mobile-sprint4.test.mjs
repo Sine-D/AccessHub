@@ -37,3 +37,31 @@ test('Expo place details source includes verification and safe unavailable state
   assert.match(source, /Verification unavailable|verificationMissing/);
   assert.match(source, /Get accessible directions/);
 });
+
+test('Expo AI Hub includes multilingual editable voice capture and secure query routing', async () => {
+  const modal = await readFile(new URL('../src/mobile/components/MobileVoiceSearchModal.tsx', import.meta.url), 'utf8');
+  const speech = await readFile(new URL('../src/mobile/hooks/useMobileSpeechRecognition.ts', import.meta.url), 'utf8');
+  const service = await readFile(new URL('../src/mobile/services/mobileQueryService.ts', import.meta.url), 'utf8');
+  assert.match(modal, /en-LK/);
+  assert.match(modal, /si-LK/);
+  assert.match(modal, /ta-LK/);
+  assert.match(modal, /Editable transcript/);
+  assert.match(modal, /Start AI microphone/);
+  assert.match(speech, /webkitSpeechRecognition/);
+  assert.match(speech, /phone keyboard/);
+  assert.match(service, /EXPO_PUBLIC_SEARCH_API_URL/);
+  assert.match(service, /parseKeywords/);
+});
+
+test('Expo Places Directory includes native markers, location, synchronized filters and live data fallback', async () => {
+  const map = await readFile(new URL('../src/mobile/components/MobilePlacesMap.tsx', import.meta.url), 'utf8');
+  const service = await readFile(new URL('../src/mobile/services/mobilePlacesService.ts', import.meta.url), 'utf8');
+  const app = await readFile(new URL('../src/AppMobile.tsx', import.meta.url), 'utf8');
+  assert.match(map, /react-native-maps/);
+  assert.match(map, /expo-location/);
+  assert.match(map, /Marker/);
+  assert.match(service, /accesshub_places/);
+  assert.match(service, /EXPO_PUBLIC_ACCESSIBLE_PLACES_API_URL/);
+  assert.match(app, /filteredMobilePlaces/);
+  assert.match(app, /MobilePlacesMap/);
+});

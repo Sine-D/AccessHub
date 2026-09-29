@@ -50,11 +50,14 @@ import { supabase } from './core/supabase';
 import { UserRole, JobPosting, ServiceItem, FreelancerServiceApplication, ServiceBookingRequest } from './core/types';
 import type { MapPin } from './core/types';
 import type { Feature, SearchQuery } from './core/search/contracts';
-import { parseKeywords, matchesFeatures } from './core/search/parser';
+import { matchesFeatures } from './core/search/parser';
 import { FEATURES } from './core/search/contracts';
 import { featureLabels } from './features/map/utils/accessibilityFilters';
 import { MobileSearchResults } from './mobile/components/MobileSearchResults';
 import { MobilePlaceDetailsModal } from './mobile/components/MobilePlaceDetailsModal';
+import { MobileVoiceSearchModal } from './mobile/components/MobileVoiceSearchModal';
+import { MobilePlacesMap } from './mobile/components/MobilePlacesMap';
+import { listMobilePlaces } from './mobile/services/mobilePlacesService';
 
 type MobileTab =
   | 'splash'
@@ -96,10 +99,11 @@ export default function AppMobile() {
 
   const [aiModalVisible, setAiModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [voiceQuery, setVoiceQuery] = useState('');
-  const [aiResponse, setAiResponse] = useState('');
   const [mobileSearchQuery, setMobileSearchQuery] = useState<SearchQuery | null>(null);
   const [selectedMobilePlace, setSelectedMobilePlace] = useState<MapPin | null>(null);
+  const [mobilePlaces, setMobilePlaces] = useState<MapPin[]>(mockMapPins);
+  const [mobilePlacesLoading, setMobilePlacesLoading] = useState(false);
+  const [mobilePlacesError, setMobilePlacesError] = useState('');
   const [mapSearchText, setMapSearchText] = useState('');
   const [mapSelectedFeatures, setMapSelectedFeatures] = useState<Feature[]>([]);
 
@@ -688,20 +692,9 @@ export default function AppMobile() {
     fontSize: Math.round(baseSize * fontSizeMultiplier),
   });
 
-  const handleAiAsk = () => {
-    if (!voiceQuery.trim()) return;
-    const query = parseKeywords(voiceQuery);
-    if (query.needsClarification) {
-      const message = query.clarification || 'Please clarify whether you need products, places, or jobs.';
-      setAiResponse(message);
-      speakText(message);
-      return;
-    }
-
+  const handleMobileVoiceSearch = (query: SearchQuery, transcript: string) => {
     setMobileSearchQuery(query);
-    const readyMessage = `Search ready for ${query.intent}.`;
-    setAiResponse(readyMessage);
-    speakText(readyMessage);
+    speakText(`Search ready for ${query.intent}.`);
     setAiModalVisible(false);
 
     if (query.intent === 'places') {
@@ -710,19 +703,37 @@ export default function AppMobile() {
       setActiveTab('map');
       return;
     }
+    setSearchQuery(transcript);
     setActiveTab('search_results');
   };
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setMobilePlacesLoading(true);
+    setMobilePlacesError('');
+    listMobilePlaces(controller.signal)
+      .then(setMobilePlaces)
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setMobilePlacesError(error instanceof Error ? error.message : 'Places could not be loaded.');
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setMobilePlacesLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
+
   const filteredMobilePlaces = useMemo(() => {
     const text = mapSearchText.trim().toLowerCase();
-    return mockMapPins.filter((place) => {
+    return mobilePlaces.filter((place) => {
       const matchesText = !text || [place.title, place.address, place.type, place.badge, ...place.accessibilityFeatures]
         .join(' ')
         .toLowerCase()
         .includes(text);
       return matchesText && matchesFeatures(place.accessibilityFeatures, mapSelectedFeatures);
     });
-  }, [mapSearchText, mapSelectedFeatures]);
+  }, [mapSearchText, mapSelectedFeatures, mobilePlaces]);
 
   const toggleMapFeature = (feature: Feature) => {
     setMapSelectedFeatures((current) =>
@@ -2967,7 +2978,7 @@ export default function AppMobile() {
               query={mobileSearchQuery}
               products={mockProducts}
               jobs={dbJobs.length > 0 ? dbJobs : mockJobs}
-              places={mockMapPins}
+              places={mobilePlaces}
               onBack={() => setAiModalVisible(true)}
               onOpenPlace={(place) => setSelectedMobilePlace(place)}
               theme={{
@@ -2994,6 +3005,20 @@ export default function AppMobile() {
               >
                 🗺️ Accessible Map Locations
               </Text>
+
+              <MobilePlacesMap
+                places={filteredMobilePlaces}
+                selectedPlaceId={selectedMobilePlace?.id}
+                onSelectPlace={setSelectedMobilePlace}
+                theme={{ card: cardBg, text: textColor, subText: subTextColor, accent: accentColor }}
+              />
+
+              {mobilePlacesLoading && (
+                <Text accessibilityLiveRegion="polite" style={{ color: subTextColor, marginBottom: 10 }}>Loading accessible places…</Text>
+              )}
+              {!!mobilePlacesError && (
+                <Text accessibilityLiveRegion="assertive" style={{ color: '#fecaca', marginBottom: 10 }}>{mobilePlacesError} Showing saved places.</Text>
+              )}
 
               <TextInput
                 accessibilityLabel="Search accessible places by name or location"
@@ -4035,137 +4060,20 @@ export default function AppMobile() {
           }}
         />
 
-        {/* AI Voice Hub Modal */}
-        <Modal
+        <MobileVoiceSearchModal
           visible={aiModalVisible}
-          animationType="slide"
-          transparent
-        >
-          <View style={styles.modalOverlay}>
-            <View
-              style={[
-                styles.modalContent,
-                {
-                  backgroundColor: cardBg,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.modalTitle,
-                  dynamicText(16),
-                  {
-                    color: textColor,
-                  },
-                ]}
-              >
-                🤖 AccessLink AI Voice Hub
-              </Text>
-
-              <Text
-                style={[
-                  styles.modalSub,
-                  dynamicText(11),
-                  {
-                    color: subTextColor,
-                    marginTop: 4,
-                  },
-                ]}
-              >
-                Speak or type accessibility commands
-                (e.g. "Find ramp entrance near me").
-              </Text>
-
-              <TextInput
-                style={[
-                  styles.modalInput,
-                  {
-                    backgroundColor: themeBg,
-                    color: textColor,
-                  },
-                ]}
-                placeholder="Ask AI Voice Assistant..."
-                placeholderTextColor={
-                  subTextColor
-                }
-                value={voiceQuery}
-                onChangeText={setVoiceQuery}
-              />
-
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  marginTop: 10,
-                }}
-              >
-                <TouchableOpacity
-                  style={[
-                    styles.modalAskBtn,
-                    {
-                      backgroundColor:
-                        primaryButtonBg,
-                      flex: 1,
-                      marginRight: 8,
-                    },
-                  ]}
-                  onPress={handleAiAsk}
-                >
-                  <Text
-                    style={[
-                      styles.buyBtnText,
-                      {
-                        color:
-                          primaryButtonText,
-                      },
-                    ]}
-                  >
-                    Submit Question
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.modalAskBtn,
-                    {
-                      backgroundColor: '#e11d48',
-                      width: 80,
-                    },
-                  ]}
-                  onPress={() =>
-                    setAiModalVisible(false)
-                  }
-                >
-                  <Text
-                    style={{
-                      color: '#fff',
-                      fontWeight: 'bold',
-                      textAlign: 'center',
-                    }}
-                  >
-                    Close
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {aiResponse ? (
-                <View style={styles.aiResBox}>
-                  <Text
-                    style={[
-                      styles.aiResText,
-                      dynamicText(12),
-                      {
-                        color: accentColor,
-                      },
-                    ]}
-                  >
-                    {aiResponse}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-        </Modal>
+          onClose={() => setAiModalVisible(false)}
+          onSearch={handleMobileVoiceSearch}
+          theme={{
+            background: themeBg,
+            card: cardBg,
+            text: textColor,
+            subText: subTextColor,
+            accent: accentColor,
+            primaryButton: primaryButtonBg,
+            primaryButtonText,
+          }}
+        />
 
         {/* Bottom Tab Bar */}
         <View
