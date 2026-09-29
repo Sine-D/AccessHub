@@ -29,7 +29,11 @@ import { useAccessibility } from '../../../core/hooks/useAccessibility';
 import { TopHeader } from '../../../core/navigation/TopHeader';
 import { BottomNav } from '../../../core/navigation/BottomNav';
 
-import { getAccessiblePlaces } from '../../../services/placesService';
+import {
+  getAccessiblePlaceDetails,
+  getAccessiblePlaces,
+} from '../../../services/placesService';
+import type { PlaceDetails } from '../types/placeDetails';
 
 import { MapPin } from '../../../core/types/models';
 import type { Feature } from '../../../core/search/contracts.ts';
@@ -39,6 +43,7 @@ import {
   AccessiblePlaceSearch,
 } from '../components/AccessiblePlaceSearch';
 import { AccessibilityFilterPanel } from '../components/AccessibilityFilterPanel';
+import { PlaceDetailsPanel } from '../components/PlaceDetailsPanel';
 
 import {
   MapPoint,
@@ -223,6 +228,49 @@ React.FC = () => {
     setReloadKey,
   ] =
     useState(0);
+
+  const [
+    detailsOpen,
+    setDetailsOpen,
+  ] = useState(false);
+  const detailsButtonRef =
+    useRef<HTMLButtonElement>(
+      null,
+    );
+
+  const [placeDetails, setPlaceDetails] =
+    useState<PlaceDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] =
+    useState(false);
+  const [detailsError, setDetailsError] =
+    useState('');
+  const [detailsReloadKey, setDetailsReloadKey] =
+    useState(0);
+
+  useEffect(() => {
+    if (!detailsOpen || !selectedPlace) return;
+    const controller = new AbortController();
+    setDetailsLoading(true);
+    setDetailsError('');
+    setPlaceDetails(null);
+    getAccessiblePlaceDetails(selectedPlace.id, controller.signal)
+      .then((details) => {
+        if (!controller.signal.aborted) setPlaceDetails(details);
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setDetailsError(
+            error instanceof Error
+              ? error.message
+              : 'Place details could not be loaded.',
+          );
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDetailsLoading(false);
+      });
+    return () => controller.abort();
+  }, [detailsOpen, detailsReloadKey, selectedPlace]);
 
   /* -----------------------------
      AC-188 accessibility filters
@@ -540,6 +588,8 @@ React.FC = () => {
     setSelectedPlace(
       place,
     );
+    setDetailsOpen(false);
+    setPlaceDetails(null);
 
     /*
       AC-179 improvement:
@@ -1116,6 +1166,24 @@ React.FC = () => {
                 <div className="mt-3 flex gap-2">
 
                   <button
+                    ref={
+                      detailsButtonRef
+                    }
+                    aria-expanded={detailsOpen}
+                    aria-controls="place-details-panel"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDetailsOpen(
+                        true,
+                      );
+                    }}
+                    className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-blue-600 px-3 py-2 text-xs font-extrabold text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-blue-300 dark:hover:bg-blue-950/40"
+                    type="button"
+                  >
+                    View details
+                  </button>
+
+                  <button
                     onClick={() =>
                       setActiveScreen(
                         'chat',
@@ -1156,6 +1224,37 @@ React.FC = () => {
                 </div>
 
               </section>
+
+              {detailsOpen && (
+                <PlaceDetailsPanel
+                  details={
+                    placeDetails
+                  }
+                  error={
+                    detailsError
+                  }
+                  loading={
+                    detailsLoading
+                  }
+                  onClose={() =>
+                    setDetailsOpen(
+                      false,
+                    )
+                  }
+                  onRetry={() =>
+                    setDetailsReloadKey(
+                      (value) =>
+                        value + 1,
+                    )
+                  }
+                  place={
+                    selectedPlace
+                  }
+                  returnFocusRef={
+                    detailsButtonRef
+                  }
+                />
+              )}
 
             </>
           )}
