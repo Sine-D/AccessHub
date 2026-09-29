@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, findNodeHandle, Image, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, findNodeHandle, Image, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { MapPin } from '../../core/types';
 import type { PlaceDetails } from '../../features/map/types/placeDetails';
 import { presentPlaceFeature } from '../../features/map/utils/placeFeaturePresentation';
@@ -41,6 +41,10 @@ export function MobilePlaceDetailsModal({ onClose, place, theme }: Props) {
   const verificationMissing = !verification || verification.status === 'unavailable';
 
   const announceHeading = () => {
+    if (Platform.OS === 'web') {
+      AccessibilityInfo.announceForAccessibility(`${place.title} accessible place details opened.`);
+      return;
+    }
     const handle = findNodeHandle(headingRef.current);
     if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
   };
