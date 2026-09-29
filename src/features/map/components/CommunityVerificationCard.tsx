@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CommunityVerificationSummary } from '../types/placeDetails';
+import { formatVerifiedDate, verificationStatusLabel } from '../utils/verificationPresentation';
 
 export function CommunityVerificationCard({
   verification,
@@ -22,6 +23,9 @@ export function CommunityVerificationCard({
       <h3 id="community-verification-heading" className="font-extrabold text-emerald-950 dark:text-emerald-100">
         Community verification
       </h3>
+      <p className="mt-1 font-bold" aria-label={`Verification status: ${verificationStatusLabel(verification)}`}>
+        {verificationStatusLabel(verification)}
+      </p>
       <dl className="mt-2 grid gap-2 text-sm">
         <div>
           <dt className="font-bold">Community rating</dt>
@@ -35,8 +39,11 @@ export function CommunityVerificationCard({
           <dt className="font-bold">Verification badge</dt>
           <dd>{verification.badge || 'No badge awarded'}</dd>
         </div>
+        <div>
+          <dt className="font-bold">Last verified</dt>
+          <dd>{formatVerifiedDate(verification.lastVerifiedAt)}</dd>
+        </div>
       </dl>
     </section>
   );
 }
-
