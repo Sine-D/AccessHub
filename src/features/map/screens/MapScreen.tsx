@@ -233,6 +233,10 @@ React.FC = () => {
     detailsOpen,
     setDetailsOpen,
   ] = useState(false);
+  const detailsButtonRef =
+    useRef<HTMLButtonElement>(
+      null,
+    );
 
   const [placeDetails, setPlaceDetails] =
     useState<PlaceDetails | null>(null);
@@ -1162,6 +1166,9 @@ React.FC = () => {
                 <div className="mt-3 flex gap-2">
 
                   <button
+                    ref={
+                      detailsButtonRef
+                    }
                     aria-expanded={detailsOpen}
                     aria-controls="place-details-panel"
                     onClick={(event) => {
@@ -1242,6 +1249,9 @@ React.FC = () => {
                   }
                   place={
                     selectedPlace
+                  }
+                  returnFocusRef={
+                    detailsButtonRef
                   }
                 />
               )}

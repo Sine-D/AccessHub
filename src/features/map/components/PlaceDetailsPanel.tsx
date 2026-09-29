@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { MapPin } from '../../../core/types/models';
 import type { PlaceDetails } from '../types/placeDetails';
 import { AccessibilityFeatureList } from './AccessibilityFeatureList';
@@ -12,6 +12,7 @@ interface PlaceDetailsPanelProps {
   onClose: () => void;
   onRetry: () => void;
   place: MapPin;
+  returnFocusRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 export function PlaceDetailsPanel({
@@ -21,7 +22,19 @@ export function PlaceDetailsPanel({
   onClose,
   onRetry,
   place,
+  returnFocusRef,
 }: PlaceDetailsPanelProps) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    headingRef.current?.focus({ preventScroll: false });
+  }, [place.id]);
+
+  const closeDetails = () => {
+    onClose();
+    window.requestAnimationFrame(() => returnFocusRef.current?.focus());
+  };
+
   return (
     <section
       id="place-details-panel"
@@ -33,13 +46,18 @@ export function PlaceDetailsPanel({
           <p className="text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-300">
             Accessible place details
           </p>
-          <h2 id="place-details-heading" className="mt-1 text-lg font-extrabold text-slate-950 dark:text-white">
+          <h2
+            ref={headingRef}
+            id="place-details-heading"
+            tabIndex={-1}
+            className="mt-1 text-lg font-extrabold text-slate-950 focus:outline-none dark:text-white"
+          >
             {place.title}
           </h2>
         </div>
         <button
           type="button"
-          onClick={onClose}
+          onClick={closeDetails}
           className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700"
           aria-label={`Close details for ${place.title}`}
         >
