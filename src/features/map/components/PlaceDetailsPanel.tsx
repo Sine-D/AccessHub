@@ -1,6 +1,7 @@
 import React from 'react';
 import type { MapPin } from '../../../core/types/models';
 import type { PlaceDetails } from '../types/placeDetails';
+import { AccessibilityFeatureList } from './AccessibilityFeatureList';
 
 interface PlaceDetailsPanelProps {
   details: PlaceDetails | null;
@@ -87,6 +88,10 @@ export function PlaceDetailsPanel({
           </div>
         )}
       </dl>
+
+      <div className="mt-5">
+        <AccessibilityFeatureList features={place.accessibilityFeatures} />
+      </div>
     </section>
   );
 }
