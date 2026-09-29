@@ -23,10 +23,15 @@ import {
   SpeechLocale,
 } from '../../../core/constants/speechLanguages';
 import { normalizeTranscript } from '../../../core/utils/normalizeTranscript';
+import { routeForSearchQuery } from '../utils/searchRouting';
 
 export const AiAssistantModal: React.FC = () => {
   const { aiModalOpen, setAiModalOpen, speakText } = useAccessibility();
-  const { setActiveScreen, setSearchQuery } = useAppState();
+  const {
+    setActiveScreen,
+    setMarketplaceCategory,
+    setSearchQuery,
+  } = useAppState();
   const requestRef = useRef<AbortController | null>(null);
   const [isInterpreting, setIsInterpreting] = useState(false);
   useEffect(() => {
@@ -99,10 +104,13 @@ export const AiAssistantModal: React.FC = () => {
         setAiResponse(message); speakText(message); return;
       }
       setSearchQuery(result.query);
+      if (result.query.intent === 'products') {
+        setMarketplaceCategory(result.query.category ?? 'All');
+      }
       speakText(result.source === 'keyword' ? 'Using keyword search. Results ready.' : 'Search results ready.');
       stopListening();
       setAiModalOpen(false);
-      setActiveScreen('search_results');
+      setActiveScreen(routeForSearchQuery(result.query));
     } catch {
       if (!controller.signal.aborted) setAiResponse('Please enter a valid search of up to 500 characters.');
     } finally {
