@@ -1,3 +1,5 @@
+import { getCommunityVerification } from './community-verification.mjs';
+
 const PLACE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 
 export function validatePlaceId(value) {
@@ -7,7 +9,11 @@ export function validatePlaceId(value) {
   return value;
 }
 
-export async function queryPlaceDetails(placeId, fetcher = fetch) {
+export async function queryPlaceDetails(
+  placeId,
+  fetcher = fetch,
+  verificationFetcher = getCommunityVerification,
+) {
   const id = validatePlaceId(placeId);
   const base = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_ANON_KEY;
@@ -34,6 +40,18 @@ export async function queryPlaceDetails(placeId, fetcher = fetch) {
   }
 
   const row = rows[0];
+  const fallbackVerification =
+    row.community_rating === null && !row.verification_badge && !row.last_verified_at
+      ? null
+      : {
+          status: row.last_verified_at ? 'verified' : 'unverified',
+          rating: typeof row.community_rating === 'number' ? row.community_rating : null,
+          reviewCount: Number(row.community_review_count || 0),
+          badge: row.verification_badge || null,
+          lastVerifiedAt: row.last_verified_at || null,
+        };
+  const verification = await verificationFetcher(id, fallbackVerification);
+
   return {
     id: row.id,
     title: row.title,
@@ -50,16 +68,6 @@ export async function queryPlaceDetails(placeId, fetcher = fetch) {
     contactPhone: row.contact_phone || null,
     website: row.website || null,
     openingHours: Array.isArray(row.opening_hours) ? row.opening_hours : [],
-    verification:
-      row.community_rating === null && !row.verification_badge && !row.last_verified_at
-        ? null
-        : {
-            status: row.last_verified_at ? 'verified' : 'unverified',
-            rating: typeof row.community_rating === 'number' ? row.community_rating : null,
-            reviewCount: Number(row.community_review_count || 0),
-            badge: row.verification_badge || null,
-            lastVerifiedAt: row.last_verified_at || null,
-          },
+    verification,
   };
 }
-
