@@ -39,6 +39,7 @@ import {
   AccessiblePlaceSearch,
 } from '../components/AccessiblePlaceSearch';
 import { AccessibilityFilterPanel } from '../components/AccessibilityFilterPanel';
+import { PlaceDetailsPanel } from '../components/PlaceDetailsPanel';
 
 import {
   MapPoint,
@@ -223,6 +224,11 @@ React.FC = () => {
     setReloadKey,
   ] =
     useState(0);
+
+  const [
+    detailsOpen,
+    setDetailsOpen,
+  ] = useState(false);
 
   /* -----------------------------
      AC-188 accessibility filters
@@ -540,6 +546,7 @@ React.FC = () => {
     setSelectedPlace(
       place,
     );
+    setDetailsOpen(false);
 
     /*
       AC-179 improvement:
@@ -1116,6 +1123,21 @@ React.FC = () => {
                 <div className="mt-3 flex gap-2">
 
                   <button
+                    aria-expanded={detailsOpen}
+                    aria-controls="place-details-panel"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDetailsOpen(
+                        true,
+                      );
+                    }}
+                    className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-blue-600 px-3 py-2 text-xs font-extrabold text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-blue-300 dark:hover:bg-blue-950/40"
+                    type="button"
+                  >
+                    View details
+                  </button>
+
+                  <button
                     onClick={() =>
                       setActiveScreen(
                         'chat',
@@ -1156,6 +1178,19 @@ React.FC = () => {
                 </div>
 
               </section>
+
+              {detailsOpen && (
+                <PlaceDetailsPanel
+                  onClose={() =>
+                    setDetailsOpen(
+                      false,
+                    )
+                  }
+                  place={
+                    selectedPlace
+                  }
+                />
+              )}
 
             </>
           )}
