@@ -8,6 +8,7 @@ import type { MapPin } from '../../../core/types/models';
 import { matchesSearch } from '../../../core/search/matchSearch.ts';
 import { matchesFeatures } from '../../../core/search/parser.ts';
 import { InterpretedSearchFilters } from '../components/InterpretedSearchFilters';
+import { SearchResultsStatus } from '../components/SearchResultsStatus';
 
 export const SearchResultsScreen: React.FC = () => {
   const { searchQuery, setActiveScreen, setSelectedProduct } = useAppState();
@@ -72,11 +73,7 @@ export const SearchResultsScreen: React.FC = () => {
           </p>
         )}
 
-        <p role="status" aria-live="polite" aria-atomic="true" className="text-sm font-bold">
-          {loading
-            ? 'Loading results…'
-            : error || `${results.length} matching ${results.length === 1 ? 'result' : 'results'}.`}
-        </p>
+        <SearchResultsStatus count={results.length} error={error} loading={loading} />
 
         {!loading && !error && results.length === 0 && searchQuery && (
           <div className="rounded-2xl border border-slate-300 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
