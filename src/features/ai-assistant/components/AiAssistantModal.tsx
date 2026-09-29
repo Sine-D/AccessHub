@@ -26,7 +26,11 @@ import { normalizeTranscript } from '../../../core/utils/normalizeTranscript';
 
 export const AiAssistantModal: React.FC = () => {
   const { aiModalOpen, setAiModalOpen, speakText } = useAccessibility();
-  const { setActiveScreen, setSearchQuery } = useAppState();
+  const {
+    setActiveScreen,
+    setMarketplaceCategory,
+    setSearchQuery,
+  } = useAppState();
   const requestRef = useRef<AbortController | null>(null);
   const [isInterpreting, setIsInterpreting] = useState(false);
   useEffect(() => {
@@ -99,6 +103,9 @@ export const AiAssistantModal: React.FC = () => {
         setAiResponse(message); speakText(message); return;
       }
       setSearchQuery(result.query);
+      if (result.query.intent === 'products') {
+        setMarketplaceCategory(result.query.category ?? 'All');
+      }
       speakText(result.source === 'keyword' ? 'Using keyword search. Results ready.' : 'Search results ready.');
       stopListening();
       setAiModalOpen(false);
