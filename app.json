@@ -3,7 +3,6 @@
     "name": "AccessHub",
     "slug": "accesshub",
     "scheme": "accesshub",
-    "sdkVersion": "54.0.0",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -25,7 +24,10 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      "expo-font",
+      "expo-status-bar",
+      "expo-web-browser"
     ]
   }
 }
