@@ -29,7 +29,11 @@ import { useAccessibility } from '../../../core/hooks/useAccessibility';
 import { TopHeader } from '../../../core/navigation/TopHeader';
 import { BottomNav } from '../../../core/navigation/BottomNav';
 
-import { getAccessiblePlaces } from '../../../services/placesService';
+import {
+  getAccessiblePlaceDetails,
+  getAccessiblePlaces,
+} from '../../../services/placesService';
+import type { PlaceDetails } from '../types/placeDetails';
 
 import { MapPin } from '../../../core/types/models';
 import type { Feature } from '../../../core/search/contracts.ts';
@@ -229,6 +233,40 @@ React.FC = () => {
     detailsOpen,
     setDetailsOpen,
   ] = useState(false);
+
+  const [placeDetails, setPlaceDetails] =
+    useState<PlaceDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] =
+    useState(false);
+  const [detailsError, setDetailsError] =
+    useState('');
+  const [detailsReloadKey, setDetailsReloadKey] =
+    useState(0);
+
+  useEffect(() => {
+    if (!detailsOpen || !selectedPlace) return;
+    const controller = new AbortController();
+    setDetailsLoading(true);
+    setDetailsError('');
+    setPlaceDetails(null);
+    getAccessiblePlaceDetails(selectedPlace.id, controller.signal)
+      .then((details) => {
+        if (!controller.signal.aborted) setPlaceDetails(details);
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setDetailsError(
+            error instanceof Error
+              ? error.message
+              : 'Place details could not be loaded.',
+          );
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDetailsLoading(false);
+      });
+    return () => controller.abort();
+  }, [detailsOpen, detailsReloadKey, selectedPlace]);
 
   /* -----------------------------
      AC-188 accessibility filters
@@ -547,6 +585,7 @@ React.FC = () => {
       place,
     );
     setDetailsOpen(false);
+    setPlaceDetails(null);
 
     /*
       AC-179 improvement:
@@ -1181,9 +1220,24 @@ React.FC = () => {
 
               {detailsOpen && (
                 <PlaceDetailsPanel
+                  details={
+                    placeDetails
+                  }
+                  error={
+                    detailsError
+                  }
+                  loading={
+                    detailsLoading
+                  }
                   onClose={() =>
                     setDetailsOpen(
                       false,
+                    )
+                  }
+                  onRetry={() =>
+                    setDetailsReloadKey(
+                      (value) =>
+                        value + 1,
                     )
                   }
                   place={

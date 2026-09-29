@@ -1,12 +1,24 @@
 import React from 'react';
 import type { MapPin } from '../../../core/types/models';
+import type { PlaceDetails } from '../types/placeDetails';
 
 interface PlaceDetailsPanelProps {
+  details: PlaceDetails | null;
+  error: string;
+  loading: boolean;
   onClose: () => void;
+  onRetry: () => void;
   place: MapPin;
 }
 
-export function PlaceDetailsPanel({ onClose, place }: PlaceDetailsPanelProps) {
+export function PlaceDetailsPanel({
+  details,
+  error,
+  loading,
+  onClose,
+  onRetry,
+  place,
+}: PlaceDetailsPanelProps) {
   return (
     <section
       id="place-details-panel"
@@ -38,6 +50,23 @@ export function PlaceDetailsPanel({ onClose, place }: PlaceDetailsPanelProps) {
         src={place.image}
       />
 
+      {loading && (
+        <p className="mt-4 rounded-xl bg-slate-100 p-3 text-sm font-bold dark:bg-slate-800" role="status">
+          Loading place details…
+        </p>
+      )}
+
+      {error && (
+        <div className="mt-4 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100" role="alert">
+          <p>{error}</p>
+          <button type="button" className="mt-2 min-h-11 rounded-lg border px-3 font-bold" onClick={onRetry}>
+            Try again
+          </button>
+        </div>
+      )}
+
+      {details && <p className="mt-4 text-sm leading-relaxed">{details.description}</p>}
+
       <dl className="mt-4 grid gap-3 text-sm">
         <div>
           <dt className="font-extrabold">Address</dt>
@@ -51,6 +80,12 @@ export function PlaceDetailsPanel({ onClose, place }: PlaceDetailsPanelProps) {
           <dt className="font-extrabold">Distance</dt>
           <dd>{place.distance}</dd>
         </div>
+        {!!details?.openingHours.length && (
+          <div>
+            <dt className="font-extrabold">Opening hours</dt>
+            <dd>{details.openingHours.join(' · ')}</dd>
+          </div>
+        )}
       </dl>
     </section>
   );
