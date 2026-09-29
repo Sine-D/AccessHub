@@ -7,13 +7,16 @@ export function CommunityVerificationCard({
 }: {
   verification: CommunityVerificationSummary | null;
 }) {
-  if (!verification) {
+  if (!verification || verification.status === 'unavailable') {
     return (
       <section aria-labelledby="community-verification-heading" className="rounded-xl border border-slate-300 p-3 dark:border-slate-700">
         <h3 id="community-verification-heading" className="font-extrabold">
           Community verification
         </h3>
-        <p className="mt-1 text-sm">No community verification summary is available.</p>
+        <p className="mt-1 font-bold">{verificationStatusLabel(verification)}</p>
+        <p className="mt-1 text-sm">
+          Use the published accessibility information and contact the venue before travelling.
+        </p>
       </section>
     );
   }

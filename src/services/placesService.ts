@@ -2,7 +2,10 @@ import { mockMapPins } from '../mock/data';
 import { MapPin } from '../core/types/models';
 import type { Feature } from '../core/search/contracts.ts';
 import { filterPlaces } from '../features/map/utils/accessibilityFilters.ts';
-import type { PlaceDetails } from '../features/map/types/placeDetails';
+import {
+  isCommunityVerificationSummary,
+  type PlaceDetails,
+} from '../features/map/types/placeDetails';
 
 const apiBaseUrl = import.meta.env.VITE_ACCESSIBLE_PLACES_API_URL?.replace(/\/$/, '');
 
@@ -59,7 +62,8 @@ const isPlaceDetails = (value: unknown): value is PlaceDetails => {
     typeof details.description === 'string' &&
     Array.isArray(details.openingHours) &&
     (details.contactPhone === null || typeof details.contactPhone === 'string') &&
-    (details.website === null || typeof details.website === 'string')
+    (details.website === null || typeof details.website === 'string') &&
+    (details.verification === null || isCommunityVerificationSummary(details.verification))
   );
 };
 
