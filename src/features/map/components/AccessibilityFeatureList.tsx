@@ -1,5 +1,5 @@
 import React from 'react';
-import { presentPlaceFeature } from '../utils/placeFeaturePresentation';
+import { presentPlaceFeature } from '../utils/placeFeaturePresentation.ts';
 
 export function AccessibilityFeatureList({ features }: { features: string[] }) {
   if (features.length === 0) {
