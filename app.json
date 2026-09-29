@@ -26,7 +26,13 @@
     "plugins": [
       "expo-asset",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow AccessHub to use your location to show nearby accessible places."
+        }
+      ]
     ]
   }
 }
