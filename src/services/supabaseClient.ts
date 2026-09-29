@@ -17,13 +17,12 @@ if (!isSupabaseConfigured) {
 }
 
 const configuredUrl =
-  supabaseUrl ?? 'https://placeholder.supabase.co';
+  supabaseUrl || 'https://placeholder.supabase.co';
 
 const configuredAnonKey =
-  supabaseAnonKey ?? 'supabase-anon-key-not-configured';
+  supabaseAnonKey || 'supabase-anon-key-not-configured';
 
 export const supabase = createClient(
   configuredUrl,
   configuredAnonKey,
 );
-
