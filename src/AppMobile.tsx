@@ -434,14 +434,15 @@ export default function AppMobile() {
     );
   };
 
-  const handleProposalSubmit = () => {
+  const handleProposalSubmit = async () => {
     if (!proposalCoverLetter.trim() || !proposalBidAmount.trim() || !proposalDeliveryTime.trim()) {
       Alert.alert('Validation Error', 'Please fill in all proposal fields (Cover Letter, Bid Amount, and Delivery Time).');
       return;
     }
 
+    const tempId = `prop-${Date.now()}`;
     const newProposal = {
-      id: `prop-${Date.now()}`,
+      id: tempId,
       jobId: proposalJobId,
       jobTitle: proposalJobTitle,
       coverLetter: proposalCoverLetter,
@@ -452,14 +453,72 @@ export default function AppMobile() {
     };
 
     setMobileProposals(prev => [newProposal, ...prev]);
+
+    // Construct a freelancer application representation for the Admin Dashboard
+    const proposalApp: FreelancerServiceApplication = {
+      id: tempId,
+      name: mockCurrentUser?.name || 'Freelancer',
+      age: 25,
+      district: 'Colombo',
+      address: 'Sri Lanka',
+      guardianName: 'N/A',
+      guardianPhone: 'N/A',
+      phone: '0770000000',
+      isFreelancer: true,
+      rating: 5,
+      ratingImages: [],
+      serviceTitle: `${proposalJobTitle} Proposal`,
+      hourlyRate: Number(proposalBidAmount) || 0,
+      category: 'Services',
+      description: `Delivery Time: ${proposalDeliveryTime}\nCover Letter: ${proposalCoverLetter}`,
+      skills: ['Proposal'],
+      status: 'pending',
+      createdAt: new Date().toLocaleString()
+    };
+
+    setMobilePendingApps(prev => [proposalApp, ...prev]);
+
     setIsProposalFormOpen(false);
+
+    try {
+      const { data, error } = await supabase.from('freelancer_applications').insert([{
+        name: proposalApp.name,
+        age: proposalApp.age,
+        district: proposalApp.district,
+        address: proposalApp.address,
+        guardian_name: proposalApp.guardianName,
+        guardian_phone: proposalApp.guardianPhone,
+        phone: proposalApp.phone,
+        is_freelancer: proposalApp.isFreelancer,
+        rating: proposalApp.rating,
+        rating_images: proposalApp.ratingImages,
+        service_title: proposalApp.serviceTitle,
+        hourly_rate: proposalApp.hourlyRate,
+        category: proposalApp.category,
+        description: proposalApp.description,
+        skills: proposalApp.skills,
+        status: proposalApp.status
+      }]).select();
+
+      if (!error && data && data.length > 0) {
+        const realId = data[0].id;
+        setMobilePendingApps(prev => prev.map(item => item.id === tempId ? { ...item, id: realId } : item));
+      }
+    } catch (err) {
+      console.error('Error inserting proposal to Supabase freelancer queue:', err);
+    }
+
     setProposalCoverLetter('');
     setProposalBidAmount('');
     setProposalDeliveryTime('');
 
     Alert.alert(
       'Proposal Submitted! 🚀',
-      `Your proposal for "${proposalJobTitle}" has been sent successfully to the client.`
+      `Your proposal for "${proposalJobTitle}" has been sent successfully. It is now pending approval in the Admin Freelancers Queue!`,
+      [
+        { text: 'OK', onPress: () => {} },
+        { text: 'Open Admin Queue', onPress: () => setIsAdminModalOpen(true) }
+      ]
     );
   };
 
