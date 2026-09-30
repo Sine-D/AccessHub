@@ -28,7 +28,7 @@ export const RatingInput: React.FC<RatingInputProps> = ({ value, onChange }) => 
             <Ionicons
               name={filled ? 'star' : 'star-outline'}
               size={32}
-              color={filled ? '#FBBF24' : '#9CA3AF'}
+              color={filled ? '#FBBF24' : '#64748B'}
               style={styles.star}
             />
           </Pressable>

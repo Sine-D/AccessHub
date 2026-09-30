@@ -38,6 +38,11 @@ import {
 } from './mock/data';
 
 import { saveRatingWithVerification } from './services/ratingsService';
+import {
+  calculateAccessibleRoute,
+  RouteType,
+  RoutePreviewResult,
+} from './services/routeService';
 import { CreateAccountScreen } from './features/auth/screens/CreateAccountScreen';
 import { MobileVendorVerificationQueue } from './features/admin/components/MobileVendorVerificationQueue';
 import { MobileListingModerationQueue } from './features/admin/components/MobileListingModerationQueue';
@@ -134,6 +139,12 @@ export default function AppMobile() {
   const [bookedProvidersList, setBookedProvidersList] = useState<any[]>([]);
   const [loadingBooked, setLoadingBooked] = useState(false);
   const [selectedBookedProvider, setSelectedBookedProvider] = useState<any | null>(null);
+
+  // AC-230: Map pin details & step-free route preview (mobile)
+  const [selectedMapPin, setSelectedMapPin] = useState<typeof mockMapPins[0] | null>(null);
+  const [mapRouteModalOpen, setMapRouteModalOpen] = useState(false);
+  const [mapRouteMode, setMapRouteMode] = useState<RouteType>('step_free_wheelchair');
+  const [mapRouteResult, setMapRouteResult] = useState<RoutePreviewResult | null>(null);
 
   const fetchBookedProviders = async () => {
     // mockCurrentUser has ID 'u1' which breaks Supabase UUID validation. Using a static valid UUID for test purposes.
@@ -3137,33 +3148,54 @@ export default function AppMobile() {
                   (review) => Boolean(review.photoUri),
                 ).length;
 
+                const isSelectedPin = selectedMapPin?.id === pin.id;
+
                 return (
-                  <View
+                  <TouchableOpacity
                     key={pin.id}
+                    activeOpacity={0.85}
+                    onPress={() => setSelectedMapPin(pin)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${pin.title}. ${pin.badge}. ${pin.distance}`}
+                    accessibilityHint="Tap to view details and navigate"
+                    accessibilityState={{ selected: isSelectedPin }}
                     style={[
                       styles.mapCard,
                       {
                         backgroundColor: cardBg,
+                        borderWidth: isSelectedPin ? 2 : 1,
+                        borderColor: isSelectedPin
+                          ? (highContrast ? '#00ff00' : '#2563eb')
+                          : (highContrast ? '#ffffff' : '#e2e8f0'),
                       },
                     ]}
                   >
                     <Image
                       source={{ uri: pin.image }}
                       style={styles.mapImg}
+                      accessibilityIgnoresInvertColors
                     />
 
                     <View style={{ padding: 12 }}>
-                      <Text
-                        style={[
-                          styles.mapPinTitle,
-                          dynamicText(15),
-                          {
-                            color: textColor,
-                          },
-                        ]}
-                      >
-                        {pin.title}
-                      </Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                        <Text
+                          style={[
+                            styles.mapPinTitle,
+                            dynamicText(15),
+                            {
+                              color: textColor,
+                              flex: 1,
+                            },
+                          ]}
+                        >
+                          {pin.title}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: highContrast ? '#333300' : '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: highContrast ? '#ffff00' : '#b45309' }}>
+                            ⭐ {pin.accessibilityRating.toFixed(1)}
+                          </Text>
+                        </View>
+                      </View>
 
                       <Text
                         style={[
@@ -3175,21 +3207,51 @@ export default function AppMobile() {
                           },
                         ]}
                       >
-                        📍 {pin.address} (
-                        {pin.distance})
+                        📍 {pin.address} ({pin.distance})
                       </Text>
 
-                      <Text
-                        style={[
-                          styles.badgeTag,
-                          {
-                            color: accentColor,
-                            marginTop: 6,
-                          },
-                        ]}
+                      {/* AC-86 - AC-90: Awarded Accessibility Badge Banner */}
+                      <View
+                        style={{
+                          marginTop: 8,
+                          padding: 8,
+                          borderRadius: 10,
+                          backgroundColor: highContrast ? '#003300' : '#f0fdf4',
+                          borderWidth: 1,
+                          borderColor: highContrast ? '#00ff00' : '#bbf7d0',
+                        }}
                       >
-                        ♿ {pin.badge}
-                      </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: highContrast ? '#ffff00' : '#15803d' }}>
+                            {pin.id === 'mp1' ? '🥇 Gold Accessibility Badge' : pin.id === 'mp2' ? '🥈 Silver Accessibility Badge' : '🏆 100% Barrier-Free Badge'}
+                          </Text>
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: highContrast ? '#ffffff' : '#166534', backgroundColor: highContrast ? '#006600' : '#dcfce7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                            ✓ VERIFIED
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 11, fontWeight: '600', color: highContrast ? '#ffffff' : '#166534', marginTop: 3 }}>
+                          ♿ {pin.badge}
+                        </Text>
+                      </View>
+
+                      {/* Accessibility Feature Badges */}
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+                        {pin.accessibilityFeatures.map((feat) => (
+                          <View
+                            key={feat}
+                            style={{
+                              backgroundColor: highContrast ? '#112233' : '#e0f2fe',
+                              borderRadius: 6,
+                              paddingHorizontal: 7,
+                              paddingVertical: 3,
+                            }}
+                          >
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: highContrast ? '#00ffff' : '#0369a1' }}>
+                              ✓ {feat}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
 
                       {photoCount > 0 && (
                         <Text
@@ -3197,38 +3259,80 @@ export default function AppMobile() {
                             styles.photoCountText,
                             {
                               color: accentColor,
+                              marginTop: 6,
                             },
                           ]}
                         >
-                          📷 {photoCount} photo
-                          {photoCount === 1
-                            ? ''
-                            : 's'}{' '}
-                          submitted
+                          📷 {photoCount} photo{photoCount === 1 ? '' : 's'} submitted
                         </Text>
                       )}
 
-                      <TouchableOpacity
-                        onPress={() =>
-                          setReviewModalLocationId(
-                            pin.id,
-                          )
-                        }
-                        accessibilityRole="button"
-                        accessibilityLabel={`Write a review for ${pin.title}`}
-                        style={{ marginTop: 10 }}
-                      >
-                        <Text
+                      {/* AC-230 Action buttons */}
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setSelectedMapPin(pin);
+                            const result = calculateAccessibleRoute(pin, 'step_free_wheelchair');
+                            setMapRouteResult(result);
+                            setMapRouteMode('step_free_wheelchair');
+                            setMapRouteModalOpen(true);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Open step-free route preview to ${pin.title}`}
                           style={{
-                            color: accentColor,
-                            fontWeight: '600',
+                            flex: 1,
+                            minHeight: 44,
+                            backgroundColor: highContrast ? '#0000cc' : '#2563eb',
+                            borderRadius: 10,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            paddingVertical: 10,
+                            paddingHorizontal: 12,
                           }}
                         >
-                          Write a Review
-                        </Text>
-                      </TouchableOpacity>
+                          <Text
+                            style={{
+                              color: '#ffffff',
+                              fontWeight: '700',
+                              fontSize: fontScale === 'xl' ? 13 : fontScale === 'lg' ? 12 : 11,
+                            }}
+                          >
+                            🗺️ Route Preview
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() =>
+                            setReviewModalLocationId(
+                              pin.id,
+                            )
+                          }
+                          accessibilityRole="button"
+                          accessibilityLabel={`Write a review for ${pin.title}`}
+                          style={{
+                            flex: 1,
+                            minHeight: 44,
+                            backgroundColor: highContrast ? '#006600' : '#0d9488',
+                            borderRadius: 10,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            paddingVertical: 10,
+                            paddingHorizontal: 12,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: '#ffffff',
+                              fontWeight: '700',
+                              fontSize: fontScale === 'xl' ? 13 : fontScale === 'lg' ? 12 : 11,
+                            }}
+                          >
+                            ✍️ Write Review
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
 
@@ -3243,7 +3347,9 @@ export default function AppMobile() {
                   setReviewModalLocationId(null)
                 }
               >
-                <View
+                <TouchableOpacity
+                  activeOpacity={1}
+                  onPress={() => setReviewModalLocationId(null)}
                   style={{
                     flex: 1,
                     justifyContent: 'flex-end',
@@ -3251,7 +3357,9 @@ export default function AppMobile() {
                       'rgba(0,0,0,0.5)',
                   }}
                 >
-                  <View
+                  <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={(e) => e.stopPropagation()}
                     style={{
                       backgroundColor: cardBg,
                       borderTopLeftRadius: 16,
@@ -3263,6 +3371,7 @@ export default function AppMobile() {
                         locationId={
                           reviewModalLocationId
                         }
+                        onCancel={() => setReviewModalLocationId(null)}
                         onSubmit={async (data) => {
                           const newReview =
                             addReview(data);
@@ -3302,6 +3411,167 @@ export default function AppMobile() {
                         }}
                       />
                     )}
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              </Modal>
+
+              {/* AC-230: Mobile Step-Free & Tactile Route Preview Modal */}
+              <Modal
+                visible={mapRouteModalOpen}
+                animationType="slide"
+                transparent
+                onRequestClose={() => setMapRouteModalOpen(false)}
+              >
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+                  <View
+                    style={{
+                      backgroundColor: cardBg,
+                      borderTopLeftRadius: 24,
+                      borderTopRightRadius: 24,
+                      maxHeight: '85%',
+                      padding: 16,
+                    }}
+                  >
+                    {/* Header */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[dynamicText(16), { fontWeight: '800', color: textColor }]}>
+                          🗺️ Step-Free Route Preview (AC-230)
+                        </Text>
+                        <Text style={[dynamicText(12), { color: subTextColor, marginTop: 2 }]}>
+                          Destination: {selectedMapPin?.title}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => setMapRouteModalOpen(false)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Close route preview"
+                        style={{
+                          padding: 8,
+                          borderRadius: 20,
+                          backgroundColor: highContrast ? '#333333' : '#334155',
+                          minWidth: 44,
+                          minHeight: 44,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ fontWeight: '800', color: textColor }}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Mode Toggle */}
+                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (selectedMapPin) {
+                            setMapRouteMode('step_free_wheelchair');
+                            setMapRouteResult(calculateAccessibleRoute(selectedMapPin, 'step_free_wheelchair'));
+                          }
+                        }}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: mapRouteMode === 'step_free_wheelchair' }}
+                        style={{
+                          flex: 1,
+                          minHeight: 44,
+                          backgroundColor: mapRouteMode === 'step_free_wheelchair' ? (highContrast ? '#0000cc' : '#2563eb') : (highContrast ? '#222' : '#334155'),
+                          borderRadius: 12,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          paddingHorizontal: 8,
+                        }}
+                      >
+                        <Text style={{ color: mapRouteMode === 'step_free_wheelchair' ? '#fff' : textColor, fontWeight: '700', fontSize: 11 }}>
+                          ♿ Step-Free Route
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (selectedMapPin) {
+                            setMapRouteMode('tactile_paving_audio');
+                            setMapRouteResult(calculateAccessibleRoute(selectedMapPin, 'tactile_paving_audio'));
+                          }
+                        }}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: mapRouteMode === 'tactile_paving_audio' }}
+                        style={{
+                          flex: 1,
+                          minHeight: 44,
+                          backgroundColor: mapRouteMode === 'tactile_paving_audio' ? (highContrast ? '#006600' : '#0d9488') : (highContrast ? '#222' : '#334155'),
+                          borderRadius: 12,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          paddingHorizontal: 8,
+                        }}
+                      >
+                        <Text style={{ color: mapRouteMode === 'tactile_paving_audio' ? '#fff' : textColor, fontWeight: '700', fontSize: 11 }}>
+                          🦯 Tactile Route
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* KPI Metrics */}
+                    {mapRouteResult && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: highContrast ? '#000000' : '#0f172a', borderRadius: 12, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: highContrast ? '#ffff00' : '#334155' }}>
+                        <View style={{ alignItems: 'center', flex: 1 }}>
+                          <Text style={{ fontSize: 10, color: subTextColor, fontWeight: '700' }}>DISTANCE</Text>
+                          <Text style={{ fontSize: 13, color: textColor, fontWeight: '800' }}>{mapRouteResult.summary.totalDistanceMeters}m</Text>
+                        </View>
+                        <View style={{ alignItems: 'center', flex: 1 }}>
+                          <Text style={{ fontSize: 10, color: subTextColor, fontWeight: '700' }}>EST. TIME</Text>
+                          <Text style={{ fontSize: 13, color: '#60a5fa', fontWeight: '800' }}>~{mapRouteResult.summary.totalDurationMinutes}m</Text>
+                        </View>
+                        <View style={{ alignItems: 'center', flex: 1 }}>
+                          <Text style={{ fontSize: 10, color: subTextColor, fontWeight: '700' }}>STEP-FREE</Text>
+                          <Text style={{ fontSize: 13, color: '#4ade80', fontWeight: '800' }}>{mapRouteResult.summary.stepFreeScorePercentage}%</Text>
+                        </View>
+                        <View style={{ alignItems: 'center', flex: 1 }}>
+                          <Text style={{ fontSize: 10, color: subTextColor, fontWeight: '700' }}>TACTILE</Text>
+                          <Text style={{ fontSize: 13, color: '#2dd4bf', fontWeight: '800' }}>{mapRouteResult.summary.tactileCoveragePercentage}%</Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Navigation Steps */}
+                    <ScrollView style={{ flexShrink: 1, marginBottom: 12 }}>
+                      {mapRouteResult?.steps.map((step) => (
+                        <View
+                          key={step.id}
+                          style={{
+                            backgroundColor: highContrast ? '#111827' : '#0f172a',
+                            borderRadius: 12,
+                            padding: 12,
+                            marginBottom: 8,
+                            borderWidth: 1,
+                            borderColor: highContrast ? '#ffff00' : '#334155',
+                          }}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: textColor }}>
+                            {step.stepNumber}. {step.instruction}
+                          </Text>
+                          <Text style={{ fontSize: 11, color: subTextColor, marginTop: 4 }}>
+                            📏 {step.distanceMeters}m {step.slopeGradientPercent ? `• Slope: ${step.slopeGradientPercent}%` : ''} {step.hasRamp ? '• Ramp ✓' : ''} {step.hasElevator ? '• Elevator 🛗' : ''}
+                          </Text>
+                        </View>
+                      ))}
+                    </ScrollView>
+
+                    {/* Close Action */}
+                    <TouchableOpacity
+                      onPress={() => setMapRouteModalOpen(false)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Close route modal"
+                      style={{
+                        minHeight: 44,
+                        backgroundColor: highContrast ? '#333333' : '#334155',
+                        borderRadius: 12,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ fontWeight: '800', color: textColor }}>Close Route Preview</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </Modal>

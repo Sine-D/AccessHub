@@ -20,6 +20,15 @@ interface MobileAccessibilityBadgeManagerProps {
   onSpeak?: (text: string) => void;
 }
 
+const MOBILE_PLACES = [
+  { id: 'mp4', name: 'Colombo Metro Transit Hub', full: 'Colombo Metro Transit Hub (Colombo 01)' },
+  { id: 'mp1', name: 'Kavindi Crafts Studio', full: 'Kavindi Crafts Studio (Colombo 07)' },
+  { id: 'mp2', name: 'Enable Lanka Foundation Center', full: 'Enable Lanka Foundation Center (Colombo 03)' },
+  { id: 'mp3', name: 'Virtusa Inclusive Hub', full: 'Virtusa Inclusive Innovation Hub (Colombo 09)' },
+  { id: 'mp5', name: 'Kandy Accessible Supermarket', full: 'Kandy Accessible Supermarket (Kandy)' },
+  { id: 'custom', name: '✏️ Type Custom...', full: '' },
+];
+
 export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeManagerProps> = ({
   highContrast = false,
   onSpeak,
@@ -29,7 +38,9 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const [entityName, setEntityName] = useState('Colombo Metro Transit Hub');
+  const [selectedPlaceId, setSelectedPlaceId] = useState('mp4');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [entityName, setEntityName] = useState('Colombo Metro Transit Hub (Colombo 01)');
   const [isVerified, setIsVerified] = useState(true);
   const [ratings, setRatings] = useState<CriteriaRatings>({
     wheelchairRamp: 5,
@@ -156,20 +167,107 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
           Calculate Score & Award Badge
         </Text>
 
-        <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#94a3b8', marginBottom: 4 }}>Entity Name</Text>
-        <TextInput
-          value={entityName}
-          onChangeText={setEntityName}
+        <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#94a3b8', marginBottom: 6 }}>
+          Select Place or Entity Dropdown Menu:
+        </Text>
+
+        {/* Dropdown Menu Trigger */}
+        <TouchableOpacity
+          onPress={() => setIsDropdownOpen(!isDropdownOpen)}
+          accessibilityRole="combobox"
+          accessibilityLabel="Select Place or Entity Dropdown Menu"
+          accessibilityState={{ expanded: isDropdownOpen }}
           style={{
             backgroundColor: '#334155',
-            color: '#ffffff',
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderRadius: 8,
-            fontSize: 13,
-            marginBottom: 12,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            minHeight: 44,
+            borderRadius: 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderWidth: 1,
+            borderColor: isDropdownOpen ? (highContrast ? '#ffff00' : '#2563eb') : '#475569',
+            marginBottom: isDropdownOpen ? 4 : 12,
           }}
-        />
+        >
+          <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '700', flex: 1 }}>
+            📍 {MOBILE_PLACES.find((p) => p.id === selectedPlaceId)?.name || entityName || 'Select a place...'}
+          </Text>
+          <Text style={{ color: highContrast ? '#ffff00' : '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>
+            {isDropdownOpen ? '▲ Close' : '▼ Select'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Dropdown Menu List Options */}
+        {isDropdownOpen && (
+          <View
+            style={{
+              backgroundColor: '#0f172a',
+              borderWidth: 1,
+              borderColor: '#475569',
+              borderRadius: 10,
+              marginBottom: 12,
+              overflow: 'hidden',
+            }}
+          >
+            {MOBILE_PLACES.map((p, index) => {
+              const isSelected = selectedPlaceId === p.id;
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  onPress={() => {
+                    setSelectedPlaceId(p.id);
+                    setIsDropdownOpen(false);
+                    if (p.id !== 'custom') {
+                      setEntityName(p.full || p.name);
+                    } else {
+                      setEntityName('');
+                    }
+                  }}
+                  accessibilityRole="menuitem"
+                  accessibilityLabel={`Select ${p.name}`}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    minHeight: 44,
+                    backgroundColor: isSelected ? (highContrast ? '#003300' : '#2563eb') : (index % 2 === 0 ? '#1e293b' : '#0f172a'),
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    borderBottomWidth: index < MOBILE_PLACES.length - 1 ? 1 : 0,
+                    borderBottomColor: '#334155',
+                  }}
+                >
+                  <Text style={{ color: isSelected ? '#ffffff' : '#e2e8f0', fontSize: 12, fontWeight: isSelected ? '800' : '600' }}>
+                    {p.name}
+                  </Text>
+                  {isSelected && <Text style={{ color: '#4ade80', fontWeight: 'bold' }}>✓ Selected</Text>}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {selectedPlaceId === 'custom' && (
+          <TextInput
+            value={entityName}
+            onChangeText={setEntityName}
+            placeholder="Enter custom place or vendor name..."
+            placeholderTextColor="#94a3b8"
+            style={{
+              backgroundColor: '#0f172a',
+              color: '#ffffff',
+              borderWidth: 1,
+              borderColor: '#475569',
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              borderRadius: 10,
+              fontSize: 13,
+              marginBottom: 12,
+            }}
+          />
+        )}
 
         {/* Verification Check */}
         <TouchableOpacity

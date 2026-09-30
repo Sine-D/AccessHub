@@ -10,6 +10,16 @@ import {
 } from '../../../services/accessibilityBadgeService';
 import { AccessibilityBadge } from '../../../components/accessibility/AccessibilityBadge';
 
+const AVAILABLE_ENTITIES = [
+  { id: 'mp4', name: 'Colombo Metro Transit Hub (Colombo 01)', type: 'place' as const, entityName: 'Colombo Metro Transit Hub' },
+  { id: 'mp1', name: 'Kavindi Crafts Studio (Colombo 07)', type: 'place' as const, entityName: 'Kavindi Crafts Studio' },
+  { id: 'mp2', name: 'Enable Lanka Foundation Center (Colombo 03)', type: 'place' as const, entityName: 'Enable Lanka Foundation Center' },
+  { id: 'mp3', name: 'Virtusa Inclusive Innovation Hub (Colombo 09)', type: 'place' as const, entityName: 'Virtusa Inclusive Innovation Hub' },
+  { id: 'mp5', name: 'Kandy Accessible Supermarket (Kandy)', type: 'place' as const, entityName: 'Kandy Accessible Supermarket' },
+  { id: 'ver-103', name: 'Kasun Kalhara Handicrafts (Vendor)', type: 'vendor' as const, entityName: 'Kasun Kalhara Handicrafts' },
+  { id: 'custom', name: '✏️ Type Custom Place or Vendor Name...', type: 'place' as const, entityName: '' },
+];
+
 export const AccessibilityBadgeManager: React.FC = () => {
   const { speakText, settings } = useAccessibility();
 
@@ -19,10 +29,26 @@ export const AccessibilityBadgeManager: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // New Badge Calculation Form State
-  const [entityId, setEntityId] = useState('mp-new-kandy');
+  const [selectedEntityId, setSelectedEntityId] = useState('mp4');
+  const [entityId, setEntityId] = useState('mp4');
   const [entityType, setEntityType] = useState<'place' | 'vendor'>('place');
-  const [entityName, setEntityName] = useState('Kandy Accessible Supermarket');
+  const [entityName, setEntityName] = useState('Colombo Metro Transit Hub');
   const [isVerifiedInput, setIsVerifiedInput] = useState(true);
+
+  const handleSelectEntity = (id: string) => {
+    setSelectedEntityId(id);
+    const found = AVAILABLE_ENTITIES.find((e) => e.id === id);
+    if (found) {
+      if (id !== 'custom') {
+        setEntityId(found.id);
+        setEntityType(found.type);
+        setEntityName(found.entityName);
+      } else {
+        setEntityId(`custom-${Date.now()}`);
+        setEntityName('');
+      }
+    }
+  };
 
   const [ratingsInput, setRatingsInput] = useState<CriteriaRatings>({
     wheelchairRamp: 5,
@@ -147,13 +173,28 @@ export const AccessibilityBadgeManager: React.FC = () => {
 
           <div className="space-y-4 text-xs">
             <div>
-              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Entity Name</label>
-              <input
-                type="text"
-                value={entityName}
-                onChange={(e) => setEntityName(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none font-bold"
-              />
+              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">Select Place or Entity</label>
+              <select
+                value={selectedEntityId}
+                onChange={(e) => handleSelectEntity(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none font-bold text-slate-900 dark:text-white"
+              >
+                {AVAILABLE_ENTITIES.map((ent) => (
+                  <option key={ent.id} value={ent.id}>
+                    {ent.name}
+                  </option>
+                ))}
+              </select>
+
+              {selectedEntityId === 'custom' && (
+                <input
+                  type="text"
+                  placeholder="Enter custom place or entity name..."
+                  value={entityName}
+                  onChange={(e) => setEntityName(e.target.value)}
+                  className="mt-2 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none font-bold text-slate-900 dark:text-white"
+                />
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
