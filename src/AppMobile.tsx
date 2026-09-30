@@ -335,6 +335,15 @@ export default function AppMobile() {
   const [formDescription, setFormDescription] = useState('');
   const [formSkills, setFormSkills] = useState<string[]>(['Accessibility', 'Freelancer']);
 
+  // Proposal Form States
+  const [isProposalFormOpen, setIsProposalFormOpen] = useState(false);
+  const [proposalJobId, setProposalJobId] = useState('');
+  const [proposalJobTitle, setProposalJobTitle] = useState('');
+  const [proposalCoverLetter, setProposalCoverLetter] = useState('');
+  const [proposalBidAmount, setProposalBidAmount] = useState('');
+  const [proposalDeliveryTime, setProposalDeliveryTime] = useState('');
+  const [mobileProposals, setMobileProposals] = useState<any[]>([]);
+
   const pickImageFromLocalStorage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -422,6 +431,35 @@ export default function AppMobile() {
         { text: 'OK', onPress: () => {} },
         { text: 'Open Admin Queue', onPress: () => setIsAdminModalOpen(true) }
       ]
+    );
+  };
+
+  const handleProposalSubmit = () => {
+    if (!proposalCoverLetter.trim() || !proposalBidAmount.trim() || !proposalDeliveryTime.trim()) {
+      Alert.alert('Validation Error', 'Please fill in all proposal fields (Cover Letter, Bid Amount, and Delivery Time).');
+      return;
+    }
+
+    const newProposal = {
+      id: `prop-${Date.now()}`,
+      jobId: proposalJobId,
+      jobTitle: proposalJobTitle,
+      coverLetter: proposalCoverLetter,
+      bidAmount: Number(proposalBidAmount) || 0,
+      deliveryTime: proposalDeliveryTime,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+
+    setMobileProposals(prev => [newProposal, ...prev]);
+    setIsProposalFormOpen(false);
+    setProposalCoverLetter('');
+    setProposalBidAmount('');
+    setProposalDeliveryTime('');
+
+    Alert.alert(
+      'Proposal Submitted! 🚀',
+      `Your proposal for "${proposalJobTitle}" has been sent successfully to the client.`
     );
   };
 
@@ -3173,8 +3211,9 @@ export default function AppMobile() {
                         },
                       ]}
                       onPress={() => {
-                        setFormServiceTitle(job.title + ' Service');
-                        setIsFreelancerFormOpen(true);
+                        setProposalJobId(job.id);
+                        setProposalJobTitle(job.title);
+                        setIsProposalFormOpen(true);
                       }}
                       accessibilityRole="button"
                       accessibilityLabel={`Apply for ${job.title} at ${job.company}`}
@@ -4644,6 +4683,67 @@ export default function AppMobile() {
                 >
                   <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>
                     Submit Application to Admin Dashboard
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Proposal Submission Form Modal */}
+        <Modal
+          visible={isProposalFormOpen}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setIsProposalFormOpen(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '85%' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
+                  📝 Submit Proposal for {proposalJobTitle}
+                </Text>
+                <TouchableOpacity onPress={() => setIsProposalFormOpen(false)}>
+                  <Text style={{ color: '#94a3b8', fontSize: 16, fontWeight: 'bold' }}>Close</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Cover Letter</Text>
+                <TextInput
+                  style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12, marginBottom: 14, minHeight: 80, textAlignVertical: 'top' }}
+                  placeholder="Why are you the best fit for this job?"
+                  multiline
+                  placeholderTextColor="#64748b"
+                  value={proposalCoverLetter}
+                  onChangeText={setProposalCoverLetter}
+                />
+
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Bid Amount (LKR)</Text>
+                <TextInput
+                  style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12, marginBottom: 14 }}
+                  placeholder="e.g. 5000"
+                  keyboardType="numeric"
+                  placeholderTextColor="#64748b"
+                  value={proposalBidAmount}
+                  onChangeText={setProposalBidAmount}
+                />
+
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Estimated Delivery Time</Text>
+                <TextInput
+                  style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12, marginBottom: 14 }}
+                  placeholder="e.g. 3 Days"
+                  placeholderTextColor="#64748b"
+                  value={proposalDeliveryTime}
+                  onChangeText={setProposalDeliveryTime}
+                />
+
+                <TouchableOpacity
+                  style={{ backgroundColor: '#10b981', padding: 14, borderRadius: 14, alignItems: 'center', marginTop: 6 }}
+                  onPress={handleProposalSubmit}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>
+                    Send Proposal
                   </Text>
                 </TouchableOpacity>
               </ScrollView>
