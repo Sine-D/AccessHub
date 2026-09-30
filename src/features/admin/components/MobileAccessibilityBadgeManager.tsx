@@ -174,9 +174,14 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
         {/* Verification Check */}
         <TouchableOpacity
           onPress={() => setIsVerified(!isVerified)}
+          accessibilityRole="button"
+          accessibilityLabel={`Entity Status: ${isVerified ? 'Verified' : 'Unverified'}. Tap to toggle verification state.`}
+          accessibilityState={{ checked: isVerified }}
           style={{
             backgroundColor: isVerified ? '#047857' : '#be123c',
             paddingVertical: 10,
+            minHeight: 44,
+            justifyContent: 'center',
             borderRadius: 8,
             alignItems: 'center',
             marginBottom: 12,
@@ -205,16 +210,19 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
                 <TouchableOpacity
                   key={val}
                   onPress={() => setRatings((prev) => ({ ...prev, [item.key]: val }))}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.label} rating ${val} out of 5 stars`}
+                  accessibilityState={{ selected: ratings[item.key] === val }}
                   style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: 4,
+                    minWidth: 44,
+                    minHeight: 44,
+                    borderRadius: 8,
                     backgroundColor: ratings[item.key] >= val ? '#f59e0b' : '#475569',
                     justifyContent: 'center',
                     alignItems: 'center',
                   }}
                 >
-                  <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#ffffff' }}>{val}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#ffffff' }}>{val}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -234,9 +242,14 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
         <TouchableOpacity
           onPress={handleAward}
           disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel="Award Accessibility Badge"
+          accessibilityState={{ disabled: loading }}
           style={{
             backgroundColor: highContrast ? '#ffff00' : '#0d9488',
             paddingVertical: 12,
+            minHeight: 44,
+            justifyContent: 'center',
             borderRadius: 12,
             alignItems: 'center',
           }}

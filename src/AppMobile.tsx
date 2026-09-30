@@ -3505,9 +3505,13 @@ export default function AppMobile() {
               >
                 <TouchableOpacity
                   onPress={() => setAdminTab('vendors')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Vendors"
+                  accessibilityState={{ selected: adminTab === 'vendors' }}
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 10,
+                    minHeight: 44,
                     borderRadius: 14,
                     backgroundColor: adminTab === 'vendors' ? '#6366f1' : cardBg,
                     alignItems: 'center',
@@ -3523,9 +3527,13 @@ export default function AppMobile() {
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('listings')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Listings"
+                  accessibilityState={{ selected: adminTab === 'listings' }}
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 10,
+                    minHeight: 44,
                     borderRadius: 14,
                     backgroundColor: adminTab === 'listings' ? '#38bdf8' : cardBg,
                     alignItems: 'center',
@@ -3541,9 +3549,13 @@ export default function AppMobile() {
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('freelancers')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Freelancers"
+                  accessibilityState={{ selected: adminTab === 'freelancers' }}
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 10,
+                    minHeight: 44,
                     borderRadius: 14,
                     backgroundColor: adminTab === 'freelancers' ? '#0284c7' : cardBg,
                     alignItems: 'center',
@@ -3559,9 +3571,13 @@ export default function AppMobile() {
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('bookings')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Bookings"
+                  accessibilityState={{ selected: adminTab === 'bookings' }}
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 10,
+                    minHeight: 44,
                     borderRadius: 14,
                     backgroundColor: adminTab === 'bookings' ? '#10b981' : cardBg,
                     alignItems: 'center',
@@ -3577,9 +3593,13 @@ export default function AppMobile() {
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('reviews')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Fraud Queue"
+                  accessibilityState={{ selected: adminTab === 'reviews' }}
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 10,
+                    minHeight: 44,
                     borderRadius: 14,
                     backgroundColor: adminTab === 'reviews' ? '#ef4444' : cardBg,
                     alignItems: 'center',
@@ -3595,9 +3615,13 @@ export default function AppMobile() {
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('badges')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Accessibility Badges"
+                  accessibilityState={{ selected: adminTab === 'badges' }}
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 10,
+                    minHeight: 44,
                     borderRadius: 14,
                     backgroundColor: adminTab === 'badges' ? '#0d9488' : cardBg,
                     alignItems: 'center',
@@ -3613,9 +3637,13 @@ export default function AppMobile() {
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('accounts')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Account Verification"
+                  accessibilityState={{ selected: adminTab === 'accounts' }}
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 10,
+                    minHeight: 44,
                     borderRadius: 14,
                     backgroundColor: adminTab === 'accounts' ? '#f59e0b' : cardBg,
                     alignItems: 'center',
@@ -3631,9 +3659,13 @@ export default function AppMobile() {
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('analytics')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Sales Analytics"
+                  accessibilityState={{ selected: adminTab === 'analytics' }}
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 10,
+                    minHeight: 44,
                     borderRadius: 14,
                     backgroundColor: adminTab === 'analytics' ? '#0284c7' : cardBg,
                     alignItems: 'center',
@@ -3649,9 +3681,13 @@ export default function AppMobile() {
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('compliance')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Compliance Monitoring"
+                  accessibilityState={{ selected: adminTab === 'compliance' }}
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 10,
+                    minHeight: 44,
                     borderRadius: 14,
                     backgroundColor: adminTab === 'compliance' ? '#10b981' : cardBg,
                     alignItems: 'center',

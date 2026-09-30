@@ -142,11 +142,14 @@ export const MobileFraudModerationQueue: React.FC = () => {
         ].map((tab) => (
           <TouchableOpacity
             key={tab.id}
-            style={[styles.tabButton, typeFilter === tab.id && styles.tabButtonActive]}
+            style={[styles.tabButton, typeFilter === tab.id && styles.tabButtonActive, { minHeight: 44, justifyContent: 'center' }]}
             onPress={() => {
               setTypeFilter(tab.id);
               setPage(1);
             }}
+            accessibilityRole="button"
+            accessibilityLabel={`Filter tab ${tab.label}. ${typeFilter === tab.id ? 'Selected' : 'Not selected'}`}
+            accessibilityState={{ selected: typeFilter === tab.id }}
           >
             <Text style={[styles.tabButtonText, typeFilter === tab.id && styles.tabButtonTextActive]}>
               {tab.label}
@@ -244,7 +247,7 @@ export const MobileFraudModerationQueue: React.FC = () => {
       )}
 
       {/* Approval Confirmation Modal (AC-257) */}
-      <Modal visible={!!approvalTarget} transparent animationType="fade">
+      <Modal visible={!!approvalTarget} transparent animationType="fade" accessibilityViewIsModal={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={[styles.modalTitle, { color: '#34d399' }]}>✓ Approve Content (AC-257)</Text>
@@ -253,14 +256,22 @@ export const MobileFraudModerationQueue: React.FC = () => {
             </Text>
 
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setApprovalTarget(null)}>
+              <TouchableOpacity
+                style={[styles.cancelBtn, { minHeight: 44, justifyContent: 'center' }]}
+                onPress={() => setApprovalTarget(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel approval"
+              >
                 <Text style={{ color: '#94a3b8', fontWeight: 'bold' }}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.confirmApproveBtn, actionLoading && { opacity: 0.6 }]}
+                style={[styles.confirmApproveBtn, actionLoading && { opacity: 0.6 }, { minHeight: 44, justifyContent: 'center' }]}
                 disabled={actionLoading}
                 onPress={handleConfirmApprove}
+                accessibilityRole="button"
+                accessibilityLabel="Confirm approve content"
+                accessibilityState={{ disabled: actionLoading }}
               >
                 {actionLoading ? (
                   <ActivityIndicator size="small" color="#fff" />
@@ -274,7 +285,7 @@ export const MobileFraudModerationQueue: React.FC = () => {
       </Modal>
 
       {/* Removal Confirmation Modal (AC-258) */}
-      <Modal visible={!!removalTarget} transparent animationType="fade">
+      <Modal visible={!!removalTarget} transparent animationType="fade" accessibilityViewIsModal={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>⚠️ Remove Content (AC-258)</Text>

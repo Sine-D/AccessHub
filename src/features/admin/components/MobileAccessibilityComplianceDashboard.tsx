@@ -193,9 +193,13 @@ export const MobileAccessibilityComplianceDashboard: React.FC<MobileAccessibilit
       <TouchableOpacity
         onPress={loadData}
         disabled={loading}
+        accessibilityRole="button"
+        accessibilityLabel="Re-audit compliance scorecards"
         style={{
           backgroundColor: highContrast ? '#ffff00' : '#0d9488',
           paddingVertical: 12,
+          minHeight: 44,
+          justifyContent: 'center',
           borderRadius: 12,
           alignItems: 'center',
           marginBottom: 16,
@@ -224,7 +228,12 @@ export const MobileAccessibilityComplianceDashboard: React.FC<MobileAccessibilit
             Compliance Audit Records ({badges.length})
           </Text>
           {onNavigateTab && (
-            <TouchableOpacity onPress={() => onNavigateTab('badges')}>
+            <TouchableOpacity
+              onPress={() => onNavigateTab('badges')}
+              accessibilityRole="button"
+              accessibilityLabel="Navigate to Manage Accessibility Badges"
+              style={{ minHeight: 44, justifyContent: 'center' }}
+            >
               <Text style={{ fontSize: 11, color: '#38bdf8', fontWeight: 'bold' }}>Manage Badges →</Text>
             </TouchableOpacity>
           )}
