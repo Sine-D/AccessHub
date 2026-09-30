@@ -257,6 +257,7 @@ export default function AppMobile() {
   };
 
   const [mobileBookingRequests, setMobileBookingRequests] = useState<ServiceBookingRequest[]>([]);
+  const [adminDbBookings, setAdminDbBookings] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchMobileData = async () => {
@@ -284,6 +285,11 @@ export default function AppMobile() {
             skills: item.skills || ['Freelancer']
           }));
           setMobileServices(formattedServices);
+        }
+
+        const { data: bData } = await supabase.from('service_bookings').select('*').order('created_at', { ascending: false });
+        if (bData) {
+          setAdminDbBookings(bData);
         }
 
         const { data: aData } = await supabase.from('freelancer_applications').select('*').eq('status', 'pending');
@@ -646,6 +652,11 @@ export default function AppMobile() {
           setMobileServices(formattedServices);
         } else {
           setMobileServices([]);
+        }
+
+        const { data: bData } = await supabase.from('service_bookings').select('*').order('created_at', { ascending: false });
+        if (bData) {
+          setAdminDbBookings(bData);
         }
 
         // Fetch real pending apps from Supabase
