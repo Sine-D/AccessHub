@@ -44,6 +44,7 @@ import { MobileListingModerationQueue } from './features/admin/components/Mobile
 import { MobileFraudModerationQueue } from './features/admin/components/MobileFraudModerationQueue';
 import { MobileAccessibilityBadgeManager } from './features/admin/components/MobileAccessibilityBadgeManager';
 import { MobileSalesAnalyticsDashboard } from './features/admin/components/MobileSalesAnalyticsDashboard';
+import { MobileAccessibilityComplianceDashboard } from './features/admin/components/MobileAccessibilityComplianceDashboard';
 import { AdminUnauthorizedState } from './features/admin/components/AdminStates';
 import { useAppState } from './core/hooks/useAppState';
 import { supabase } from './core/supabase';
@@ -125,7 +126,7 @@ export default function AppMobile() {
   const [bookingHours, setBookingHours] = useState('2');
   const [bookingPaymentOption, setBookingPaymentOption] = useState<'50_50' | 'full'>('50_50');
   const [bookingSuccessAlert, setBookingSuccessAlert] = useState(false);
-  const [adminTab, setAdminTab] = useState<'vendors' | 'listings' | 'reviews' | 'freelancers' | 'accounts' | 'bookings' | 'badges' | 'analytics'>('vendors');
+  const [adminTab, setAdminTab] = useState<'vendors' | 'listings' | 'reviews' | 'freelancers' | 'accounts' | 'bookings' | 'badges' | 'analytics' | 'compliance'>('vendors');
   const [mobileUsers, setMobileUsers] = useState<any[]>([]);
   const [selectedMobileProfile, setSelectedMobileProfile] = useState<any | null>(null);
 
@@ -3632,7 +3633,29 @@ export default function AppMobile() {
                     📈 Sales
                   </Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setAdminTab('compliance')}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    backgroundColor: adminTab === 'compliance' ? '#10b981' : cardBg,
+                    alignItems: 'center',
+                    borderColor: '#10b981',
+                    borderWidth: 1,
+                  }}
+                >
+                  <Text style={{ color: adminTab === 'compliance' ? '#fff' : '#94a3b8', fontWeight: 'bold', fontSize: 11 }}>
+                    ✅ Compliance
+                  </Text>
+                </TouchableOpacity>
               </View>
+
+              {/* ACCESSIBILITY COMPLIANCE MONITORING DASHBOARD (AC-68 to AC-71) */}
+              {adminTab === 'compliance' && (
+                <MobileAccessibilityComplianceDashboard highContrast={highContrast} onSpeak={speakText} onNavigateTab={(tab) => setAdminTab(tab as any)} />
+              )}
 
               {/* SALES ANALYTICS DASHBOARD (AC-63 to AC-67) */}
               {adminTab === 'analytics' && (
