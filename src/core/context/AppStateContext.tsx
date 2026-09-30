@@ -102,7 +102,9 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const rejectBookingEscrow = (id: string) => {
-    setBookingRequests(prev => prev.filter(r => r.id !== id));
+    setBookingRequests(prev =>
+      prev.map(r => r.id === id ? { ...r, status: 'canceled' as any } : r)
+    );
   };
 
   const unreadNotifications = 2;
