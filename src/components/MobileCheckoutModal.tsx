@@ -680,7 +680,7 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
                 </TouchableOpacity>
 
                 <Text style={[dynamicText(14), { color: highContrast ? '#ff0' : textColor, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }]}>
-                  Enter 4-Digit OTP (Check incoming SMS)
+                  Enter 4-Digit OTP (Test OTP: {expectedOtp})
                 </Text>
 
                 <TextInput
