@@ -2281,8 +2281,8 @@ export default function AppMobile() {
                         )}
                       </View>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
-                        <Text style={{ color: status === 'accepted' ? '#34d399' : status === 'canceled' ? '#f87171' : '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>
-                          Status: {booking.status?.toUpperCase() || 'PENDING'}
+                        <Text style={{ color: status.startsWith('accepted') || status === 'completed' ? '#34d399' : status === 'canceled' ? '#f87171' : '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>
+                          Status: {status === 'completed' ? 'COMPLETED' : status.startsWith('accepted') ? `ACCEPTED${status.includes('_') ? ` (${status.split('_')[1]}% DONE)` : ''}` : (booking.status?.toUpperCase() || 'PENDING')}
                         </Text>
                         <Text style={{ color: '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>
                           Budget: LKR {booking.total_budget?.toLocaleString()}
@@ -2352,14 +2352,25 @@ export default function AppMobile() {
                           let message = 'Provider will review and accept your task soon.';
                           let displayStatus = 'PENDING';
 
-                          if (status === 'accepted' || status === 'in_progress') {
+                          if (status === 'accepted' || status === 'in_progress' || status.startsWith('accepted_') || status === 'completed') {
                             bgColor = 'rgba(52, 211, 153, 0.1)';
                             borderColor = '#34d399';
                             titleColor = '#34d399';
                             mainColor = '#10b981';
                             subtitleColor = '#a7f3d0';
-                            message = 'Booking accepted! The provider has taken your task.';
-                            displayStatus = 'TAKEN';
+                            
+                            let pct = '';
+                            if (status === 'accepted_25') pct = ' (25% Done)';
+                            if (status === 'accepted_50') pct = ' (50% Done)';
+                            if (status === 'accepted_75') pct = ' (75% Done)';
+                            
+                            if (status === 'completed') {
+                              message = 'Task completed! The provider has finished your task.';
+                              displayStatus = 'COMPLETED';
+                            } else {
+                              message = `Booking accepted! The provider has taken your task.${pct}`;
+                              displayStatus = `TAKEN${pct}`;
+                            }
                           } else if (status === 'canceled' || status === 'rejected') {
                             bgColor = 'rgba(239, 68, 68, 0.1)';
                             borderColor = '#ef4444';
@@ -4085,8 +4096,31 @@ export default function AppMobile() {
                         ) : (
                           <View style={{ backgroundColor: req.status === 'canceled' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)', padding: 10, borderRadius: 12, alignItems: 'center' }}>
                             <Text style={{ color: req.status === 'canceled' ? '#fca5a5' : '#34d399', fontWeight: 'bold', fontSize: 12 }}>
-                              {req.status === 'canceled' ? '❌ Order Declined/Canceled' : `✓ Order Accepted by Freelancer ${req.providerName} & Work Started`}
+                              {req.status === 'canceled' ? '❌ Order Declined/Canceled' : req.status === 'completed' ? `🎉 Order Completed by ${req.providerName}` : `✓ Order Accepted by Freelancer ${req.providerName} & Work Started`}
                             </Text>
+                            
+                            {req.status !== 'canceled' && (
+                              <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
+                                {['25%', '50%', '75%', '100%'].map(pct => {
+                                  const statusVal = pct === '100%' ? 'completed' : `accepted_${pct.replace('%', '')}`;
+                                  const isActive = req.status === statusVal || (pct === '100%' && req.status === 'completed');
+                                  return (
+                                    <TouchableOpacity 
+                                      key={pct}
+                                      style={{ backgroundColor: isActive ? '#059669' : '#064e3b', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: isActive ? 2 : 0, borderColor: '#34d399' }}
+                                      onPress={async () => {
+                                        setMobileBookingRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: statusVal } : r));
+                                        setBookedProvidersList(prev => prev.map(r => r.id === req.id ? { ...r, status: statusVal } : r));
+                                        setAdminDbBookings(prev => prev.map(r => r.id === req.id ? { ...r, status: statusVal } : r));
+                                        try { await supabase.from('service_bookings').update({ status: statusVal }).eq('id', req.id); } catch(e){}
+                                      }}
+                                    >
+                                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>{pct} Done</Text>
+                                    </TouchableOpacity>
+                                  )
+                                })}
+                              </View>
+                            )}
                           </View>
                         )}
                       </View>
