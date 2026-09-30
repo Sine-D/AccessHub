@@ -257,6 +257,7 @@ export default function AppMobile() {
   };
 
   const [mobileBookingRequests, setMobileBookingRequests] = useState<ServiceBookingRequest[]>([]);
+  const [adminDbBookings, setAdminDbBookings] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchMobileData = async () => {
@@ -284,6 +285,11 @@ export default function AppMobile() {
             skills: item.skills || ['Freelancer']
           }));
           setMobileServices(formattedServices);
+        }
+
+        const { data: bData } = await supabase.from('service_bookings').select('*').order('created_at', { ascending: false });
+        if (bData) {
+          setAdminDbBookings(bData);
         }
 
         const { data: aData } = await supabase.from('freelancer_applications').select('*').eq('status', 'pending');
@@ -549,6 +555,11 @@ export default function AppMobile() {
           setMobileServices(formattedServices);
         } else {
           setMobileServices([]);
+        }
+
+        const { data: bData } = await supabase.from('service_bookings').select('*').order('created_at', { ascending: false });
+        if (bData) {
+          setAdminDbBookings(bData);
         }
 
         // Fetch real pending apps from Supabase
@@ -3983,6 +3994,20 @@ export default function AppMobile() {
                         description: '',
                         status: b.status === 'accepted' ? 'in_progress' : (b.status || 'pending'),
                         createdAt: b.created_at
+                      })),
+                      ...adminDbBookings.map(b => ({
+                        id: b.id,
+                        serviceTitle: b.service_title,
+                        providerName: b.provider_name,
+                        clientName: 'Customer',
+                        projectTitle: `${b.service_title} Task`,
+                        totalBudget: b.total_budget,
+                        paymentType: 'full_upfront',
+                        upfrontDeposit: b.total_budget,
+                        remainingBalance: 0,
+                        description: '',
+                        status: b.status === 'accepted' ? 'in_progress' : (b.status || 'pending'),
+                        createdAt: b.created_at
                       }))
                     ].filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
 
@@ -4037,6 +4062,7 @@ export default function AppMobile() {
                               onPress={async () => {
                                 setMobileBookingRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'in_progress' } : r));
                                 setBookedProvidersList(prev => prev.map(r => r.id === req.id ? { ...r, status: 'accepted' } : r));
+                                setAdminDbBookings(prev => prev.map(r => r.id === req.id ? { ...r, status: 'accepted' } : r));
                                 try { await supabase.from('service_bookings').update({ status: 'accepted' }).eq('id', req.id); } catch(e){}
                                 Alert.alert('Order Accepted! 🎉', `Freelancer ${req.providerName} accepted order for ${req.projectTitle}. Locked in Vault.`);
                               }}
@@ -4049,6 +4075,7 @@ export default function AppMobile() {
                               onPress={async () => {
                                 setMobileBookingRequests(prev => prev.filter(r => r.id !== req.id));
                                 setBookedProvidersList(prev => prev.map(r => r.id === req.id ? { ...r, status: 'canceled' } : r));
+                                setAdminDbBookings(prev => prev.map(r => r.id === req.id ? { ...r, status: 'canceled' } : r));
                                 try { await supabase.from('service_bookings').update({ status: 'canceled' }).eq('id', req.id); } catch(e){}
                               }}
                             >
