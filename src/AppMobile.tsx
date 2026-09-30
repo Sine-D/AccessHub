@@ -3497,20 +3497,26 @@ export default function AppMobile() {
               </View>
 
               {/* Sub-Tab Navigation Bar */}
-              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
+                style={{ marginBottom: 16 }}
+              >
                 <TouchableOpacity
                   onPress={() => setAdminTab('vendors')}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'vendors' ? '#6366f1' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#6366f1',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     🏢 Vendors
                   </Text>
                 </TouchableOpacity>
@@ -3518,16 +3524,17 @@ export default function AppMobile() {
                 <TouchableOpacity
                   onPress={() => setAdminTab('listings')}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'listings' ? '#38bdf8' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#38bdf8',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: adminTab === 'listings' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: adminTab === 'listings' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     🛍️ Listings
                   </Text>
                 </TouchableOpacity>
@@ -3535,16 +3542,17 @@ export default function AppMobile() {
                 <TouchableOpacity
                   onPress={() => setAdminTab('freelancers')}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'freelancers' ? '#0284c7' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#0284c7',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     🛠️ Freelancers
                   </Text>
                 </TouchableOpacity>
@@ -3552,16 +3560,17 @@ export default function AppMobile() {
                 <TouchableOpacity
                   onPress={() => setAdminTab('bookings')}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'bookings' ? '#10b981' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#10b981',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     💳 Bookings
                   </Text>
                 </TouchableOpacity>
@@ -3569,16 +3578,17 @@ export default function AppMobile() {
                 <TouchableOpacity
                   onPress={() => setAdminTab('reviews')}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'reviews' ? '#ef4444' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#ef4444',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     🚨 Fraud Queue
                   </Text>
                 </TouchableOpacity>
@@ -3586,16 +3596,17 @@ export default function AppMobile() {
                 <TouchableOpacity
                   onPress={() => setAdminTab('badges')}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'badges' ? '#0d9488' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#0d9488',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     🏅 Badges
                   </Text>
                 </TouchableOpacity>
@@ -3603,16 +3614,17 @@ export default function AppMobile() {
                 <TouchableOpacity
                   onPress={() => setAdminTab('accounts')}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'accounts' ? '#f59e0b' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#f59e0b',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: adminTab === 'accounts' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: adminTab === 'accounts' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     📊 Account
                   </Text>
                 </TouchableOpacity>
@@ -3620,16 +3632,17 @@ export default function AppMobile() {
                 <TouchableOpacity
                   onPress={() => setAdminTab('analytics')}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'analytics' ? '#0284c7' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#0284c7',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: adminTab === 'analytics' ? '#fff' : '#94a3b8', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: adminTab === 'analytics' ? '#fff' : '#94a3b8', fontWeight: 'bold', fontSize: 12 }}>
                     📈 Sales
                   </Text>
                 </TouchableOpacity>
@@ -3637,20 +3650,21 @@ export default function AppMobile() {
                 <TouchableOpacity
                   onPress={() => setAdminTab('compliance')}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'compliance' ? '#10b981' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#10b981',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: adminTab === 'compliance' ? '#fff' : '#94a3b8', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: adminTab === 'compliance' ? '#fff' : '#94a3b8', fontWeight: 'bold', fontSize: 12 }}>
                     ✅ Compliance
                   </Text>
                 </TouchableOpacity>
-              </View>
+              </ScrollView>
 
               {/* ACCESSIBILITY COMPLIANCE MONITORING DASHBOARD (AC-68 to AC-71) */}
               {adminTab === 'compliance' && (
