@@ -11,6 +11,7 @@ import { FraudModerationQueue } from '../components/FraudModerationQueue';
 import { AccessibilityBadgeManager } from '../components/AccessibilityBadgeManager';
 import { SalesAnalyticsDashboard } from '../components/SalesAnalyticsDashboard';
 import { AccessibilityComplianceDashboard } from '../components/AccessibilityComplianceDashboard';
+import { AdminBookingsQueue } from '../components/AdminBookingsQueue';
 import { SubmitVerificationModal } from '../../vendor/components/SubmitVerificationModal';
 import { AdminTab, AdminFeature } from '../types/admin';
 import { 
@@ -281,6 +282,11 @@ export const AdminScreen: React.FC = () => {
       {/* SALES ANALYTICS DASHBOARD (AC-63–67) */}
       {activeTab === 'analytics' && (
         <SalesAnalyticsDashboard />
+      )}
+
+      {/* BOOKINGS QUEUE */}
+      {activeTab === 'bookings' && (
+        <AdminBookingsQueue />
       )}
 
       {/* FREELANCER APPROVALS TAB */}

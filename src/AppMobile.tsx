@@ -65,7 +65,7 @@ type MobileTab =
   | 'bookedProviders';
 
 export default function AppMobile() {
-  const { userRole, setUserRole, currentUser, setCurrentUser, setActiveScreen } = useAppState();
+  const { userRole, setUserRole, currentUser, setCurrentUser, setActiveScreen, bookingRequests, addBookingRequest } = useAppState();
   const isAdmin = userRole === 'admin' || currentUser?.role === 'admin';
 
   const [activeTab, setActiveTab] = useState<MobileTab>(isAdmin ? 'admin' : 'splash');
@@ -155,6 +155,26 @@ export default function AppMobile() {
       console.log('Error fetching bookings', err);
     } finally {
       setLoadingBooked(false);
+    }
+  };
+
+  const handleDeleteBookedProvider = async (id: string) => {
+    if (!id) return;
+    
+    // Optimistic UI update
+    setBookedProvidersList(prev => prev.filter(b => b.id !== id));
+    
+    try {
+      const { error } = await supabase
+        .from('service_bookings')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        console.log('Error deleting booking from Supabase', error);
+      }
+    } catch (err) {
+      console.log('Error in delete booking', err);
     }
   };
 
@@ -2201,26 +2221,56 @@ export default function AppMobile() {
                 <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 20, textAlign: 'center' }}>
                   Loading your booked providers from database...
                 </Text>
-              ) : bookedProvidersList.length === 0 ? (
-                <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 20, textAlign: 'center' }}>
-                  You haven't booked any providers yet. Find one from the services page!
-                </Text>
-              ) : (
+              ) : (() => {
+                const combinedBookings = [
+                  ...bookingRequests.map(b => ({
+                    id: b.id,
+                    service_title: b.serviceTitle,
+                    provider_name: b.providerName,
+                    total_budget: b.totalBudget,
+                    status: b.status === 'in_progress' ? 'accepted' : b.status,
+                    created_at: b.createdAt
+                  })),
+                  ...bookedProvidersList
+                ].filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
+                
+                if (combinedBookings.length === 0) {
+                  return (
+                    <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 20, textAlign: 'center' }}>
+                      You haven't booked any providers yet. Find one from the services page!
+                    </Text>
+                  );
+                }
+                return (
                 <ScrollView style={{ marginTop: 10, paddingBottom: 20 }}>
-                  {bookedProvidersList.map((booking, index) => (
+                  {combinedBookings.map((booking, index) => {
+                    const status = booking.status?.toLowerCase() || 'pending';
+                    return (
                     <TouchableOpacity 
-                      key={index} 
+                      key={booking.id || index} 
                       onPress={() => setSelectedBookedProvider(booking)}
                       style={{ backgroundColor: '#1b1436', padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#4c1d95' }}
                     >
-                      <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>
-                        {booking.service_title}
-                      </Text>
-                      <Text style={{ color: '#fbbf24', fontSize: 14, fontWeight: 'bold' }}>
-                        Provider: {booking.provider_name}
-                      </Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <View style={{ flex: 1, paddingRight: 10 }}>
+                          <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>
+                            {booking.service_title}
+                          </Text>
+                          <Text style={{ color: '#fbbf24', fontSize: 14, fontWeight: 'bold' }}>
+                            Provider: {booking.provider_name}
+                          </Text>
+                        </View>
+                        {status === 'pending' && (
+                          <TouchableOpacity
+                            onPress={() => handleDeleteBookedProvider(booking.id)}
+                            style={{ padding: 6, backgroundColor: '#dc2626', borderRadius: 8 }}
+                          >
+                            <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Delete</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
-                        <Text style={{ color: '#34d399', fontSize: 12, fontWeight: 'bold' }}>
+                        <Text style={{ color: status === 'accepted' ? '#34d399' : status === 'canceled' ? '#f87171' : '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>
                           Status: {booking.status?.toUpperCase() || 'PENDING'}
                         </Text>
                         <Text style={{ color: '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>
@@ -2228,9 +2278,10 @@ export default function AppMobile() {
                         </Text>
                       </View>
                     </TouchableOpacity>
-                  ))}
+                  )})}
                 </ScrollView>
-              )}
+              )
+              })()}
               {/* Detailed Booked Provider Modal Overlay */}
               {selectedBookedProvider && (
                 <Modal visible={true} transparent animationType="fade">
@@ -2280,13 +2331,44 @@ export default function AppMobile() {
                     </View>
                     
                     <ScrollView style={{ flexShrink: 1 }}>
-                        <View style={{ backgroundColor: 'rgba(52, 211, 153, 0.1)', padding: 16, borderRadius: 12, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#34d399' }}>
-                          <Text style={{ color: '#34d399', fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>CURRENT STATUS</Text>
-                          <Text style={{ color: '#10b981', fontSize: 24, fontWeight: '900', letterSpacing: 2 }}>{selectedBookedProvider.status?.toUpperCase() || 'PENDING'}</Text>
-                          <Text style={{ color: '#a7f3d0', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
-                            Provider will review and accept your task soon.
-                          </Text>
-                        </View>
+                        {(() => {
+                          const status = (selectedBookedProvider.status || 'pending').toLowerCase();
+                          let bgColor = 'rgba(251, 191, 36, 0.1)';
+                          let borderColor = '#fbbf24';
+                          let titleColor = '#fbbf24';
+                          let mainColor = '#f59e0b';
+                          let subtitleColor = '#fde68a';
+                          let message = 'Provider will review and accept your task soon.';
+                          let displayStatus = 'PENDING';
+
+                          if (status === 'accepted' || status === 'in_progress') {
+                            bgColor = 'rgba(52, 211, 153, 0.1)';
+                            borderColor = '#34d399';
+                            titleColor = '#34d399';
+                            mainColor = '#10b981';
+                            subtitleColor = '#a7f3d0';
+                            message = 'Booking accepted! The provider has taken your task.';
+                            displayStatus = 'TAKEN';
+                          } else if (status === 'canceled' || status === 'rejected') {
+                            bgColor = 'rgba(239, 68, 68, 0.1)';
+                            borderColor = '#ef4444';
+                            titleColor = '#ef4444';
+                            mainColor = '#dc2626';
+                            subtitleColor = '#fecaca';
+                            message = 'This booking has been canceled.';
+                            displayStatus = 'CANCELED';
+                          }
+
+                          return (
+                            <View style={{ backgroundColor: bgColor, padding: 16, borderRadius: 12, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor }}>
+                              <Text style={{ color: titleColor, fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>CURRENT STATUS</Text>
+                              <Text style={{ color: mainColor, fontSize: 24, fontWeight: '900', letterSpacing: 2 }}>{displayStatus}</Text>
+                              <Text style={{ color: subtitleColor, fontSize: 11, marginTop: 6, textAlign: 'center' }}>
+                                {message}
+                              </Text>
+                            </View>
+                          );
+                        })()}
                         
                         <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Service Title</Text>
                         <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: 'bold', marginBottom: 16 }}>{selectedBookedProvider.service_title}</Text>
@@ -2629,6 +2711,7 @@ export default function AppMobile() {
                           createdAt: new Date().toISOString()
                         };
 
+                        addBookingRequest(newBooking);
                         setMobileBookingRequests(prev => [newBooking, ...prev]);
 
                         // 🔥 OPTIMISTIC UI UPDATE + REAL SUPABASE DATABASE INSERTION
@@ -3884,15 +3967,37 @@ export default function AppMobile() {
                     Client Orders Dispatched to Freelancers ({mobileBookingRequests.length})
                   </Text>
 
-                  {mobileBookingRequests.length === 0 ? (
-                    <View style={{ backgroundColor: cardBg, padding: 24, borderRadius: 20, alignItems: 'center', borderColor: '#334155', borderWidth: 1 }}>
-                      <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 15 }}>No Orders Sent to Freelancers</Text>
-                      <Text style={{ color: subTextColor, fontSize: 12, marginTop: 4, textAlign: 'center' }}>
-                        When a client books a freelancer through the form, the order details will appear here for freelancer acceptance.
-                      </Text>
-                    </View>
-                  ) : (
-                    mobileBookingRequests.map((req) => (
+                  {(() => {
+                    const combinedAdminBookings = [
+                      ...mobileBookingRequests,
+                      ...bookedProvidersList.map(b => ({
+                        id: b.id,
+                        serviceTitle: b.service_title,
+                        providerName: b.provider_name,
+                        clientName: 'Customer',
+                        projectTitle: `${b.service_title} Task`,
+                        totalBudget: b.total_budget,
+                        paymentType: 'full_upfront',
+                        upfrontDeposit: b.total_budget,
+                        remainingBalance: 0,
+                        description: '',
+                        status: b.status === 'accepted' ? 'in_progress' : (b.status || 'pending'),
+                        createdAt: b.created_at
+                      }))
+                    ].filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
+
+                    if (combinedAdminBookings.length === 0) {
+                      return (
+                        <View style={{ backgroundColor: cardBg, padding: 24, borderRadius: 20, alignItems: 'center', borderColor: '#334155', borderWidth: 1 }}>
+                          <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 15 }}>No Orders Sent to Freelancers</Text>
+                          <Text style={{ color: subTextColor, fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+                            When a client books a freelancer through the form, the order details will appear here for freelancer acceptance.
+                          </Text>
+                        </View>
+                      );
+                    }
+                    
+                    return combinedAdminBookings.map((req) => (
                       <View key={req.id} style={{ backgroundColor: cardBg, padding: 16, borderRadius: 20, marginBottom: 12, borderColor: '#334155', borderWidth: 1 }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <View style={{ flex: 1 }}>
@@ -3929,8 +4034,10 @@ export default function AppMobile() {
                           <View style={{ flexDirection: 'row', gap: 8 }}>
                             <TouchableOpacity
                               style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 10, borderRadius: 12, alignItems: 'center' }}
-                              onPress={() => {
+                              onPress={async () => {
                                 setMobileBookingRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'in_progress' } : r));
+                                setBookedProvidersList(prev => prev.map(r => r.id === req.id ? { ...r, status: 'accepted' } : r));
+                                try { await supabase.from('service_bookings').update({ status: 'accepted' }).eq('id', req.id); } catch(e){}
                                 Alert.alert('Order Accepted! 🎉', `Freelancer ${req.providerName} accepted order for ${req.projectTitle}. Locked in Vault.`);
                               }}
                             >
@@ -3939,21 +4046,25 @@ export default function AppMobile() {
 
                             <TouchableOpacity
                               style={{ backgroundColor: '#7f1d1d', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, alignItems: 'center' }}
-                              onPress={() => {
+                              onPress={async () => {
                                 setMobileBookingRequests(prev => prev.filter(r => r.id !== req.id));
+                                setBookedProvidersList(prev => prev.map(r => r.id === req.id ? { ...r, status: 'canceled' } : r));
+                                try { await supabase.from('service_bookings').update({ status: 'canceled' }).eq('id', req.id); } catch(e){}
                               }}
                             >
                               <Text style={{ color: '#fca5a5', fontWeight: 'bold', fontSize: 12 }}>Decline</Text>
                             </TouchableOpacity>
                           </View>
                         ) : (
-                          <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', padding: 10, borderRadius: 12, alignItems: 'center' }}>
-                            <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 12 }}>✓ Order Accepted by Freelancer {req.providerName} & Work Started</Text>
+                          <View style={{ backgroundColor: req.status === 'canceled' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)', padding: 10, borderRadius: 12, alignItems: 'center' }}>
+                            <Text style={{ color: req.status === 'canceled' ? '#fca5a5' : '#34d399', fontWeight: 'bold', fontSize: 12 }}>
+                              {req.status === 'canceled' ? '❌ Order Declined/Canceled' : `✓ Order Accepted by Freelancer ${req.providerName} & Work Started`}
+                            </Text>
                           </View>
                         )}
                       </View>
-                    ))
-                  )}
+                    ));
+                  })()}
                 </View>
               )}
 

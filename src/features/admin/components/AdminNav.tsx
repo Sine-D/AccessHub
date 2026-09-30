@@ -8,7 +8,8 @@ import {
   Award, 
   BarChart3,
   Wrench,
-  Users
+  Users,
+  CreditCard
 } from 'lucide-react';
 import { AdminTab } from '../types/admin';
 import { useAccessibility } from '../../../core/hooks/useAccessibility';
@@ -35,6 +36,7 @@ export const AdminNav: React.FC<AdminNavProps> = ({
     { id: 'badges', label: 'Badges', icon: Award },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'freelancers', label: 'Freelancers', icon: Wrench },
+    { id: 'bookings', label: 'Bookings', icon: CreditCard },
     { id: 'accounts', label: 'Accounts', icon: Users },
   ];
 
