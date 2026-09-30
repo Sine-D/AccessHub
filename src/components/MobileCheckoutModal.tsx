@@ -75,6 +75,7 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
 
   // AC-130 OTP State
   const [otp, setOtp] = useState('');
+  const [expectedOtp, setExpectedOtp] = useState('1234');
 
   const startVoiceTyping = () => {
     if (Platform.OS !== 'web') {
@@ -219,8 +220,12 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
     // }
 
     if (handoffPreference === 'verbal') {
+      const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
+      setExpectedOtp(newOtp);
       setCheckoutState('otp_verification');
-      const msg = "Please enter your 4 digit One Time Password to verify the payment";
+      
+      const spokenOtp = newOtp.split('').join(' ');
+      const msg = `Please enter your 4 digit One Time Password to verify the payment. Your O T P is: ${spokenOtp}`;
       speakText(msg);
       if (AccessibilityInfo?.announceForAccessibility) {
         AccessibilityInfo.announceForAccessibility(msg);
@@ -231,7 +236,7 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
   };
 
   const handleVerifyOTP = () => {
-    if (otp === '1234') {
+    if (otp === expectedOtp) {
       const msg = 'Payment successful. OTP Verified.';
       speakText(msg);
       if (AccessibilityInfo?.announceForAccessibility) AccessibilityInfo.announceForAccessibility(msg);
@@ -664,7 +669,8 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
                 <TouchableOpacity 
                   style={{ backgroundColor: '#10b981', padding: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}
                   onPress={() => {
-                    const msg = "Please enter your 4 digit One Time Password to verify the payment";
+                    const spokenOtp = expectedOtp.split('').join(' ');
+                    const msg = `Please enter your 4 digit One Time Password to verify the payment. Your O T P is: ${spokenOtp}`;
                     speakText(msg);
                   }}
                   accessibilityLabel="Read instructions aloud"
@@ -674,7 +680,7 @@ export const MobileCheckoutModal: React.FC<MobileCheckoutModalProps> = ({
                 </TouchableOpacity>
 
                 <Text style={[dynamicText(14), { color: highContrast ? '#ff0' : textColor, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }]}>
-                  Enter 4-Digit OTP (e.g., 1234)
+                  Enter 4-Digit OTP (Check incoming SMS)
                 </Text>
 
                 <TextInput
