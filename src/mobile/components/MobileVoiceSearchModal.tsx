@@ -178,7 +178,7 @@ export function MobileVoiceSearchModal({ onClose, onSearch, theme, visible }: Pr
                 </View>
                 <TextInput ref={inputRef} accessibilityLabel="AI voice search transcript" accessibilityHint="You can edit recognized speech before searching" multiline value={speech.transcript} onChangeText={speech.setTranscript} placeholder="Your speech appears here. You can also type or correct the text." placeholderTextColor="#94a3b8" style={[styles.input, speech.isListening && styles.listeningInput]} />
 
-                {Platform.OS !== 'web' && <Text style={styles.help}>Expo Go: tap the large microphone, then use the microphone on your phone keyboard for free speech-to-text.</Text>}
+                {Platform.OS !== 'web' && <Text style={styles.help}>Development build: tap the large microphone for live speech-to-text. Expo Go fallback: use the microphone on your phone keyboard.</Text>}
                 {(speech.message || searchMessage) && <Text accessibilityLiveRegion={searchMessage && searchMessage !== 'Interpreting your request…' ? 'assertive' : 'polite'} style={[styles.status, searchMessage?.includes('failed') && styles.errorStatus]}>{searchMessage ?? speech.message}</Text>}
 
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel="Search using transcript" accessibilityState={{ disabled: isSearching || !speech.transcript.trim() }} disabled={isSearching || !speech.transcript.trim()} onPress={submit} style={[styles.searchButton, (isSearching || !speech.transcript.trim()) && styles.disabledSearch]}>

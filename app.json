@@ -32,6 +32,18 @@
         {
           "locationWhenInUsePermission": "Allow AccessHub to use your location to show nearby accessible places."
         }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow AccessHub to use the microphone for accessible voice search.",
+          "speechRecognitionPermission": "Allow AccessHub to convert your speech into an editable search transcript.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.as",
+            "com.google.android.tts"
+          ]
+        }
       ]
     ]
   }

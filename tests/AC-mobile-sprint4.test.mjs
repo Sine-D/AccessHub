@@ -48,6 +48,9 @@ test('Expo AI Hub includes multilingual editable voice capture and secure query 
   assert.match(modal, /Voice search transcript/);
   assert.match(modal, /Start AI microphone/);
   assert.match(speech, /webkitSpeechRecognition/);
+  assert.match(speech, /expo-speech-recognition/);
+  assert.match(speech, /requestPermissionsAsync/);
+  assert.match(speech, /lang: language/);
   assert.match(speech, /phone keyboard/);
   assert.match(service, /EXPO_PUBLIC_SEARCH_API_URL/);
   assert.match(service, /parseKeywords/);
