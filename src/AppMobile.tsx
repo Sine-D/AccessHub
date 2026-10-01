@@ -824,7 +824,12 @@ export default function AppMobile() {
   }, [activeTab]);
 
   const speakText = (text: string) => {
-    if (ttsActive) {
+    if (Platform.OS === 'web' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.95;
+      window.speechSynthesis.speak(utterance);
+    } else if (ttsActive) {
       Alert.alert('🔊 Voice Reader', text);
     }
   };
