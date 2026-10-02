@@ -44,6 +44,7 @@ import {
 } from '../components/AccessiblePlaceSearch';
 import { AccessibilityFilterPanel } from '../components/AccessibilityFilterPanel';
 import { PlaceDetailsPanel } from '../components/PlaceDetailsPanel';
+import { StepFreeRouteModal } from '../components/StepFreeRouteModal';
 
 import {
   MapPoint,
@@ -229,14 +230,9 @@ React.FC = () => {
   ] =
     useState(0);
 
-  const [
-    detailsOpen,
-    setDetailsOpen,
-  ] = useState(false);
-  const detailsButtonRef =
-    useRef<HTMLButtonElement>(
-      null,
-    );
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [routeModalOpen, setRouteModalOpen] = useState(false);
+  const detailsButtonRef = useRef<HTMLButtonElement>(null);
 
   const [placeDetails, setPlaceDetails] =
     useState<PlaceDetails | null>(null);
@@ -582,13 +578,10 @@ React.FC = () => {
 
   const selectPlace = (
     place: MapPin,
-    moveFocusToList =
-      false,
+    moveFocusToList = false,
   ) => {
-    setSelectedPlace(
-      place,
-    );
-    setDetailsOpen(false);
+    setSelectedPlace(place);
+    setDetailsOpen(true);
     setPlaceDetails(null);
 
     /*
@@ -1203,59 +1196,39 @@ React.FC = () => {
                   </button>
 
                   <button
-                    onClick={() =>
-                      speakText(
-                        `Starting accessible navigation to ${selectedPlace.title}`,
-                      )
-                    }
-                    className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-extrabold text-white hover:bg-blue-700"
+                    onClick={() => {
+                      setRouteModalOpen(true);
+                      speakText(`Starting accessible navigation to ${selectedPlace.title}`);
+                    }}
+                    className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2 text-xs font-extrabold text-white shadow-md hover:opacity-95"
                     type="button"
                   >
-
                     <Navigation
                       aria-hidden="true"
                       className="h-4 w-4"
                     />
-
-                    Navigate
-
+                    Navigate (AC-230)
                   </button>
-
                 </div>
-
               </section>
 
               {detailsOpen && (
                 <PlaceDetailsPanel
-                  details={
-                    placeDetails
-                  }
-                  error={
-                    detailsError
-                  }
-                  loading={
-                    detailsLoading
-                  }
-                  onClose={() =>
-                    setDetailsOpen(
-                      false,
-                    )
-                  }
-                  onRetry={() =>
-                    setDetailsReloadKey(
-                      (value) =>
-                        value + 1,
-                    )
-                  }
-                  place={
-                    selectedPlace
-                  }
-                  returnFocusRef={
-                    detailsButtonRef
-                  }
+                  details={placeDetails}
+                  error={detailsError}
+                  loading={detailsLoading}
+                  onClose={() => setDetailsOpen(false)}
+                  onRetry={() => setDetailsReloadKey((value) => value + 1)}
+                  place={selectedPlace}
+                  returnFocusRef={detailsButtonRef}
                 />
               )}
 
+              <StepFreeRouteModal
+                place={selectedPlace}
+                isOpen={routeModalOpen}
+                onClose={() => setRouteModalOpen(false)}
+              />
             </>
           )}
 

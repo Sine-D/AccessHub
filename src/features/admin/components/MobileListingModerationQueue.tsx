@@ -138,6 +138,9 @@ export const MobileListingModerationQueue: React.FC = () => {
         <TouchableOpacity
           style={[styles.metricCard, filter === 'pending' && styles.metricCardActive]}
           onPress={() => setFilter(filter === 'pending' ? 'all' : 'pending')}
+          accessibilityRole="button"
+          accessibilityLabel={`Filter by pending status. ${pendingCount} pending listings`}
+          accessibilityState={{ selected: filter === 'pending' }}
         >
           <Text style={styles.metricNumber}>{pendingCount}</Text>
           <Text style={[styles.metricLabel, { color: '#fbbf24' }]}>⏳ Pending</Text>
@@ -146,6 +149,9 @@ export const MobileListingModerationQueue: React.FC = () => {
         <TouchableOpacity
           style={[styles.metricCard, filter === 'approved' && styles.metricCardActive]}
           onPress={() => setFilter(filter === 'approved' ? 'all' : 'approved')}
+          accessibilityRole="button"
+          accessibilityLabel={`Filter by approved status. ${approvedCount} approved listings`}
+          accessibilityState={{ selected: filter === 'approved' }}
         >
           <Text style={styles.metricNumber}>{approvedCount}</Text>
           <Text style={[styles.metricLabel, { color: '#34d399' }]}>✓ Approved</Text>
@@ -154,6 +160,9 @@ export const MobileListingModerationQueue: React.FC = () => {
         <TouchableOpacity
           style={[styles.metricCard, filter === 'rejected' && styles.metricCardActive]}
           onPress={() => setFilter(filter === 'rejected' ? 'all' : 'rejected')}
+          accessibilityRole="button"
+          accessibilityLabel={`Filter by rejected status. ${rejectedCount} rejected listings`}
+          accessibilityState={{ selected: filter === 'rejected' }}
         >
           <Text style={styles.metricNumber}>{rejectedCount}</Text>
           <Text style={[styles.metricLabel, { color: '#f87171' }]}>✕ Rejected</Text>
@@ -162,6 +171,9 @@ export const MobileListingModerationQueue: React.FC = () => {
         <TouchableOpacity
           style={[styles.metricCard, filter === 'all' && styles.metricCardActive]}
           onPress={() => setFilter('all')}
+          accessibilityRole="button"
+          accessibilityLabel={`Show all listings. Total ${listings.length} listings`}
+          accessibilityState={{ selected: filter === 'all' }}
         >
           <Text style={styles.metricNumber}>{listings.length}</Text>
           <Text style={[styles.metricLabel, { color: '#38bdf8' }]}>Total</Text>
@@ -177,9 +189,15 @@ export const MobileListingModerationQueue: React.FC = () => {
           placeholderTextColor="#64748b"
           value={search}
           onChangeText={setSearch}
+          accessibilityLabel="Search listings by title, seller, or tag"
         />
         {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')}>
+          <TouchableOpacity
+            onPress={() => setSearch('')}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search text"
+            style={{ minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' }}
+          >
             <Text style={{ color: '#94a3b8', fontSize: 13, paddingHorizontal: 6 }}>✕</Text>
           </TouchableOpacity>
         )}
@@ -190,8 +208,11 @@ export const MobileListingModerationQueue: React.FC = () => {
         {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
           <TouchableOpacity
             key={tab}
-            style={[styles.tabButton, filter === tab && styles.tabButtonActive]}
+            style={[styles.tabButton, filter === tab && styles.tabButtonActive, { minHeight: 44, justifyContent: 'center' }]}
             onPress={() => setFilter(tab)}
+            accessibilityRole="button"
+            accessibilityLabel={`Filter tab ${tab === 'all' ? 'All' : tab}. ${filter === tab ? 'Selected' : 'Not selected'}`}
+            accessibilityState={{ selected: filter === tab }}
           >
             <Text style={[styles.tabButtonText, filter === tab && styles.tabButtonTextActive]}>
               {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}

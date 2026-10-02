@@ -13,6 +13,7 @@ import { CriteriaRatings } from '../../types/review';
 
 interface ReviewFormProps {
   locationId: string;
+  onCancel?: () => void;
 
   onSubmit: (data: {
     locationId: string;
@@ -24,6 +25,7 @@ interface ReviewFormProps {
 
 export const ReviewForm: React.FC<ReviewFormProps> = ({
   locationId,
+  onCancel,
   onSubmit,
 }) => {
   const [criteriaRatings, setCriteriaRatings] =
@@ -88,6 +90,23 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
 
   return (
     <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <Text style={styles.headerTitle}>
+          Write Accessibility Review
+        </Text>
+        {onCancel && (
+          <Pressable
+            style={styles.cancelHeaderBtn}
+            onPress={onCancel}
+            accessibilityRole="button"
+            accessibilityLabel="Close review form without submitting"
+            accessibilityHint="Discards changes and returns to map"
+          >
+            <Text style={styles.cancelHeaderBtnText}>✕ Close</Text>
+          </Pressable>
+        )}
+      </View>
+
       <Text style={styles.label}>
         Rate each accessibility feature
       </Text>
@@ -112,7 +131,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           }
         }}
         placeholder="Describe the accessibility of this location..."
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor="#94A3B8"
         multiline
         numberOfLines={4}
         accessibilityLabel="Review comment"
@@ -143,30 +162,44 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         />
       )}
 
-      <Pressable
-        style={[
-          styles.button,
-          submitting && styles.buttonDisabled,
-        ]}
-        onPress={handleSubmit}
-        disabled={submitting}
-        accessibilityRole="button"
-        accessibilityLabel={
-          submitting
-            ? 'Submitting review'
-            : 'Submit accessibility review'
-        }
-        accessibilityState={{
-          disabled: submitting,
-          busy: submitting,
-        }}
-      >
-        <Text style={styles.buttonText}>
-          {submitting
-            ? 'Submitting...'
-            : 'Submit Review'}
-        </Text>
-      </Pressable>
+      <View style={styles.buttonRow}>
+        {onCancel && (
+          <Pressable
+            style={styles.cancelButton}
+            onPress={onCancel}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel and go back without submitting"
+          >
+            <Text style={styles.cancelButtonText}>Back / Cancel</Text>
+          </Pressable>
+        )}
+
+        <Pressable
+          style={[
+            styles.button,
+            onCancel && { flex: 1 },
+            submitting && styles.buttonDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={submitting}
+          accessibilityRole="button"
+          accessibilityLabel={
+            submitting
+              ? 'Submitting review'
+              : 'Submit accessibility review'
+          }
+          accessibilityState={{
+            disabled: submitting,
+            busy: submitting,
+          }}
+        >
+          <Text style={styles.buttonText}>
+            {submitting
+              ? 'Submitting...'
+              : 'Submit Review'}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 };
@@ -177,26 +210,56 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#F9FAFB',
+  },
+
+  cancelHeaderBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    backgroundColor: '#334155',
+  },
+
+  cancelHeaderBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#F9FAFB',
+  },
+
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#F9FAFB',
     marginTop: 8,
   },
 
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: '#475569',
+    backgroundColor: '#0F172A',
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
-    color: '#1F2937',
+    color: '#F9FAFB',
     textAlignVertical: 'top',
     minHeight: 90,
   },
 
   error: {
-    color: '#DC2626',
+    color: '#F87171',
     fontSize: 13,
     marginTop: 4,
   },
@@ -208,12 +271,35 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+
+  cancelButton: {
+    flex: 1,
+    minHeight: 44,
+    backgroundColor: '#334155',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  cancelButtonText: {
+    color: '#F9FAFB',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+
   button: {
     backgroundColor: '#2563EB',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
-    marginTop: 12,
+    justifyContent: 'center',
+    minHeight: 44,
   },
 
   buttonDisabled: {

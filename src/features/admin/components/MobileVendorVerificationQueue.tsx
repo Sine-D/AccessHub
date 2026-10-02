@@ -198,6 +198,9 @@ export const MobileVendorVerificationQueue: React.FC = () => {
         <TouchableOpacity
           style={[styles.metricCard, filter === 'pending' && styles.metricCardActive]}
           onPress={() => setFilter(filter === 'pending' ? 'all' : 'pending')}
+          accessibilityRole="button"
+          accessibilityLabel={`Filter by pending status. ${pendingCount} pending requests`}
+          accessibilityState={{ selected: filter === 'pending' }}
         >
           <Text style={styles.metricNumber}>{pendingCount}</Text>
           <Text style={[styles.metricLabel, { color: '#fbbf24' }]}>⏳ Pending</Text>
@@ -206,6 +209,9 @@ export const MobileVendorVerificationQueue: React.FC = () => {
         <TouchableOpacity
           style={[styles.metricCard, filter === 'approved' && styles.metricCardActive]}
           onPress={() => setFilter(filter === 'approved' ? 'all' : 'approved')}
+          accessibilityRole="button"
+          accessibilityLabel={`Filter by approved status. ${approvedCount} approved requests`}
+          accessibilityState={{ selected: filter === 'approved' }}
         >
           <Text style={styles.metricNumber}>{approvedCount}</Text>
           <Text style={[styles.metricLabel, { color: '#34d399' }]}>✓ Approved</Text>
@@ -214,6 +220,9 @@ export const MobileVendorVerificationQueue: React.FC = () => {
         <TouchableOpacity
           style={[styles.metricCard, filter === 'rejected' && styles.metricCardActive]}
           onPress={() => setFilter(filter === 'rejected' ? 'all' : 'rejected')}
+          accessibilityRole="button"
+          accessibilityLabel={`Filter by rejected status. ${rejectedCount} rejected requests`}
+          accessibilityState={{ selected: filter === 'rejected' }}
         >
           <Text style={styles.metricNumber}>{rejectedCount}</Text>
           <Text style={[styles.metricLabel, { color: '#f87171' }]}>✕ Rejected</Text>
@@ -222,6 +231,9 @@ export const MobileVendorVerificationQueue: React.FC = () => {
         <TouchableOpacity
           style={[styles.metricCard, filter === 'all' && styles.metricCardActive]}
           onPress={() => setFilter('all')}
+          accessibilityRole="button"
+          accessibilityLabel={`Show all requests. Total ${requests.length} requests`}
+          accessibilityState={{ selected: filter === 'all' }}
         >
           <Text style={styles.metricNumber}>{requests.length}</Text>
           <Text style={[styles.metricLabel, { color: '#38bdf8' }]}>Total</Text>
@@ -237,9 +249,15 @@ export const MobileVendorVerificationQueue: React.FC = () => {
           placeholderTextColor="#64748b"
           value={search}
           onChangeText={setSearch}
+          accessibilityLabel="Search verification requests by vendor, document number, or district"
         />
         {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')}>
+          <TouchableOpacity
+            onPress={() => setSearch('')}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search filter text"
+            style={{ minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' }}
+          >
             <Text style={{ color: '#94a3b8', fontSize: 13, paddingHorizontal: 6 }}>✕</Text>
           </TouchableOpacity>
         )}
@@ -250,8 +268,11 @@ export const MobileVendorVerificationQueue: React.FC = () => {
         {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
           <TouchableOpacity
             key={tab}
-            style={[styles.tabButton, filter === tab && styles.tabButtonActive]}
+            style={[styles.tabButton, filter === tab && styles.tabButtonActive, { minHeight: 44, justifyContent: 'center' }]}
             onPress={() => setFilter(tab)}
+            accessibilityRole="button"
+            accessibilityLabel={`Tab ${tab === 'all' ? 'All' : tab}. ${filter === tab ? 'Selected' : 'Not selected'}`}
+            accessibilityState={{ selected: filter === tab }}
           >
             <Text style={[styles.tabButtonText, filter === tab && styles.tabButtonTextActive]}>
               {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -373,7 +394,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
       {/* ========================================================= */}
       {/* AC-53: INSPECT DOCUMENTS MODAL                            */}
       {/* ========================================================= */}
-      <Modal visible={!!selectedRequest} transparent animationType="slide">
+      <Modal visible={!!selectedRequest} transparent animationType="slide" accessibilityViewIsModal={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             {selectedRequest && (
@@ -474,7 +495,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
       {/* ========================================================= */}
       {/* AC-55: REJECTION FEEDBACK MODAL                           */}
       {/* ========================================================= */}
-      <Modal visible={!!rejectModalTarget} transparent animationType="fade">
+      <Modal visible={!!rejectModalTarget} transparent animationType="fade" accessibilityViewIsModal={true}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxHeight: 380 }]}>
             <Text style={styles.modalTitle}>⚠️ Reject Verification (AC-55)</Text>
@@ -490,20 +511,26 @@ export const MobileVendorVerificationQueue: React.FC = () => {
               numberOfLines={4}
               value={rejectionReason}
               onChangeText={setRejectionReason}
+              accessibilityLabel="Rejection reason feedback text"
             />
 
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
               <TouchableOpacity
-                style={styles.cancelBtn}
+                style={[styles.cancelBtn, { minHeight: 44, justifyContent: 'center' }]}
                 onPress={() => setRejectModalTarget(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel rejection"
               >
                 <Text style={{ color: '#94a3b8', fontWeight: 'bold' }}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.confirmRejectBtn, actionLoading && { opacity: 0.6 }]}
+                style={[styles.confirmRejectBtn, actionLoading && { opacity: 0.6 }, { minHeight: 44, justifyContent: 'center' }]}
                 disabled={actionLoading}
                 onPress={handleConfirmReject}
+                accessibilityRole="button"
+                accessibilityLabel="Confirm Rejection"
+                accessibilityState={{ disabled: actionLoading }}
               >
                 {actionLoading ? (
                   <ActivityIndicator size="small" color="#fff" />
@@ -519,7 +546,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
       {/* ========================================================= */}
       {/* AC-52: CREATE VERIFICATION REQUEST MODAL                  */}
       {/* ========================================================= */}
-      <Modal visible={createModalVisible} transparent animationType="slide">
+      <Modal visible={createModalVisible} transparent animationType="slide" accessibilityViewIsModal={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <ScrollView showsVerticalScrollIndicator={false}>
