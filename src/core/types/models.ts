@@ -94,7 +94,7 @@ export interface ServiceBookingRequest {
   upfrontDeposit: number;
   remainingBalance: number;
   deliveryDate: string;
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'disputed';
+  status: 'pending' | 'accepted' | 'in_progress' | 'accepted_25' | 'accepted_50' | 'accepted_75' | 'completed' | 'disputed' | 'canceled' | string;
   createdAt: string;
 }
 
