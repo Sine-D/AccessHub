@@ -62,6 +62,8 @@ let memoryQueue: VendorVerificationRequest[] = [...initialVerificationRequests];
 export async function fetchVendorVerifications(
   statusFilter?: VerificationStatus
 ): Promise<VendorVerificationRequest[]> {
+  let list: VendorVerificationRequest[] = [...memoryQueue];
+
   try {
     const { data, error } = await supabase
       .from('vendor_verifications')
@@ -80,7 +82,7 @@ export async function fetchVendorVerifications(
         documentType: item.document_type,
         documentNumber: item.document_number,
         documentUrl: item.document_url,
-        disabilityBadge: item.disability_badge,
+        disabilityBadge: item.disability_badge || 'Verified Disabled Artisan',
         guardianName: item.guardian_name,
         guardianPhone: item.guardian_phone,
         status: item.status,
@@ -90,20 +92,24 @@ export async function fetchVendorVerifications(
         reviewedBy: item.reviewed_by,
       }));
 
-      if (statusFilter) {
-        return formatted.filter((r) => r.status === statusFilter);
-      }
-      return formatted;
+      // Merge memoryQueue updates for items modified in session
+      const supabaseMap = new Map(formatted.map((item) => [item.id, item]));
+      memoryQueue.forEach((memItem) => {
+        if (memItem.status !== 'pending' || !supabaseMap.has(memItem.id)) {
+          supabaseMap.set(memItem.id, memItem);
+        }
+      });
+
+      list = Array.from(supabaseMap.values());
     }
   } catch (err) {
     console.warn('Supabase fetch notice (vendor_verifications fallback):', err);
   }
 
-  // Memory fallback
   if (statusFilter) {
-    return memoryQueue.filter((r) => r.status === statusFilter);
+    return list.filter((r) => r.status === statusFilter);
   }
-  return [...memoryQueue];
+  return list;
 }
 
 /**
@@ -135,7 +141,7 @@ export async function submitVendorVerification(
         document_type: request.documentType,
         document_number: request.documentNumber,
         document_url: request.documentUrl,
-        disability_badge: request.disabilityBadge,
+        disability_badge: request.disabilityBadge || 'Verified Disabled Artisan',
         guardian_name: request.guardianName,
         guardian_phone: request.guardianPhone,
         status: 'pending',
@@ -154,15 +160,22 @@ export async function submitVendorVerification(
  */
 export async function approveVendorVerification(
   id: string,
-  userId: string,
-  disabilityBadge: string
+  userId?: string,
+  disabilityBadge?: string
 ): Promise<boolean> {
   const now = new Date().toISOString();
+  const badgeToAssign = disabilityBadge || 'Verified Disabled Artisan';
 
   // Update memory store
   memoryQueue = memoryQueue.map((item) =>
     item.id === id
-      ? { ...item, status: 'approved', reviewedAt: now, reviewedBy: 'Admin' }
+      ? {
+          ...item,
+          status: 'approved',
+          disabilityBadge: badgeToAssign,
+          reviewedAt: now,
+          reviewedBy: 'Admin',
+        }
       : item
   );
 
@@ -170,7 +183,12 @@ export async function approveVendorVerification(
     // 1. Update verification table status
     await supabase
       .from('vendor_verifications')
-      .update({ status: 'approved', reviewed_at: now, reviewed_by: 'Admin' })
+      .update({
+        status: 'approved',
+        disability_badge: badgeToAssign,
+        reviewed_at: now,
+        reviewed_by: 'Admin',
+      })
       .eq('id', id);
 
     // 2. Update user table profile
@@ -180,15 +198,15 @@ export async function approveVendorVerification(
         .update({
           is_verified: true,
           verified: true,
-          disability_badge: disabilityBadge,
+          disability_badge: badgeToAssign,
         })
         .eq('id', userId);
     }
-    return true;
   } catch (err) {
     console.warn('Supabase update notice on approval:', err);
-    return true;
   }
+
+  return true;
 }
 
 /**
@@ -223,10 +241,10 @@ export async function rejectVendorVerification(
         reviewed_by: 'Admin',
       })
       .eq('id', id);
-    return true;
   } catch (err) {
     console.warn('Supabase update notice on rejection:', err);
-    return true;
   }
+
+  return true;
 }
 

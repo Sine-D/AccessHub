@@ -3598,14 +3598,20 @@ export default function AppMobile() {
                             newReview,
                           );
 
-                          setReviewModalLocationId(
-                            null,
-                          );
+                          setTimeout(() => {
+                            setReviewModalLocationId(
+                              null,
+                            );
+                          }, 1200);
 
-                          Alert.alert(
-                            'Thank you!',
-                            'Your accessibility review was submitted.',
-                          );
+                          if (typeof window !== 'undefined' && window.alert) {
+                            window.alert('🎉 Thank you!\nYour accessibility review was submitted.');
+                          } else {
+                            Alert.alert(
+                              'Thank you!',
+                              'Your accessibility review was submitted.',
+                            );
+                          }
                         }}
                       />
                     )}

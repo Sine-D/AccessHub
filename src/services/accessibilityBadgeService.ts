@@ -295,6 +295,8 @@ export async function awardAccessibilityBadge(
  * Fetch all accessibility badges with offline fallback.
  */
 export async function fetchAccessibilityBadges(): Promise<AccessibilityBadgeRecord[]> {
+  let list: AccessibilityBadgeRecord[] = [...memoryBadges];
+
   try {
     const { data, error } = await supabase
       .from('place_accessibility_badges')
@@ -316,13 +318,19 @@ export async function fetchAccessibilityBadges(): Promise<AccessibilityBadgeReco
         awardedBy: item.awarded_by || 'Admin Compliance Team',
         reason: item.reason || 'Verified accessibility compliance',
       }));
-      return formatted;
+
+      // Merge memoryBadges into list
+      const map = new Map(formatted.map((b) => [b.id, b]));
+      memoryBadges.forEach((mb) => {
+        map.set(mb.id, mb);
+      });
+      list = Array.from(map.values());
     }
   } catch (err) {
     console.warn('Supabase fetch notice (place_accessibility_badges fallback):', err);
   }
 
-  return [...memoryBadges];
+  return list;
 }
 
 /**

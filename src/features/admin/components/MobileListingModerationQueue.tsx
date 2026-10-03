@@ -10,6 +10,7 @@ import {
   Image,
   ActivityIndicator,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { Product, ListingModerationStatus } from '../../../core/types/models';
 import {
@@ -49,7 +50,21 @@ export const MobileListingModerationQueue: React.FC = () => {
   }, []);
 
   // AC-59: Approve Listing
-  const handleApprove = (product: Product) => {
+  const handleApprove = async (product: Product) => {
+    if (Platform.OS === 'web') {
+      setActionLoading(true);
+      try {
+        await approveListing(product.id);
+        setSelectedProduct(null);
+        await loadListings();
+      } catch (err: any) {
+        console.error('Approve failed:', err);
+      } finally {
+        setActionLoading(false);
+      }
+      return;
+    }
+
     Alert.alert(
       'Approve Listing',
       `Are you sure you want to approve "${product.title}"? It will become visible on the public marketplace.`,

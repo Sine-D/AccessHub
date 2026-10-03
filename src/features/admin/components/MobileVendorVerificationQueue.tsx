@@ -10,6 +10,7 @@ import {
   Image,
   ActivityIndicator,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { VendorVerificationRequest, VerificationStatus, VendorBusinessType, VerificationDocumentType } from '../../../types/vendorVerification';
 import {
@@ -64,9 +65,25 @@ export const MobileVendorVerificationQueue: React.FC = () => {
 
   // AC-54: Approve Verification
   const handleApprove = async (req: VendorVerificationRequest) => {
+    const badgeToAssign = req.disabilityBadge || 'Verified Disabled Artisan';
+
+    if (Platform.OS === 'web') {
+      setActionLoading(true);
+      try {
+        await approveVendorVerification(req.id, req.userId, badgeToAssign);
+        setSelectedRequest(null);
+        await loadRequests();
+      } catch (err: any) {
+        console.error('Approve failed:', err);
+      } finally {
+        setActionLoading(false);
+      }
+      return;
+    }
+
     Alert.alert(
       'Approve Verification',
-      `Are you sure you want to approve "${req.vendorName}"? This assigns the badge "${req.disabilityBadge || 'Verified Disabled Artisan'}".`,
+      `Are you sure you want to approve "${req.vendorName}"? This assigns the badge "${badgeToAssign}".`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -75,7 +92,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
           onPress: async () => {
             setActionLoading(true);
             try {
-              await approveVendorVerification(req.id, req.userId, req.disabilityBadge || 'Verified Disabled Artisan');
+              await approveVendorVerification(req.id, req.userId, badgeToAssign);
               Alert.alert('Success', `Vendor "${req.vendorName}" has been successfully approved!`);
               setSelectedRequest(null);
               await loadRequests();

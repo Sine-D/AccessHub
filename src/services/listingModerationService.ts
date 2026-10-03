@@ -12,6 +12,8 @@ let memoryProducts: Product[] = [...mockProducts];
 export async function fetchMarketplaceListings(
   statusFilter?: ListingModerationStatus
 ): Promise<Product[]> {
+  let list: Product[] = [...memoryProducts];
+
   try {
     const { data, error } = await supabase
       .from('products')
@@ -47,20 +49,24 @@ export async function fetchMarketplaceListings(
         altText: item.alt_text,
       }));
 
-      if (statusFilter) {
-        return formatted.filter((p) => (p.moderationStatus || 'pending') === statusFilter);
-      }
-      return formatted;
+      // Merge memoryProducts updates for items modified in session
+      const supabaseMap = new Map(formatted.map((item) => [item.id, item]));
+      memoryProducts.forEach((memItem) => {
+        if (memItem.moderationStatus !== 'pending' || !supabaseMap.has(memItem.id)) {
+          supabaseMap.set(memItem.id, memItem);
+        }
+      });
+
+      list = Array.from(supabaseMap.values());
     }
   } catch (err) {
     console.warn('Supabase fetch notice (products fallback to memory):', err);
   }
 
-  // Memory fallback
   if (statusFilter) {
-    return memoryProducts.filter((p) => (p.moderationStatus || 'pending') === statusFilter);
+    return list.filter((p) => (p.moderationStatus || 'pending') === statusFilter);
   }
-  return [...memoryProducts];
+  return list;
 }
 
 /**

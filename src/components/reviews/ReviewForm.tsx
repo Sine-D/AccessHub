@@ -6,6 +6,8 @@ import {
   Pressable,
   StyleSheet,
   Image,
+  Alert,
+  Platform,
 } from 'react-native';
 import { RatingMatrix } from './RatingMatrix';
 import { PhotoPicker } from './PhotoPicker';
@@ -39,6 +41,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   const [comment, setComment] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -59,6 +62,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
     }
 
     setError(null);
+    setSuccessMsg(null);
     setSubmitting(true);
 
     try {
@@ -68,6 +72,14 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         comment: comment.trim(),
         photoUri,
       });
+
+      setSuccessMsg('🎉 Thank you! Your accessibility review has been submitted successfully.');
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('🎉 Thank you!\nYour accessibility review has been submitted successfully.');
+      } else {
+        Alert.alert('Thank you!', 'Your accessibility review has been submitted successfully.');
+      }
 
       setCriteriaRatings({
         wheelchairRamp: 0,
@@ -146,6 +158,16 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         >
           {error}
         </Text>
+      )}
+
+      {successMsg && (
+        <View
+          style={styles.successBanner}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+        >
+          <Text style={styles.successText}>{successMsg}</Text>
+        </View>
       )}
 
       <PhotoPicker
@@ -262,6 +284,22 @@ const styles = StyleSheet.create({
     color: '#F87171',
     fontSize: 13,
     marginTop: 4,
+  },
+
+  successBanner: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    borderColor: '#10B981',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 6,
+  },
+
+  successText: {
+    color: '#34D399',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 
   photoPreview: {

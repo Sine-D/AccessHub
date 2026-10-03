@@ -319,7 +319,6 @@ export const FraudModerationQueue: React.FC = () => {
               >
                 {actionLoading ? 'Removing...' : 'Confirm Remove'}
               </button>
-              </button>
             </div>
           </div>
         </div>
