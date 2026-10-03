@@ -1,4 +1,4 @@
-export const allowedOrigins = () => (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000').split(',').map(s=>s.trim());
+export const allowedOrigins = () => (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:8081,http://127.0.0.1:8081').split(',').map(s=>s.trim());
 export async function readBody(req) {
   let raw = ''; let bytes = 0;
   for await (const chunk of req) { bytes += chunk.length; if (bytes > 4096) throw Object.assign(new Error('Request too large.'),{status:413}); raw += chunk; }
@@ -25,4 +25,3 @@ export async function authenticate(req) {
     const u = await r.json(); return typeof u.id === 'string' ? u.id : null;
   } catch {return null;}
 }
-

@@ -17,6 +17,6 @@ if (!isSupabaseConfigured) {
 }
 
 export const supabase = createClient(
-  supabaseUrl ?? 'https://placeholder.supabase.co',
-  supabaseAnonKey ?? 'supabase-anon-key-not-configured'
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'supabase-anon-key-not-configured'
 );

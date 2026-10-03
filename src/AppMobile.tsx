@@ -54,6 +54,17 @@ import { AdminUnauthorizedState } from './features/admin/components/AdminStates'
 import { useAppState } from './core/hooks/useAppState';
 import { supabase } from './core/supabase';
 import { UserRole, JobPosting, ServiceItem, FreelancerServiceApplication, ServiceBookingRequest } from './core/types';
+import type { MapPin } from './core/types';
+import type { Feature, SearchQuery } from './core/search/contracts';
+import { matchesFeatures } from './core/search/parser';
+import { FEATURES } from './core/search/contracts';
+import { featureLabels } from './features/map/utils/accessibilityFilters';
+import { MobileSearchResults } from './mobile/components/MobileSearchResults';
+import { MobilePlaceDetailsModal } from './mobile/components/MobilePlaceDetailsModal';
+import { MobileVoiceSearchModal } from './mobile/components/MobileVoiceSearchModal';
+import { MobilePlacesMap } from './mobile/components/MobilePlacesMap';
+import type { Coordinate as MobileCoordinate } from './mobile/components/MobilePlacesMap';
+import { listMobilePlaces } from './mobile/services/mobilePlacesService';
 
 type MobileTab =
   | 'splash'
@@ -65,6 +76,7 @@ type MobileTab =
   | 'services'
   | 'jobs'
   | 'map'
+  | 'search_results'
   | 'admin'
   | 'profile'
   | 'bookedProviders';
@@ -95,8 +107,14 @@ export default function AppMobile() {
 
   const [aiModalVisible, setAiModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [voiceQuery, setVoiceQuery] = useState('');
-  const [aiResponse, setAiResponse] = useState('');
+  const [mobileSearchQuery, setMobileSearchQuery] = useState<SearchQuery | null>(null);
+  const [selectedMobilePlace, setSelectedMobilePlace] = useState<MapPin | null>(null);
+  const [mobilePlaces, setMobilePlaces] = useState<MapPin[]>(mockMapPins);
+  const [mobilePlacesLoading, setMobilePlacesLoading] = useState(false);
+  const [mobilePlacesError, setMobilePlacesError] = useState('');
+  const [mapSearchText, setMapSearchText] = useState('');
+  const [mapSelectedFeatures, setMapSelectedFeatures] = useState<Feature[]>([]);
+  const [mobileUserCoordinate, setMobileUserCoordinate] = useState<MobileCoordinate | null>(null);
 
   const [checkoutProduct, setCheckoutProduct] = useState<any>(null);
   const [isCheckoutModalVisible, setCheckoutModalVisible] = useState(false);
@@ -856,11 +874,52 @@ export default function AppMobile() {
     fontSize: Math.round(baseSize * fontSizeMultiplier),
   });
 
-  const handleAiAsk = () => {
-    if (!voiceQuery.trim()) return;
+  const handleMobileVoiceSearch = (query: SearchQuery, transcript: string) => {
+    setMobileSearchQuery(query);
+    speakText(`Search ready for ${query.intent}.`);
+    setAiModalVisible(false);
 
-    setAiResponse(
-      `AccessLink AI: Searching accessibility resources for "${voiceQuery}"... Found 3 wheelchair-accessible locations and 2 assistive tech products in Colombo.`,
+    if (query.intent === 'places') {
+      setMapSearchText(query.location || query.keywords);
+      setMapSelectedFeatures(query.features);
+      setActiveTab('map');
+      return;
+    }
+    setSearchQuery(transcript);
+    setActiveTab('search_results');
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setMobilePlacesLoading(true);
+    setMobilePlacesError('');
+    listMobilePlaces(controller.signal)
+      .then(setMobilePlaces)
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setMobilePlacesError(error instanceof Error ? error.message : 'Places could not be loaded.');
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setMobilePlacesLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
+
+  const filteredMobilePlaces = useMemo(() => {
+    const text = mapSearchText.trim().toLowerCase();
+    return mobilePlaces.filter((place) => {
+      const matchesText = !text || [place.title, place.address, place.type, place.badge, ...place.accessibilityFeatures]
+        .join(' ')
+        .toLowerCase()
+        .includes(text);
+      return matchesText && matchesFeatures(place.accessibilityFeatures, mapSelectedFeatures);
+    });
+  }, [mapSearchText, mapSelectedFeatures, mobilePlaces]);
+
+  const toggleMapFeature = (feature: Feature) => {
+    setMapSelectedFeatures((current) =>
+      current.includes(feature) ? current.filter((item) => item !== feature) : [...current, feature],
     );
   };
 
@@ -3324,6 +3383,25 @@ export default function AppMobile() {
             </View>
           )}
 
+          {/* SPRINT 4 VOICE SEARCH RESULTS */}
+          {activeTab === 'search_results' && mobileSearchQuery && (
+            <MobileSearchResults
+              query={mobileSearchQuery}
+              products={mockProducts}
+              jobs={dbJobs.length > 0 ? dbJobs : mockJobs}
+              places={mobilePlaces}
+              onBack={() => setAiModalVisible(true)}
+              onOpenPlace={(place) => setSelectedMobilePlace(place)}
+              theme={{
+                background: themeBg,
+                card: cardBg,
+                text: textColor,
+                subText: subTextColor,
+                accent: accentColor,
+              }}
+            />
+          )}
+
           {/* MAP */}
           {activeTab === 'map' && (
             <View>
@@ -3339,7 +3417,83 @@ export default function AppMobile() {
                 🗺️ Accessible Map Locations
               </Text>
 
-              {mockMapPins.map((pin) => {
+              <MobilePlacesMap
+                places={filteredMobilePlaces}
+                selectedPlaceId={selectedMobilePlace?.id}
+                onLocationChange={setMobileUserCoordinate}
+                onSelectPlace={setSelectedMobilePlace}
+                theme={{ card: cardBg, text: textColor, subText: subTextColor, accent: accentColor }}
+              />
+
+              {mobilePlacesLoading && (
+                <Text accessibilityLiveRegion="polite" style={{ color: subTextColor, marginBottom: 10 }}>Loading accessible places…</Text>
+              )}
+              {!!mobilePlacesError && (
+                <Text accessibilityLiveRegion="assertive" style={{ color: '#fecaca', marginBottom: 10 }}>{mobilePlacesError} Showing saved places.</Text>
+              )}
+
+              <TextInput
+                accessibilityLabel="Search accessible places by name or location"
+                value={mapSearchText}
+                onChangeText={setMapSearchText}
+                placeholder="Search name or location"
+                placeholderTextColor={subTextColor}
+                style={[styles.searchInput, { backgroundColor: cardBg, color: textColor, marginBottom: 10 }]}
+              />
+
+              <Text style={{ color: textColor, fontWeight: '800', marginBottom: 8 }}>
+                Required accessibility features
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }} accessibilityLabel="Accessibility feature filters">
+                {FEATURES.map((feature) => {
+                  const selected = mapSelectedFeatures.includes(feature);
+                  return (
+                    <TouchableOpacity
+                      key={feature}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: selected }}
+                      accessibilityLabel={featureLabels[feature]}
+                      onPress={() => toggleMapFeature(feature)}
+                      style={{
+                        minHeight: 44,
+                        justifyContent: 'center',
+                        borderRadius: 999,
+                        paddingHorizontal: 12,
+                        borderWidth: 1,
+                        borderColor: selected ? accentColor : '#475569',
+                        backgroundColor: selected ? 'rgba(56,189,248,0.18)' : cardBg,
+                      }}
+                    >
+                      <Text style={{ color: selected ? accentColor : subTextColor, fontWeight: '800' }}>
+                        {selected ? '✓ ' : ''}{featureLabels[feature]}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {(mapSearchText || mapSelectedFeatures.length > 0) && (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear place search and accessibility filters"
+                  onPress={() => {
+                    setMapSearchText('');
+                    setMapSelectedFeatures([]);
+                    setMobileSearchQuery(null);
+                  }}
+                  style={{ minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', marginBottom: 8 }}
+                >
+                  <Text style={{ color: accentColor, fontWeight: '900' }}>Clear search and filters</Text>
+                </TouchableOpacity>
+              )}
+
+              <Text accessibilityLiveRegion="polite" style={{ color: filteredMobilePlaces.length ? subTextColor : '#fbbf24', marginBottom: 10, fontWeight: '700' }}>
+                {filteredMobilePlaces.length === 0
+                  ? 'No places match every selected feature. Clear a filter or try another search.'
+                  : `${filteredMobilePlaces.length} ${filteredMobilePlaces.length === 1 ? 'place' : 'places'} available.`}
+              </Text>
+
+              {filteredMobilePlaces.map((pin) => {
                 const photoCount = getReviewsForLocation(
                   pin.id,
                 ).filter(
@@ -3352,10 +3506,13 @@ export default function AppMobile() {
                   <TouchableOpacity
                     key={pin.id}
                     activeOpacity={0.85}
-                    onPress={() => setSelectedMapPin(pin)}
+                    onPress={() => {
+                      setSelectedMapPin(pin);
+                      setSelectedMobilePlace(pin);
+                    }}
                     accessibilityRole="button"
-                    accessibilityLabel={`Select ${pin.title}. ${pin.badge}. ${pin.distance}`}
-                    accessibilityHint="Tap to view details and navigate"
+                    accessibilityLabel={`Open ${pin.title}. ${pin.badge}. ${pin.distance}`}
+                    accessibilityHint="Opens place details with a button for real directions in Maps"
                     accessibilityState={{ selected: isSelectedPin }}
                     style={[
                       styles.mapCard,
@@ -3963,42 +4120,6 @@ export default function AppMobile() {
                     </View>
                   </View>
                 </View>
-
-                {/* Sub-Tab Navigation Bar */}
-                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
-                  <TouchableOpacity
-                    onPress={() => setAdminTab('vendors')}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      borderRadius: 12,
-                      backgroundColor: adminTab === 'vendors' ? '#6366f1' : cardBg,
-                      alignItems: 'center',
-                      borderColor: '#6366f1',
-                      borderWidth: 1,
-                    }}
-                  >
-                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
-                      🏢 Vendors
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => setAdminTab('listings')}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      borderRadius: 12,
-                      backgroundColor: adminTab === 'listings' ? '#38bdf8' : cardBg,
-                      alignItems: 'center',
-                      borderColor: '#38bdf8',
-                      borderWidth: 1,
-                    }}
-                  >
-                    <Text style={{ color: adminTab === 'listings' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 11 }}>
-                      🛍️ Listings
-                    </Text>
-                  </TouchableOpacity>
 
               {/* Sub-Tab Navigation Bar */}
               <ScrollView
@@ -4675,137 +4796,33 @@ export default function AppMobile() {
           </View>
         </Modal>
 
-        {/* AI Voice Hub Modal */}
-        <Modal
+        <MobilePlaceDetailsModal
+          place={selectedMobilePlace}
+          onClose={() => setSelectedMobilePlace(null)}
+          userCoordinate={mobileUserCoordinate}
+          theme={{
+            background: themeBg,
+            card: cardBg,
+            text: textColor,
+            subText: subTextColor,
+            accent: accentColor,
+          }}
+        />
+
+        <MobileVoiceSearchModal
           visible={aiModalVisible}
-          animationType="slide"
-          transparent
-        >
-          <View style={styles.modalOverlay}>
-            <View
-              style={[
-                styles.modalContent,
-                {
-                  backgroundColor: cardBg,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.modalTitle,
-                  dynamicText(16),
-                  {
-                    color: textColor,
-                  },
-                ]}
-              >
-                🤖 AccessLink AI Voice Hub
-              </Text>
-
-              <Text
-                style={[
-                  styles.modalSub,
-                  dynamicText(11),
-                  {
-                    color: subTextColor,
-                    marginTop: 4,
-                  },
-                ]}
-              >
-                Speak or type accessibility commands
-                (e.g. "Find ramp entrance near me").
-              </Text>
-
-              <TextInput
-                style={[
-                  styles.modalInput,
-                  {
-                    backgroundColor: themeBg,
-                    color: textColor,
-                  },
-                ]}
-                placeholder="Ask AI Voice Assistant..."
-                placeholderTextColor={
-                  subTextColor
-                }
-                value={voiceQuery}
-                onChangeText={setVoiceQuery}
-              />
-
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  marginTop: 10,
-                }}
-              >
-                <TouchableOpacity
-                  style={[
-                    styles.modalAskBtn,
-                    {
-                      backgroundColor:
-                        primaryButtonBg,
-                      flex: 1,
-                      marginRight: 8,
-                    },
-                  ]}
-                  onPress={handleAiAsk}
-                >
-                  <Text
-                    style={[
-                      styles.buyBtnText,
-                      {
-                        color:
-                          primaryButtonText,
-                      },
-                    ]}
-                  >
-                    Submit Question
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.modalAskBtn,
-                    {
-                      backgroundColor: '#e11d48',
-                      width: 80,
-                    },
-                  ]}
-                  onPress={() =>
-                    setAiModalVisible(false)
-                  }
-                >
-                  <Text
-                    style={{
-                      color: '#fff',
-                      fontWeight: 'bold',
-                      textAlign: 'center',
-                    }}
-                  >
-                    Close
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {aiResponse ? (
-                <View style={styles.aiResBox}>
-                  <Text
-                    style={[
-                      styles.aiResText,
-                      dynamicText(12),
-                      {
-                        color: accentColor,
-                      },
-                    ]}
-                  >
-                    {aiResponse}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-        </Modal>
+          onClose={() => setAiModalVisible(false)}
+          onSearch={handleMobileVoiceSearch}
+          theme={{
+            background: themeBg,
+            card: cardBg,
+            text: textColor,
+            subText: subTextColor,
+            accent: accentColor,
+            primaryButton: primaryButtonBg,
+            primaryButtonText,
+          }}
+        />
 
         {/* Bottom Tab Bar */}
         <View
