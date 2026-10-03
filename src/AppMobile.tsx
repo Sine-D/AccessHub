@@ -63,6 +63,7 @@ import { MobileSearchResults } from './mobile/components/MobileSearchResults';
 import { MobilePlaceDetailsModal } from './mobile/components/MobilePlaceDetailsModal';
 import { MobileVoiceSearchModal } from './mobile/components/MobileVoiceSearchModal';
 import { MobilePlacesMap } from './mobile/components/MobilePlacesMap';
+import type { Coordinate as MobileCoordinate } from './mobile/components/MobilePlacesMap';
 import { listMobilePlaces } from './mobile/services/mobilePlacesService';
 
 type MobileTab =
@@ -113,6 +114,7 @@ export default function AppMobile() {
   const [mobilePlacesError, setMobilePlacesError] = useState('');
   const [mapSearchText, setMapSearchText] = useState('');
   const [mapSelectedFeatures, setMapSelectedFeatures] = useState<Feature[]>([]);
+  const [mobileUserCoordinate, setMobileUserCoordinate] = useState<MobileCoordinate | null>(null);
 
   const [checkoutProduct, setCheckoutProduct] = useState<any>(null);
   const [isCheckoutModalVisible, setCheckoutModalVisible] = useState(false);
@@ -3418,6 +3420,7 @@ export default function AppMobile() {
               <MobilePlacesMap
                 places={filteredMobilePlaces}
                 selectedPlaceId={selectedMobilePlace?.id}
+                onLocationChange={setMobileUserCoordinate}
                 onSelectPlace={setSelectedMobilePlace}
                 theme={{ card: cardBg, text: textColor, subText: subTextColor, accent: accentColor }}
               />
@@ -3503,10 +3506,13 @@ export default function AppMobile() {
                   <TouchableOpacity
                     key={pin.id}
                     activeOpacity={0.85}
-                    onPress={() => setSelectedMapPin(pin)}
+                    onPress={() => {
+                      setSelectedMapPin(pin);
+                      setSelectedMobilePlace(pin);
+                    }}
                     accessibilityRole="button"
-                    accessibilityLabel={`Select ${pin.title}. ${pin.badge}. ${pin.distance}`}
-                    accessibilityHint="Tap to view details and navigate"
+                    accessibilityLabel={`Open ${pin.title}. ${pin.badge}. ${pin.distance}`}
+                    accessibilityHint="Opens place details with a button for real directions in Maps"
                     accessibilityState={{ selected: isSelectedPin }}
                     style={[
                       styles.mapCard,
@@ -4114,42 +4120,6 @@ export default function AppMobile() {
                     </View>
                   </View>
                 </View>
-
-                {/* Sub-Tab Navigation Bar */}
-                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
-                  <TouchableOpacity
-                    onPress={() => setAdminTab('vendors')}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      borderRadius: 12,
-                      backgroundColor: adminTab === 'vendors' ? '#6366f1' : cardBg,
-                      alignItems: 'center',
-                      borderColor: '#6366f1',
-                      borderWidth: 1,
-                    }}
-                  >
-                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
-                      🏢 Vendors
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => setAdminTab('listings')}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      borderRadius: 12,
-                      backgroundColor: adminTab === 'listings' ? '#38bdf8' : cardBg,
-                      alignItems: 'center',
-                      borderColor: '#38bdf8',
-                      borderWidth: 1,
-                    }}
-                  >
-                    <Text style={{ color: adminTab === 'listings' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 11 }}>
-                      🛍️ Listings
-                    </Text>
-                  </TouchableOpacity>
 
               {/* Sub-Tab Navigation Bar */}
               <ScrollView
@@ -4829,6 +4799,7 @@ export default function AppMobile() {
         <MobilePlaceDetailsModal
           place={selectedMobilePlace}
           onClose={() => setSelectedMobilePlace(null)}
+          userCoordinate={mobileUserCoordinate}
           theme={{
             background: themeBg,
             card: cardBg,

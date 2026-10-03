@@ -12,20 +12,22 @@ import {
 import type { MapPin } from '../../core/types';
 
 interface Props {
+  onLocationChange?: (coordinate: Coordinate) => void;
   onSelectPlace: (place: MapPin) => void;
   places: MapPin[];
   selectedPlaceId?: string | null;
   theme: { card: string; text: string; subText: string; accent: string };
 }
 
-type Coordinate = { latitude: number; longitude: number };
+export type Coordinate = { latitude: number; longitude: number };
 
 const defaultCoordinate: Coordinate = { latitude: 6.9271, longitude: 79.8612 };
 
-export function MobilePlacesMap({ onSelectPlace, places, selectedPlaceId, theme }: Props) {
+export function MobilePlacesMap({ onLocationChange, onSelectPlace, places, selectedPlaceId, theme }: Props) {
   const mapRef = useRef<any>(null);
   const [userCoordinate, setUserCoordinate] = useState<Coordinate | null>(null);
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
+  const [locationSettingsRequired, setLocationSettingsRequired] = useState(false);
   const [locating, setLocating] = useState(false);
   const center = useMemo<Coordinate>(() => {
     const selected = places.find((place) => place.id === selectedPlaceId);
@@ -34,6 +36,9 @@ export function MobilePlacesMap({ onSelectPlace, places, selectedPlaceId, theme 
   }, [places, selectedPlaceId]);
 
   const moveToCurrentLocation = async () => {
+    setLocationMessage(null);
+    setLocationSettingsRequired(false);
+
     if (Platform.OS === 'web') {
       if (!navigator.geolocation) {
         setLocationMessage('Current location is unavailable in this browser.');
@@ -44,11 +49,18 @@ export function MobilePlacesMap({ onSelectPlace, places, selectedPlaceId, theme 
         (position) => {
           const coordinate = { latitude: position.coords.latitude, longitude: position.coords.longitude };
           setUserCoordinate(coordinate);
+          onLocationChange?.(coordinate);
           setLocationMessage('Map centred on your current location.');
           setLocating(false);
         },
-        () => {
-          setLocationMessage('Location permission was denied. Search by place or address instead.');
+        (error) => {
+          if (error.code === error.PERMISSION_DENIED) {
+            setLocationMessage('Location permission was denied. Allow location access in your browser settings, or search by address.');
+          } else if (error.code === error.TIMEOUT) {
+            setLocationMessage('Finding your location timed out. Check Location Services and try again.');
+          } else {
+            setLocationMessage('Your location is currently unavailable. Check Location Services and try again.');
+          }
           setLocating(false);
         },
         { enableHighAccuracy: true, timeout: 10_000 },
@@ -60,14 +72,27 @@ export function MobilePlacesMap({ onSelectPlace, places, selectedPlaceId, theme 
     try {
       // Loaded only on native so Expo web remains independent of native modules.
       const Location = require('expo-location') as typeof import('expo-location');
-      const permission = await Location.requestForegroundPermissionsAsync();
+      let permission = await Location.getForegroundPermissionsAsync();
+      if (permission.status !== 'granted' && permission.canAskAgain) {
+        permission = await Location.requestForegroundPermissionsAsync();
+      }
       if (permission.status !== 'granted') {
-        setLocationMessage('Location permission was denied. Search by place or address instead.');
+        setLocationSettingsRequired(!permission.canAskAgain);
+        setLocationMessage(
+          permission.canAskAgain
+            ? 'Location permission was not granted. Tap Use my location to try again.'
+            : 'Location access is blocked. Open app settings and allow location access.',
+        );
+        return;
+      }
+      if (!(await Location.hasServicesEnabledAsync())) {
+        setLocationMessage('Location Services are turned off. Enable them on your phone and try again.');
         return;
       }
       const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const coordinate = { latitude: current.coords.latitude, longitude: current.coords.longitude };
       setUserCoordinate(coordinate);
+      onLocationChange?.(coordinate);
       mapRef.current?.animateToRegion({ ...coordinate, latitudeDelta: 0.045, longitudeDelta: 0.045 }, 500);
       setLocationMessage('Map centred on your current location.');
       AccessibilityInfo.announceForAccessibility('Map centred on your current location.');
@@ -135,6 +160,16 @@ export function MobilePlacesMap({ onSelectPlace, places, selectedPlaceId, theme 
         {locating ? <ActivityIndicator color={theme.accent} /> : <Text style={{ color: theme.accent, fontWeight: '900' }}>◎ Use my location</Text>}
       </TouchableOpacity>
       {!!locationMessage && <Text accessibilityLiveRegion="polite" style={{ color: theme.subText, marginTop: 7 }}>{locationMessage}</Text>}
+      {locationSettingsRequired && (
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Open app settings to allow location"
+          onPress={() => void Linking.openSettings()}
+          style={[styles.settingsButton, { borderColor: theme.accent }]}
+        >
+          <Text style={{ color: theme.accent, fontWeight: '900' }}>Open app settings</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -142,6 +177,7 @@ export function MobilePlacesMap({ onSelectPlace, places, selectedPlaceId, theme 
 const styles = StyleSheet.create({
   nativeMapFrame: { height: 280, borderRadius: 18, overflow: 'hidden', marginBottom: 9 },
   nativeLocationButton: { minHeight: 46, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderRadius: 13 },
+  settingsButton: { minHeight: 44, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderRadius: 13, marginTop: 8 },
   webMap: { minHeight: 210, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderRadius: 18, padding: 18, marginBottom: 12 },
   webIcon: { fontSize: 38 },
   webTitle: { fontSize: 17, fontWeight: '900', marginTop: 6, marginBottom: 5 },

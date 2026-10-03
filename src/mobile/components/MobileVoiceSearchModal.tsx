@@ -45,11 +45,9 @@ interface Props {
 }
 
 export function MobileVoiceSearchModal({ onClose, onSearch, theme, visible }: Props) {
-  const [activeTab, setActiveTab] = useState<'voice' | 'scanner' | 'fraud'>('voice');
   const [language, setLanguage] = useState('en-LK');
   const [isSearching, setIsSearching] = useState(false);
   const [searchMessage, setSearchMessage] = useState<string | null>(null);
-  const [scanResult, setScanResult] = useState('');
   const inputRef = useRef<TextInput>(null);
   const requestRef = useRef<AbortController | null>(null);
   const speech = useMobileSpeechRecognition(language);
@@ -114,36 +112,23 @@ export function MobileVoiceSearchModal({ onClose, onSearch, theme, visible }: Pr
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
       <View style={styles.overlay} accessibilityViewIsModal>
         <View style={styles.card}>
-          <LinearGradient colors={['#2563eb', '#119da4', '#4f46e5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.header}>
-            <View style={styles.brandIcon}><Ionicons name="sparkles" size={30} color="#fde047" /></View>
+          <LinearGradient colors={['#172554', '#1d4ed8', '#0f766e']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+            <View style={styles.brandIcon}><Ionicons name="mic" size={26} color="#fff" /></View>
             <View style={styles.headerCopy}>
-              <Text accessibilityRole="header" style={styles.title}>AccessLink AI Assistant</Text>
-              <Text style={styles.subtitle}>Smart Voice & Vision Accessibility Engine</Text>
+              <Text accessibilityRole="header" style={styles.title}>AccessHub Voice</Text>
+              <Text style={styles.subtitle}>Speak naturally. Search accessibly.</Text>
             </View>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close AI Assistant" onPress={close} style={styles.closeButton}>
-              <Ionicons name="close" size={34} color="#fff" />
+              <Ionicons name="close" size={26} color="#fff" />
             </TouchableOpacity>
           </LinearGradient>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs} contentContainerStyle={styles.tabsContent} accessibilityRole="tablist">
-            {[
-              { id: 'voice' as const, label: 'Voice Assistant', icon: 'mic-outline' as const },
-              { id: 'scanner' as const, label: 'AI Scanner', icon: 'camera-outline' as const },
-              { id: 'fraud' as const, label: 'AI Fraud Shield', icon: 'shield-checkmark-outline' as const },
-            ].map((tab) => {
-              const selected = activeTab === tab.id;
-              return (
-                <TouchableOpacity key={tab.id} accessibilityRole="tab" accessibilityState={{ selected }} onPress={() => setActiveTab(tab.id)} style={[styles.tab, selected && styles.activeTab]}>
-                  <Ionicons name={tab.icon} size={24} color={selected ? '#2563eb' : '#64748b'} />
-                  <Text style={[styles.tabText, selected && styles.activeTabText]}>{tab.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
           <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled">
-            {activeTab === 'voice' && (
               <View>
+                <View style={styles.voiceBadge}>
+                  <View style={styles.voiceBadgeDot} />
+                  <Text style={styles.voiceBadgeText}>{Platform.OS === 'web' ? 'WEB SPEECH' : 'NATIVE SPEECH RECOGNITION'}</Text>
+                </View>
                 <Text style={styles.sectionTitle}>Spoken language</Text>
                 <Text style={styles.sectionDescription}>Choose the language before starting the microphone.</Text>
                 <View style={styles.languageRow} accessibilityRole="radiogroup" accessibilityLabel="Speech language">
@@ -158,7 +143,13 @@ export function MobileVoiceSearchModal({ onClose, onSearch, theme, visible }: Pr
                   })}
                 </View>
 
-                <View style={styles.exampleBox}><Text style={styles.exampleText}>{examples[language]}</Text></View>
+                <View style={styles.exampleBox}>
+                  <View style={styles.exampleIcon}><Ionicons name="chatbubble-ellipses" size={18} color="#2563eb" /></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.exampleLabel}>TRY SAYING</Text>
+                    <Text style={styles.exampleText}>{examples[language]}</Text>
+                  </View>
+                </View>
 
                 <View style={styles.micArea}>
                   <TouchableOpacity accessibilityRole="button" accessibilityLabel={speech.isListening ? 'Stop microphone' : 'Start AI microphone'} accessibilityState={{ busy: speech.isListening }} onPress={handleMicrophone} style={styles.micShadow}>
@@ -166,7 +157,8 @@ export function MobileVoiceSearchModal({ onClose, onSearch, theme, visible }: Pr
                       <Ionicons name={speech.isListening ? 'stop' : 'mic'} size={54} color="#fff" />
                     </LinearGradient>
                   </TouchableOpacity>
-                  {speech.isListening && <Text style={styles.listening}>LISTENING…</Text>}
+                  <Text style={[styles.micState, speech.isListening && styles.listening]}>{speech.isListening ? 'Listening… tap to stop' : 'Tap to speak'}</Text>
+                  <Text style={styles.micHint}>{speech.isListening ? 'Speak clearly in the selected language' : 'Your speech will appear below'}</Text>
                 </View>
 
                 <View style={styles.transcriptHeading}>
@@ -182,25 +174,9 @@ export function MobileVoiceSearchModal({ onClose, onSearch, theme, visible }: Pr
                 {(speech.message || searchMessage) && <Text accessibilityLiveRegion={searchMessage && searchMessage !== 'Interpreting your request…' ? 'assertive' : 'polite'} style={[styles.status, searchMessage?.includes('failed') && styles.errorStatus]}>{searchMessage ?? speech.message}</Text>}
 
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel="Search using transcript" accessibilityState={{ disabled: isSearching || !speech.transcript.trim() }} disabled={isSearching || !speech.transcript.trim()} onPress={submit} style={[styles.searchButton, (isSearching || !speech.transcript.trim()) && styles.disabledSearch]}>
-                  {isSearching ? <ActivityIndicator color="#fff" /> : <><Ionicons name="search" size={21} color="#fff" /><Text style={styles.searchText}>Use transcript</Text></>}
+                  {isSearching ? <ActivityIndicator color="#fff" /> : <><Ionicons name="sparkles" size={21} color="#fff" /><Text style={styles.searchText}>Search with AI</Text><Ionicons name="arrow-forward" size={20} color="#fff" /></>}
                 </TouchableOpacity>
               </View>
-            )}
-
-            {activeTab === 'scanner' && (
-              <View>
-                <View style={styles.scannerFrame}><Ionicons name="camera-outline" size={58} color="#14b8a6" /><Text style={styles.scannerText}>Point your camera at a physical product, barcode, document, or Braille label.</Text></View>
-                <TouchableOpacity onPress={() => setScanResult('Accessible product label detected. Text and product details are ready for review.')} style={styles.tealButton}><Ionicons name="scan" size={21} color="#fff" /><Text style={styles.searchText}>Simulate Camera Scan</Text></TouchableOpacity>
-                {!!scanResult && <View style={styles.resultBox}><Ionicons name="checkmark-circle" size={22} color="#059669" /><Text style={styles.resultText}>{scanResult}</Text></View>}
-              </View>
-            )}
-
-            {activeTab === 'fraud' && (
-              <View>
-                <View style={styles.shieldCard}><Ionicons name="shield-checkmark" size={62} color="#059669" /><Text style={styles.shieldTitle}>AccessLink AI Safety & Verification Shield</Text><Text style={styles.shieldText}>Seller certificates, NGO registrations, and job postings use automated verification checks.</Text></View>
-                {['Disability Certificate Verification', 'NGO Registration & Escrow Protection'].map((label) => <View key={label} style={styles.verificationRow}><Text style={styles.verificationLabel}>{label}</Text><Text style={styles.verified}>✓ Active</Text></View>)}
-              </View>
-            )}
           </ScrollView>
         </View>
       </View>
@@ -209,57 +185,47 @@ export function MobileVoiceSearchModal({ onClose, onSearch, theme, visible }: Pr
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(2,6,23,0.88)', padding: 14 },
-  card: { width: '100%', maxWidth: 900, height: '92%', maxHeight: 920, overflow: 'hidden', borderRadius: 30, borderWidth: 1, borderColor: '#cbd5e1', backgroundColor: '#fff' },
-  header: { minHeight: 138, paddingHorizontal: 32, paddingVertical: 24, flexDirection: 'row', alignItems: 'center', gap: 18 },
-  brandIcon: { width: 64, height: 64, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)' },
+  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(2,6,23,0.92)', padding: 10 },
+  card: { width: '100%', maxWidth: 680, height: '95%', maxHeight: 900, overflow: 'hidden', borderRadius: 28, borderWidth: 1, borderColor: '#334155', backgroundColor: '#f8fafc' },
+  header: { minHeight: 104, paddingHorizontal: 20, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', gap: 13 },
+  brandIcon: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   headerCopy: { flex: 1 },
-  title: { color: '#fff', fontSize: 29, fontWeight: '900', letterSpacing: -0.6 },
-  subtitle: { color: '#e0f2fe', fontSize: 20, marginTop: 2 },
-  closeButton: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center', borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.14)' },
-  tabs: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', backgroundColor: '#f8fafc' },
-  tabsContent: { flexGrow: 1, minWidth: '100%', padding: 10, gap: 8 },
-  tab: { flex: 1, minWidth: 175, minHeight: 58, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, borderRadius: 20 },
-  activeTab: { backgroundColor: '#fff' },
-  tabText: { color: '#64748b', fontSize: 18, fontWeight: '800' },
-  activeTabText: { color: '#2563eb' },
-  body: { flex: 1, backgroundColor: '#fff' },
-  bodyContent: { paddingHorizontal: 32, paddingTop: 30, paddingBottom: 42 },
-  sectionTitle: { color: '#334155', fontSize: 20, fontWeight: '900' },
-  sectionDescription: { color: '#64748b', fontSize: 16, marginTop: 5, marginBottom: 18 },
-  languageRow: { flexDirection: 'row', gap: 14 },
-  languageButton: { flex: 1, minWidth: 88, minHeight: 86, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, borderWidth: 2, borderColor: '#cbd5e1', borderRadius: 19, backgroundColor: '#fff' },
-  languageButtonSelected: { borderColor: '#2563eb', backgroundColor: '#2563eb' },
-  languageNative: { color: '#334155', fontSize: 18, fontWeight: '900', textAlign: 'center' },
-  languageEnglish: { color: '#475569', fontSize: 14, fontWeight: '700', marginTop: 2 },
+  title: { color: '#fff', fontSize: 23, fontWeight: '900', letterSpacing: -0.4 },
+  subtitle: { color: '#bfdbfe', fontSize: 13, marginTop: 2 },
+  closeButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.12)' },
+  body: { flex: 1, backgroundColor: '#f8fafc' },
+  bodyContent: { paddingHorizontal: 18, paddingTop: 18, paddingBottom: 34 },
+  voiceBadge: { alignSelf: 'flex-start', minHeight: 30, paddingHorizontal: 10, borderRadius: 999, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#99f6e4', marginBottom: 16 },
+  voiceBadgeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#14b8a6' },
+  voiceBadgeText: { color: '#0f766e', fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
+  sectionTitle: { color: '#0f172a', fontSize: 17, fontWeight: '900' },
+  sectionDescription: { color: '#64748b', fontSize: 13, marginTop: 4, marginBottom: 14 },
+  languageRow: { flexDirection: 'row', gap: 8 },
+  languageButton: { flex: 1, minWidth: 82, minHeight: 70, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 16, backgroundColor: '#fff' },
+  languageButtonSelected: { borderColor: '#2563eb', backgroundColor: '#2563eb', shadowColor: '#2563eb', shadowOpacity: 0.18, shadowRadius: 8, elevation: 3 },
+  languageNative: { color: '#1e293b', fontSize: 15, fontWeight: '900', textAlign: 'center' },
+  languageEnglish: { color: '#64748b', fontSize: 11, fontWeight: '700', marginTop: 3 },
   selectedText: { color: '#fff' },
-  exampleBox: { marginTop: 20, borderRadius: 18, backgroundColor: '#f1f5f9', paddingHorizontal: 20, paddingVertical: 16 },
-  exampleText: { color: '#475569', fontSize: 15, fontWeight: '700', lineHeight: 22 },
-  micArea: { minHeight: 205, alignItems: 'center', justifyContent: 'center' },
-  micShadow: { width: 142, height: 142, borderRadius: 71, shadowColor: '#0f172a', shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 0, height: 14 }, elevation: 12 },
-  micButton: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 71 },
-  listening: { color: '#dc2626', fontSize: 11, fontWeight: '900', letterSpacing: 1.5, marginTop: 12 },
+  exampleBox: { marginTop: 12, borderRadius: 16, backgroundColor: '#fff', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 11, borderWidth: 1, borderColor: '#e2e8f0' },
+  exampleIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#eff6ff' },
+  exampleLabel: { color: '#64748b', fontSize: 9, fontWeight: '900', letterSpacing: 1.1, marginBottom: 3 },
+  exampleText: { color: '#334155', fontSize: 13, fontWeight: '700', lineHeight: 19 },
+  micArea: { minHeight: 205, alignItems: 'center', justifyContent: 'center', paddingTop: 8 },
+  micShadow: { width: 118, height: 118, borderRadius: 59, padding: 7, backgroundColor: '#dbeafe', shadowColor: '#2563eb', shadowOpacity: 0.3, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
+  micButton: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 52 },
+  micState: { color: '#0f172a', fontSize: 15, fontWeight: '900', marginTop: 13 },
+  micHint: { color: '#64748b', fontSize: 11, marginTop: 3 },
+  listening: { color: '#dc2626' },
   transcriptHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   clearButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8 },
-  clearText: { color: '#64748b', fontSize: 16, fontWeight: '800' },
+  clearText: { color: '#64748b', fontSize: 13, fontWeight: '800' },
   disabledText: { color: '#cbd5e1' },
-  input: { minHeight: 132, maxHeight: 190, marginTop: 8, borderWidth: 2, borderColor: '#cbd5e1', borderRadius: 20, padding: 18, color: '#0f172a', backgroundColor: '#fff', fontSize: 18, lineHeight: 27, textAlignVertical: 'top' },
-  listeningInput: { borderColor: '#2563eb' },
+  input: { minHeight: 112, maxHeight: 180, marginTop: 8, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 16, padding: 15, color: '#0f172a', backgroundColor: '#fff', fontSize: 16, lineHeight: 23, textAlignVertical: 'top' },
+  listeningInput: { borderWidth: 2, borderColor: '#2563eb' },
   help: { color: '#64748b', fontSize: 12, lineHeight: 18, marginTop: 9 },
   status: { color: '#2563eb', fontSize: 13, lineHeight: 19, marginTop: 9, fontWeight: '700' },
   errorStatus: { color: '#dc2626' },
-  searchButton: { minHeight: 54, marginTop: 16, borderRadius: 16, backgroundColor: '#2563eb', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  searchButton: { minHeight: 56, marginTop: 18, borderRadius: 16, backgroundColor: '#2563eb', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, shadowColor: '#2563eb', shadowOpacity: 0.22, shadowRadius: 10, elevation: 4 },
   disabledSearch: { backgroundColor: '#94a3b8' },
   searchText: { color: '#fff', fontSize: 16, fontWeight: '900' },
-  scannerFrame: { height: 270, borderWidth: 2, borderStyle: 'dashed', borderColor: '#14b8a6', borderRadius: 24, backgroundColor: '#0f172a', alignItems: 'center', justifyContent: 'center', padding: 30 },
-  scannerText: { color: '#cbd5e1', fontSize: 16, lineHeight: 24, textAlign: 'center', marginTop: 14 },
-  tealButton: { minHeight: 54, marginTop: 18, borderRadius: 16, backgroundColor: '#0d9488', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
-  resultBox: { marginTop: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 16, borderWidth: 1, borderColor: '#a7f3d0', backgroundColor: '#ecfdf5' },
-  resultText: { flex: 1, color: '#065f46', fontSize: 14, fontWeight: '700', lineHeight: 21 },
-  shieldCard: { alignItems: 'center', borderRadius: 24, borderWidth: 1, borderColor: '#a7f3d0', backgroundColor: '#ecfdf5', padding: 28 },
-  shieldTitle: { color: '#064e3b', fontSize: 20, fontWeight: '900', textAlign: 'center', marginTop: 10 },
-  shieldText: { color: '#475569', fontSize: 15, lineHeight: 23, textAlign: 'center', marginTop: 8 },
-  verificationRow: { minHeight: 64, marginTop: 12, borderRadius: 16, backgroundColor: '#f1f5f9', paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  verificationLabel: { flex: 1, color: '#334155', fontSize: 14, fontWeight: '800' },
-  verified: { color: '#059669', fontSize: 14, fontWeight: '900' },
 });

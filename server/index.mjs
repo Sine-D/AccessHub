@@ -43,6 +43,11 @@ export function createApi({interpret = async () => {throw Object.assign(new Erro
 if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
  const host=process.env.HOST || '127.0.0.1';
  const port=Number(process.env.PORT || 8787);
- createApi({interpret,places:queryPlaces,placeDetails:queryPlaceDetails}).listen(port,host,()=>console.log(`AccessHub API: http://${host}:${port}`));
- createApi({interpret,places:queryPlaces,placeDetails:queryPlaceDetails,getBookingsFn:queryBookings,createBookingFn:createBooking}).listen(Number(process.env.PORT || 8787), '127.0.0.1',()=>console.log('AccessHub API: http://127.0.0.1:8787'));
+ createApi({
+  interpret,
+  places:queryPlaces,
+  placeDetails:queryPlaceDetails,
+  getBookingsFn:queryBookings,
+  createBookingFn:createBooking,
+ }).listen(port,host,()=>console.log(`AccessHub API: http://${host}:${port}`));
 }

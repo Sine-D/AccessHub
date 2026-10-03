@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { requireOptionalNativeModule } from 'expo';
 import { Platform } from 'react-native';
 import { normalizeTranscript } from '../../core/utils/normalizeTranscript';
 
@@ -81,15 +82,15 @@ export function useMobileSpeechRecognition(language: string) {
     if (Platform.OS !== 'web') {
       if (isListening) return true;
 
-      let nativeModule: NativeSpeechModule;
-      try {
-        const speechPackage = require('expo-speech-recognition') as {
-          ExpoSpeechRecognitionModule?: NativeSpeechModule;
-        };
-        if (!speechPackage.ExpoSpeechRecognitionModule) throw new Error('Native module missing');
-        nativeModule = speechPackage.ExpoSpeechRecognitionModule;
-      } catch {
-        setMessage('Expo Go does not include native speech recognition. Use a development build, or tap the microphone on your phone keyboard.');
+      // expo-speech-recognition calls requireNativeModule() as soon as its JS
+      // entry point is loaded. That throws in Expo Go (and in development
+      // builds made before the plugin was added), before we can show a useful
+      // in-app fallback. Query Expo's native registry optionally instead.
+      const nativeModule = requireOptionalNativeModule<NativeSpeechModule>(
+        'ExpoSpeechRecognition',
+      );
+      if (!nativeModule) {
+        setMessage('This app build does not include native speech recognition. Rebuild the development app, or use the microphone on your phone keyboard.');
         return false;
       }
 

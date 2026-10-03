@@ -39,11 +39,17 @@ const toMapPin = (row: Record<string, any>): MapPin => ({
 export async function listMobilePlaces(signal?: AbortSignal): Promise<MapPin[]> {
   const base = apiBase();
   if (base) {
-    const response = await fetch(`${base}/accessible-places`, { headers: { Accept: 'application/json' }, signal });
-    if (!response.ok) throw new Error('The accessible places directory could not be loaded.');
-    const body = await response.json();
-    if (!Array.isArray(body)) throw new Error('The places service returned invalid data.');
-    return body.map(toMapPin);
+    try {
+      const response = await fetch(`${base}/accessible-places`, { headers: { Accept: 'application/json' }, signal });
+      if (!response.ok) throw new Error('The accessible places directory could not be loaded.');
+      const body = await response.json();
+      if (!Array.isArray(body)) throw new Error('The places service returned invalid data.');
+      return body.map(toMapPin);
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      // A local development API may be offline or unreachable from the phone.
+      // Continue to Supabase or the bundled directory instead of blanking the map.
+    }
   }
 
   if (isSupabaseConfigured) {
@@ -52,8 +58,7 @@ export async function listMobilePlaces(signal?: AbortSignal): Promise<MapPin[]> 
       .select('id,title,type,lat,lng,address,badge,accessibility_features,accessibility_rating,image')
       .eq('published', true)
       .order('id');
-    if (error) throw new Error('The accessible places directory could not be loaded.');
-    if (data?.length) return data.map(toMapPin);
+    if (!error && data?.length) return data.map(toMapPin);
   }
 
   return mockMapPins.map((place) => ({ ...place, accessibilityFeatures: [...place.accessibilityFeatures] }));
@@ -62,12 +67,18 @@ export async function listMobilePlaces(signal?: AbortSignal): Promise<MapPin[]> 
 export async function getMobilePlaceDetails(placeId: string, signal?: AbortSignal): Promise<PlaceDetails> {
   const base = apiBase();
   if (base) {
-    const response = await fetch(`${base}/api/places/${encodeURIComponent(placeId)}`, {
-      headers: { Accept: 'application/json' },
-      signal,
-    });
-    if (!response.ok) throw new Error('Place details could not be loaded.');
-    return response.json() as Promise<PlaceDetails>;
+    try {
+      const response = await fetch(`${base}/api/places/${encodeURIComponent(placeId)}`, {
+        headers: { Accept: 'application/json' },
+        signal,
+      });
+      if (!response.ok) throw new Error('Place details could not be loaded.');
+      return response.json() as Promise<PlaceDetails>;
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      // Fall through to Supabase or bundled place details when the local API
+      // cannot be reached from a physical device.
+    }
   }
 
   if (isSupabaseConfigured) {
@@ -77,8 +88,7 @@ export async function getMobilePlaceDetails(placeId: string, signal?: AbortSigna
       .eq('id', placeId)
       .eq('published', true)
       .maybeSingle();
-    if (error) throw new Error('Place details could not be loaded.');
-    if (data) {
+    if (!error && data) {
       const pin = toMapPin(data);
       const candidateVerification = data.community_rating === null && !data.verification_badge && !data.last_verified_at
         ? null

@@ -8,7 +8,7 @@ export interface SpeechEngineOptions {
 }
 
 let isSpeakingState = false;
-let speechInterval: NodeJS.Timeout | null = null;
+let speechInterval: ReturnType<typeof setInterval> | null = null;
 let currentStepIndex = 0;
 
 /**
@@ -93,4 +93,3 @@ export function stopContinuousVoiceNavigation(): void {
 export function isNavigatingSpeaking(): boolean {
   return isSpeakingState;
 }
-

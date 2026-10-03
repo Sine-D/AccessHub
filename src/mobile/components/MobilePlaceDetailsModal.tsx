@@ -5,17 +5,20 @@ import type { PlaceDetails } from '../../features/map/types/placeDetails';
 import { presentPlaceFeature } from '../../features/map/utils/placeFeaturePresentation';
 import { formatVerifiedDate, verificationStatusLabel } from '../../features/map/utils/verificationPresentation';
 import { getMobilePlaceDetails } from '../services/mobilePlacesService';
+import type { Coordinate } from './MobilePlacesMap';
 
 interface Props {
   onClose: () => void;
   place: MapPin | null;
   theme: { background: string; card: string; text: string; subText: string; accent: string };
+  userCoordinate?: Coordinate | null;
 }
 
-export function MobilePlaceDetailsModal({ onClose, place, theme }: Props) {
+export function MobilePlaceDetailsModal({ onClose, place, theme, userCoordinate }: Props) {
   const [details, setDetails] = useState<PlaceDetails | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [navigationError, setNavigationError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const headingRef = useRef<Text>(null);
 
@@ -49,9 +52,22 @@ export function MobilePlaceDetailsModal({ onClose, place, theme }: Props) {
     if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
   };
 
-  const openDirections = () => Linking.openURL(
-    `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${place.lat},${place.lng}`)}`,
-  );
+  const openDirections = async () => {
+    const destination = `${place.lat},${place.lng}`;
+    const origin = userCoordinate
+      ? `${userCoordinate.latitude},${userCoordinate.longitude}`
+      : undefined;
+    const url = Platform.OS === 'ios'
+      ? `https://maps.apple.com/?daddr=${encodeURIComponent(destination)}&dirflg=w${origin ? `&saddr=${encodeURIComponent(origin)}` : ''}`
+      : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=walking&dir_action=navigate${origin ? `&origin=${encodeURIComponent(origin)}` : ''}`;
+
+    setNavigationError('');
+    try {
+      await Linking.openURL(url);
+    } catch {
+      setNavigationError('A maps app could not be opened. Install or enable Apple Maps or Google Maps and try again.');
+    }
+  };
 
   return (
     <Modal visible animationType="slide" onShow={announceHeading} onRequestClose={onClose} presentationStyle="pageSheet">
@@ -86,9 +102,13 @@ export function MobilePlaceDetailsModal({ onClose, place, theme }: Props) {
           })}
         </View>
 
-        <TouchableOpacity accessibilityRole="link" accessibilityHint="Opens Google Maps. Confirm route accessibility before travelling." onPress={openDirections} style={[styles.directions, { backgroundColor: theme.accent }]}>
-          <Text style={styles.directionsText}>Get accessible directions</Text>
+        <TouchableOpacity accessibilityRole="link" accessibilityHint="Opens your maps app with walking directions. Confirm route accessibility before travelling." onPress={() => void openDirections()} style={[styles.directions, { backgroundColor: theme.accent }]}>
+          <Text style={styles.directionsText}>Open route in Maps</Text>
         </TouchableOpacity>
+        <Text style={{ color: theme.subText, marginTop: 6 }}>
+          {userCoordinate ? 'Starting from your current location.' : 'Your maps app will choose the starting location.'}
+        </Text>
+        {!!navigationError && <Text accessibilityLiveRegion="assertive" style={styles.navigationError}>{navigationError}</Text>}
         <Text style={{ color: theme.subText, marginTop: 6 }}>Confirm that the suggested route meets your accessibility needs before travelling.</Text>
 
         {!loading && !error && (
@@ -126,4 +146,5 @@ const styles = StyleSheet.create({
   feature: { marginBottom: 10, gap: 2 },
   directions: { minHeight: 48, justifyContent: 'center', alignItems: 'center', borderRadius: 14, marginTop: 16 },
   directionsText: { color: '#0f172a', fontWeight: '900' },
+  navigationError: { color: '#fecaca', marginTop: 8, fontWeight: '700' },
 });
