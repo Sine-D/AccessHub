@@ -83,7 +83,7 @@ export const AdminScreen: React.FC = () => {
       title: 'Vendor Verification',
       description: 'Verify disabled vendor credentials, medical certificates, identity proofs, and assign verified status badges.',
       iconName: 'UserCheck',
-      acReference: 'AC-51–56',
+      acReference: '',
       badgeCount: 2,
       badgeText: 'Live Workflow Active',
       status: 'active'
@@ -93,7 +93,7 @@ export const AdminScreen: React.FC = () => {
       title: 'Listing Moderation',
       description: 'Review submitted product listings, inspect accessibility attributes and alt text, approve or request revisions.',
       iconName: 'ShoppingBag',
-      acReference: 'AC-57–62',
+      acReference: '',
       badgeCount: 3,
       badgeText: 'Live Workflow Active',
       status: 'active'
@@ -103,7 +103,7 @@ export const AdminScreen: React.FC = () => {
       title: 'Suspicious & Fraud Review Moderation',
       description: 'Moderate reported and flagged accessibility reviews, inspect rating anomalies, dismiss flags or remove fraudulent submissions.',
       iconName: 'ShieldAlert',
-      acReference: 'AC-252–263',
+      acReference: '',
       badgeCount: 4,
       badgeText: 'Live Workflow Active',
       status: 'active',
@@ -113,7 +113,7 @@ export const AdminScreen: React.FC = () => {
       title: 'Accessibility Compliance Monitoring',
       description: 'Monitor platform WCAG AA/AAA compliance, audit missing alt-text and feature tags, and generate compliance reports.',
       iconName: 'CheckCircle2',
-      acReference: 'AC-68–71',
+      acReference: '',
       badgeCount: 0,
       badgeText: 'Live Compliance Active',
       status: 'active'
@@ -123,7 +123,7 @@ export const AdminScreen: React.FC = () => {
       title: 'Accessibility Badge System',
       description: 'Evaluate multi-criteria accessibility ratings, calculate place and vendor badge tiers, manage automated badge awards.',
       iconName: 'Award',
-      acReference: 'AC-86–90',
+      acReference: '',
       badgeCount: 4,
       badgeText: 'Live Workflow Active',
       status: 'active'
@@ -133,7 +133,7 @@ export const AdminScreen: React.FC = () => {
       title: 'Sales Analytics Dashboard',
       description: 'Track platform GMV, completed orders, 10% commission earnings, top-selling categories, and Sri Lanka district distribution.',
       iconName: 'BarChart3',
-      acReference: 'AC-63–67',
+      acReference: '',
       badgeCount: 0,
       badgeText: 'Live Workflow Active',
       status: 'active'

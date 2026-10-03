@@ -50,7 +50,7 @@ export const ExpandableDirectionsBottomSheet: React.FC<ExpandableDirectionsBotto
     <div
       className={`fixed bottom-0 inset-x-0 z-50 flex flex-col rounded-t-3xl border-t border-blue-200 bg-white shadow-2xl transition-all duration-300 dark:border-blue-900 dark:bg-slate-900 ${heightClasses}`}
       role="region"
-      aria-label="Expandable directions bottom sheet (AC-233)"
+      aria-label="Expandable directions bottom sheet"
     >
       {/* Drag / Expand Handle Touch Target (Min height 48dp / 48px) */}
       <button
@@ -71,7 +71,7 @@ export const ExpandableDirectionsBottomSheet: React.FC<ExpandableDirectionsBotto
             <div className="flex items-center space-x-2">
               <Compass className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
-                Step-Free Polyline Navigation (AC-231, AC-233)
+                Step-Free Polyline Navigation
               </h3>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -80,7 +80,7 @@ export const ExpandableDirectionsBottomSheet: React.FC<ExpandableDirectionsBotto
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* Continuous Voice Navigation Toggle (AC-234) */}
+            {/* Continuous Voice Navigation Toggle */}
             <button
               type="button"
               onClick={handleToggleSpeech}
@@ -104,15 +104,15 @@ export const ExpandableDirectionsBottomSheet: React.FC<ExpandableDirectionsBotto
           </div>
         </div>
 
-        {/* Network Offline Graceful Fallback Banner (AC-237) */}
+        {/* Network Offline Graceful Fallback Banner */}
         {directions.isOfflineFallback && (
           <div className="flex items-center space-x-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-xs font-bold text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
             <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
-            <span>Network coverage offline (AC-237). Showing cached text directions fallback.</span>
+            <span>Network coverage offline. Showing cached text directions fallback.</span>
           </div>
         )}
 
-        {/* High-Contrast Polyline Canvas View (AC-231 & AC-238) */}
+        {/* High-Contrast Polyline Canvas View */}
         {expandedState !== 'collapsed' && (
           <PolylineRenderer
             points={directions.polylinePoints}
@@ -120,11 +120,11 @@ export const ExpandableDirectionsBottomSheet: React.FC<ExpandableDirectionsBotto
           />
         )}
 
-        {/* AC-236: Closest Step-Free Transit Drop-offs & Parking Bays */}
+        {/* Closest Step-Free Transit Drop-offs & Parking Bays */}
         {expandedState !== 'collapsed' && directions.closestDropoffs.length > 0 && (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3.5 dark:border-emerald-900 dark:bg-emerald-950/30">
             <p className="text-xs font-extrabold text-emerald-900 dark:text-emerald-200 mb-2">
-              🚗 Closest Step-Free Transit Drop-Offs & Parking (AC-236):
+              🚗 Closest Step-Free Transit Drop-Offs & Parking:
             </p>
             <div className="space-y-2">
               {directions.closestDropoffs.map((drop) => (

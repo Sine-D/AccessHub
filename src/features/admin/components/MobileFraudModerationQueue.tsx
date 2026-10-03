@@ -104,7 +104,7 @@ export const MobileFraudModerationQueue: React.FC = () => {
       {/* Header */}
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>🚨 Fraud Moderation Queue (AC-252)</Text>
+          <Text style={styles.headerTitle}>🚨 Fraud Moderation Queue</Text>
           <Text style={styles.headerSubtitle}>Review 3+ distinct user report flags & duplicate photos</Text>
         </View>
         <TouchableOpacity style={styles.refreshBtn} onPress={loadData}>
@@ -132,13 +132,13 @@ export const MobileFraudModerationQueue: React.FC = () => {
         </View>
       )}
 
-      {/* Filter Tabs (AC-253, AC-254, AC-255) */}
+      {/* Filter Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', gap: 6 }}>
         {[
           { id: 'all', label: 'All Items' },
-          { id: 'flagged_review', label: 'Reviews (AC-253)' },
-          { id: 'duplicate_photo', label: 'Duplicates (AC-254)' },
-          { id: 'flagged_listing', label: 'Listings (AC-255)' },
+          { id: 'flagged_review', label: 'Flagged Reviews' },
+          { id: 'duplicate_photo', label: 'Duplicate Photos' },
+          { id: 'flagged_listing', label: 'Flagged Listings' },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.id}
@@ -182,7 +182,7 @@ export const MobileFraudModerationQueue: React.FC = () => {
                 {/* AC-259: 3 Distinct User Reports Badge */}
                 <View style={styles.reportBadge}>
                   <Text style={styles.reportBadgeText}>
-                    🚩 {item.reportCount || 3} Distinct User Reports (AC-259)
+                    🚩 {item.reportCount || 3} Distinct User Reports
                   </Text>
                 </View>
               </View>
@@ -204,7 +204,7 @@ export const MobileFraudModerationQueue: React.FC = () => {
                   accessibilityRole="button"
                   accessibilityLabel={`Approve ${item.title}`}
                 >
-                  <Text style={styles.approveBtnText}>✓ Approve (AC-257)</Text>
+                  <Text style={styles.approveBtnText}>✓ Approve</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -213,7 +213,7 @@ export const MobileFraudModerationQueue: React.FC = () => {
                   accessibilityRole="button"
                   accessibilityLabel={`Remove ${item.title}`}
                 >
-                  <Text style={styles.removeBtnText}>✕ Remove (AC-258)</Text>
+                  <Text style={styles.removeBtnText}>✕ Remove</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -221,7 +221,7 @@ export const MobileFraudModerationQueue: React.FC = () => {
         </View>
       )}
 
-      {/* Pagination Controls (AC-256) */}
+      {/* Pagination Controls */}
       {paginatedData && paginatedData.totalPages > 1 && (
         <View style={styles.paginationRow}>
           <TouchableOpacity
@@ -246,11 +246,11 @@ export const MobileFraudModerationQueue: React.FC = () => {
         </View>
       )}
 
-      {/* Approval Confirmation Modal (AC-257) */}
+      {/* Approval Confirmation Modal */}
       <Modal visible={!!approvalTarget} transparent animationType="fade" accessibilityViewIsModal={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={[styles.modalTitle, { color: '#34d399' }]}>✓ Approve Content (AC-257)</Text>
+            <Text style={[styles.modalTitle, { color: '#34d399' }]}>✓ Approve Content</Text>
             <Text style={styles.modalSub}>
               Are you sure you want to approve "{approvalTarget?.title}"? This will dismiss the fraud flag and mark the content as verified.
             </Text>
@@ -276,7 +276,7 @@ export const MobileFraudModerationQueue: React.FC = () => {
                 {actionLoading ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Confirm Approve (AC-257)</Text>
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Confirm Approve</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -284,11 +284,11 @@ export const MobileFraudModerationQueue: React.FC = () => {
         </View>
       </Modal>
 
-      {/* Removal Confirmation Modal (AC-258) */}
+      {/* Removal Confirmation Modal */}
       <Modal visible={!!removalTarget} transparent animationType="fade" accessibilityViewIsModal={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>⚠️ Remove Content (AC-258)</Text>
+            <Text style={styles.modalTitle}>⚠️ Remove Content</Text>
             <Text style={styles.modalSub}>
               Are you sure you want to remove "{removalTarget?.title}"? This will purge the flagged content.
             </Text>
@@ -306,7 +306,7 @@ export const MobileFraudModerationQueue: React.FC = () => {
                 {actionLoading ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Confirm Remove (AC-258)</Text>
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Confirm Remove</Text>
                 )}
               </TouchableOpacity>
             </View>

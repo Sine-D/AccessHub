@@ -123,7 +123,7 @@ export function PlaceDetailsPanel({
             onClick={() => setRouteModalOpen(true)}
             className="flex w-full min-h-12 items-center justify-center space-x-2 rounded-xl bg-gradient-to-r from-blue-700 via-indigo-700 to-teal-700 px-4 py-2.5 text-sm font-extrabold text-white shadow-md transition-all hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <span>🗺️ Step-Free & Tactile Route Preview (AC-230)</span>
+            <span>🗺️ Step-Free & Tactile Route Preview</span>
           </button>
 
           <AccessibleDirectionsLink place={place} />

@@ -94,7 +94,7 @@ export const ListingModerationQueue: React.FC = () => {
           </div>
           <div>
             <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">
-              Marketplace Listing Moderation (AC-57)
+              Marketplace Listing Moderation
             </h3>
             <span className="text-xs text-slate-400 block font-medium">
               Review seller products, audit accessibility tags & verify image alt-text
@@ -362,7 +362,7 @@ export const ListingModerationQueue: React.FC = () => {
                     className="px-3.5 py-1.5 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 text-xs font-bold flex items-center space-x-1 transition-colors"
                   >
                     <span>👁️</span>
-                    <span>Inspect Details & Alt-Text (AC-58)</span>
+                    <span>Inspect Details & Alt-Text</span>
                   </button>
 
                   {isPending && (
@@ -375,7 +375,7 @@ export const ListingModerationQueue: React.FC = () => {
                         }}
                         className="px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 text-xs font-bold transition-colors"
                       >
-                        ✕ Reject (AC-60)
+                        ✕ Reject
                       </button>
 
                       <button
@@ -383,7 +383,7 @@ export const ListingModerationQueue: React.FC = () => {
                         onClick={() => handleApprove(item.id)}
                         className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all"
                       >
-                        ✓ Approve (AC-59)
+                        ✓ Approve
                       </button>
                     </div>
                   )}
@@ -394,7 +394,7 @@ export const ListingModerationQueue: React.FC = () => {
         </div>
       )}
 
-      {/* Detailed Inspector Modal (AC-58) */}
+      {/* Detailed Inspector Modal */}
       <ListingDetailModal
         product={selectedProduct}
         isOpen={isModalOpen}
@@ -406,7 +406,7 @@ export const ListingModerationQueue: React.FC = () => {
         onReject={handleReject}
       />
 
-      {/* Quick Reject Modal (AC-60, AC-61) */}
+      {/* Quick Reject Modal */}
       {quickRejectTarget && (
         <div
           role="dialog"
@@ -416,10 +416,10 @@ export const ListingModerationQueue: React.FC = () => {
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
             <div>
               <h4 className="font-extrabold text-sm text-rose-600 dark:text-rose-400">
-                Reject Listing: {quickRejectTarget.title} (AC-60)
+                Reject Listing: {quickRejectTarget.title}
               </h4>
               <p className="text-xs text-slate-500 mt-1">
-                Provide feedback to explain what needs to be corrected (AC-61).
+                Provide feedback to explain what needs to be corrected.
               </p>
             </div>
 
@@ -444,7 +444,7 @@ export const ListingModerationQueue: React.FC = () => {
                 onClick={handleConfirmQuickReject}
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white"
               >
-                Confirm Rejection (AC-60)
+                Confirm Rejection
               </button>
             </div>
           </div>

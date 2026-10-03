@@ -130,7 +130,7 @@ export const AccessibilityBadgeManager: React.FC = () => {
             <h2 className="text-xl font-extrabold tracking-tight">Accessibility Badge Management</h2>
           </div>
           <p className="text-xs text-teal-100 pt-1 max-w-xl">
-            Evaluate accessibility score criteria (AC-87), check verification rules (AC-88), award badges (AC-89), and present badges (AC-90).
+            Evaluate accessibility score criteria, check verification rules, award badges, and present badges.
           </p>
         </div>
 
@@ -167,7 +167,7 @@ export const AccessibilityBadgeManager: React.FC = () => {
           <div className="flex items-center space-x-2 border-b border-slate-100 dark:border-slate-800 pb-3">
             <Calculator className="w-5 h-5 text-teal-600 dark:text-teal-400" />
             <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
-              Accessibility Score & Rule Verification (AC-87, AC-88)
+              Accessibility Score & Rule Verification
             </h3>
           </div>
 
@@ -286,18 +286,18 @@ export const AccessibilityBadgeManager: React.FC = () => {
               className="w-full py-3 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs shadow-lg shadow-teal-600/30 flex items-center justify-center space-x-2 transition-all cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Evaluate & Award Badge (AC-89)</span>
+              <span>Evaluate & Award Badge</span>
             </button>
           </div>
         </div>
 
-        {/* Right: Active Badges Presentation List (AC-90) */}
+        {/* Right: Active Badges Presentation List */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <div className="flex items-center space-x-2">
               <ShieldCheck className="w-5 h-5 text-teal-600 dark:text-teal-400" />
               <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
-                Awarded Badges & Eligibility State (AC-90)
+                Awarded Badges & Eligibility State
               </h3>
             </div>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-700 dark:text-teal-300">

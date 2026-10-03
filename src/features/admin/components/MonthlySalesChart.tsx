@@ -105,7 +105,7 @@ export const MonthlySalesChart: React.FC<MonthlySalesChartProps> = ({
             <LineChart className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-extrabold text-sm tracking-tight">Multi-Series Sales Line Chart (AC-66)</h3>
+            <h3 className="font-extrabold text-sm tracking-tight">Multi-Series Sales Line Chart</h3>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
               Comparative revenue timeline with alternating vertical column shading bands.
             </p>

@@ -71,7 +71,7 @@ export const StepFreeRouteModal: React.FC<StepFreeRouteModalProps> = ({
             </div>
             <div>
               <h2 id="route-modal-title" className="text-lg font-extrabold text-slate-900 dark:text-white">
-                Step-Free & Tactile Route Preview (AC-230)
+                Step-Free & Tactile Route Preview
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Destination: <span className="font-bold text-blue-600 dark:text-blue-400">{place.title}</span>
@@ -238,7 +238,7 @@ export const StepFreeRouteModal: React.FC<StepFreeRouteModalProps> = ({
         <div className="flex items-center justify-between border-t border-slate-100 p-4 dark:border-slate-800">
           <div className="flex items-center space-x-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
             <ShieldCheck className="h-4 w-4" />
-            <span>Verified Accessible Route (AC-230)</span>
+            <span>Verified Accessible Route</span>
           </div>
 
           <button

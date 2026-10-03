@@ -86,7 +86,7 @@ export const VendorVerificationQueue: React.FC<VendorVerificationQueueProps> = (
           </div>
           <div>
             <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">
-              Vendor Verification Queue (AC-51)
+              Vendor Verification Queue
             </h3>
             <span className="text-xs text-slate-400 block font-medium">
               Review disabled vendor identity credentials & medical board documents
@@ -104,7 +104,7 @@ export const VendorVerificationQueue: React.FC<VendorVerificationQueueProps> = (
               className="px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-extrabold flex items-center space-x-1.5 shadow-md transition-all focus:ring-2 focus:ring-teal-500"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Submit New Request (AC-52)</span>
+              <span>Submit New Request</span>
             </button>
           )}
 
@@ -250,7 +250,7 @@ export const VendorVerificationQueue: React.FC<VendorVerificationQueueProps> = (
                   className="flex-1 min-h-[44px] py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs shadow-md flex items-center justify-center space-x-1.5 transition-all focus:ring-2 focus:ring-teal-500"
                 >
                   <Eye className="w-4 h-4" />
-                  <span>Inspect Documents (AC-53)</span>
+                  <span>Inspect Documents</span>
                 </button>
 
                 {req.status === 'pending' && (

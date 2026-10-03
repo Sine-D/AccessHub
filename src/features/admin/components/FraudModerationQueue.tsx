@@ -99,10 +99,10 @@ export const FraudModerationQueue: React.FC = () => {
           </div>
           <div>
             <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">
-              Suspicious & Fraud Content Moderation Queue (AC-252)
+              Suspicious & Fraud Content Moderation Queue
             </h3>
             <p className="text-xs text-slate-400 block font-medium">
-              Review 3+ distinct user report flags (AC-259), duplicate photo hashes & fraudulent listings
+              Review 3+ distinct user report flags, duplicate photo hashes & fraudulent listings
             </p>
           </div>
         </div>
@@ -116,13 +116,13 @@ export const FraudModerationQueue: React.FC = () => {
         </button>
       </div>
 
-      {/* Content Type Tabs (AC-253, AC-254, AC-255) */}
+      {/* Content Type Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
         {[
           { id: 'all', label: 'All Suspicious Items', icon: '⚡' },
-          { id: 'flagged_review', label: 'Flagged Reviews (AC-253)', icon: '💬' },
-          { id: 'duplicate_photo', label: 'Duplicate Photos (AC-254)', icon: '🖼️' },
-          { id: 'flagged_listing', label: 'Flagged Listings (AC-255)', icon: '🛍️' },
+          { id: 'flagged_review', label: 'Flagged Reviews', icon: '💬' },
+          { id: 'duplicate_photo', label: 'Duplicate Photos', icon: '🖼️' },
+          { id: 'flagged_listing', label: 'Flagged Listings', icon: '🛍️' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -205,9 +205,9 @@ export const FraudModerationQueue: React.FC = () => {
                       {item.contentType.replace('_', ' ').toUpperCase()}
                     </span>
 
-                    {/* AC-259: 3 Distinct User Reports Badge */}
+                    {/* 3 Distinct User Reports Badge */}
                     <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                      🚩 {item.reportCount || item.reports?.length || 3} Distinct User Reports (AC-259)
+                      🚩 {item.reportCount || item.reports?.length || 3} Distinct User Reports
                     </span>
                   </div>
 
@@ -230,7 +230,7 @@ export const FraudModerationQueue: React.FC = () => {
                 </div>
               </div>
 
-              {/* Action Buttons (AC-257, AC-258) */}
+              {/* Action Buttons */}
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end space-x-2">
                 <button
                   type="button"
@@ -240,7 +240,7 @@ export const FraudModerationQueue: React.FC = () => {
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 transition-colors flex items-center space-x-1"
                 >
                   <span>✓</span>
-                  <span>Approve Content (AC-257)</span>
+                  <span>Approve Content</span>
                 </button>
 
                 <button
@@ -251,7 +251,7 @@ export const FraudModerationQueue: React.FC = () => {
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition-all flex items-center space-x-1"
                 >
                   <span>✕</span>
-                  <span>Remove Content (AC-258)</span>
+                  <span>Remove Content</span>
                 </button>
               </div>
             </div>
@@ -259,7 +259,7 @@ export const FraudModerationQueue: React.FC = () => {
         </div>
       )}
 
-      {/* Pagination Controls (AC-256) */}
+      {/* Pagination Controls */}
       {paginatedData && paginatedData.totalPages > 1 && (
         <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs font-bold">
           <button
@@ -286,7 +286,7 @@ export const FraudModerationQueue: React.FC = () => {
         </div>
       )}
 
-      {/* Removal Confirmation Dialog (AC-258) */}
+      {/* Removal Confirmation Dialog */}
       {removalTarget && (
         <div
           role="dialog"
@@ -295,7 +295,7 @@ export const FraudModerationQueue: React.FC = () => {
         >
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 text-slate-900 dark:text-white">
             <h4 className="font-extrabold text-base text-rose-600 dark:text-rose-400">
-              Confirm Content Removal (AC-258)
+              Confirm Content Removal
             </h4>
 
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -317,7 +317,8 @@ export const FraudModerationQueue: React.FC = () => {
                 disabled={actionLoading}
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-sm"
               >
-                {actionLoading ? 'Removing...' : 'Confirm Remove (AC-258)'}
+                {actionLoading ? 'Removing...' : 'Confirm Remove'}
+              </button>
               </button>
             </div>
           </div>

@@ -137,7 +137,7 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
             marginTop: 4,
           }}
         >
-          Evaluate accessibility score (AC-87), check rules (AC-88) & assign badge (AC-89).
+          Evaluate accessibility score, check rules & assign badge.
         </Text>
       </View>
 
@@ -356,7 +356,7 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
             <ActivityIndicator color={highContrast ? '#000000' : '#ffffff'} />
           ) : (
             <Text style={{ color: highContrast ? '#000000' : '#ffffff', fontWeight: 'bold', fontSize: 13 }}>
-              🏅 Award Accessibility Badge (AC-89)
+              🏅 Award Accessibility Badge
             </Text>
           )}
         </TouchableOpacity>

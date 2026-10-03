@@ -3634,7 +3634,7 @@ export default function AppMobile() {
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                       <View style={{ flex: 1 }}>
                         <Text style={[dynamicText(16), { fontWeight: '800', color: textColor }]}>
-                          🗺️ Step-Free Route Preview (AC-230)
+                          🗺️ Step-Free Route Preview
                         </Text>
                         <Text style={[dynamicText(12), { color: subTextColor, marginTop: 2 }]}>
                           Destination: {selectedMapPin?.title}

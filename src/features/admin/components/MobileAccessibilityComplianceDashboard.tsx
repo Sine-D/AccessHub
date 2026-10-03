@@ -75,7 +75,7 @@ export const MobileAccessibilityComplianceDashboard: React.FC<MobileAccessibilit
             color: highContrast ? '#000000' : '#ffffff',
           }}
         >
-          ✅ Accessibility Compliance Monitoring (AC-68–71)
+          ✅ Accessibility Compliance Monitoring
         </Text>
         <Text
           style={{

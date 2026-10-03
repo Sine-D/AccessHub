@@ -58,9 +58,11 @@ export const AdminFeatureCard: React.FC<AdminFeatureCardProps> = ({
         </div>
 
         <div className="flex items-center space-x-1.5">
-          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-            {acReference}
-          </span>
+          {Boolean(acReference) && (
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+              {acReference}
+            </span>
+          )}
           {badgeCount !== undefined && badgeCount > 0 ? (
             <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 animate-pulse">
               {badgeCount} Pending

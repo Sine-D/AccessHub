@@ -51,7 +51,7 @@ export const MobileListingModerationQueue: React.FC = () => {
   // AC-59: Approve Listing
   const handleApprove = (product: Product) => {
     Alert.alert(
-      'Approve Listing (AC-59)',
+      'Approve Listing',
       `Are you sure you want to approve "${product.title}"? It will become visible on the public marketplace.`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -123,7 +123,7 @@ export const MobileListingModerationQueue: React.FC = () => {
       {/* Header Row */}
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>🛍️ Listing Moderation (AC-57)</Text>
+          <Text style={styles.headerTitle}>🛍️ Listing Moderation</Text>
           <Text style={styles.headerSubtitle}>
             Audit seller listings, alt-text quality & accessibility claims
           </Text>
@@ -336,7 +336,7 @@ export const MobileListingModerationQueue: React.FC = () => {
                     accessibilityRole="button"
                     accessibilityLabel={`Inspect details for ${item.title}`}
                   >
-                    <Text style={styles.inspectBtnText}>👁️ Inspect & Alt-Text (AC-58)</Text>
+                    <Text style={styles.inspectBtnText}>👁️ Inspect & Alt-Text</Text>
                   </TouchableOpacity>
 
                   {isPending && (
@@ -347,7 +347,7 @@ export const MobileListingModerationQueue: React.FC = () => {
                         accessibilityRole="button"
                         accessibilityLabel={`Approve ${item.title}`}
                       >
-                        <Text style={styles.approveBtnText}>✓ Approve (AC-59)</Text>
+                        <Text style={styles.approveBtnText}>✓ Approve</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -356,7 +356,7 @@ export const MobileListingModerationQueue: React.FC = () => {
                         accessibilityRole="button"
                         accessibilityLabel={`Reject ${item.title}`}
                       >
-                        <Text style={styles.rejectBtnText}>✕ Reject (AC-60)</Text>
+                        <Text style={styles.rejectBtnText}>✕ Reject</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -368,7 +368,7 @@ export const MobileListingModerationQueue: React.FC = () => {
       )}
 
       {/* ========================================================= */}
-      {/* AC-58: INSPECT LISTING MODAL                              */}
+      {/* INSPECT LISTING MODAL                                     */}
       {/* ========================================================= */}
       <Modal visible={!!selectedProduct} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -376,7 +376,7 @@ export const MobileListingModerationQueue: React.FC = () => {
             {selectedProduct && (
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>🛍️ Listing Inspector (AC-58)</Text>
+                  <Text style={styles.modalTitle}>🛍️ Listing Inspector</Text>
                   <TouchableOpacity onPress={() => setSelectedProduct(null)} style={styles.closeBtn}>
                     <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>✕</Text>
                   </TouchableOpacity>
@@ -457,14 +457,14 @@ export const MobileListingModerationQueue: React.FC = () => {
                       style={[styles.modalApproveBtn, { flex: 1 }]}
                       onPress={() => handleApprove(selectedProduct)}
                     >
-                      <Text style={styles.modalApproveBtnText}>✓ Approve Listing (AC-59)</Text>
+                      <Text style={styles.modalApproveBtnText}>✓ Approve Listing</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
                       style={[styles.modalRejectBtn, { flex: 1 }]}
                       onPress={() => openRejectModal(selectedProduct)}
                     >
-                      <Text style={styles.modalRejectBtnText}>✕ Reject (AC-60)</Text>
+                      <Text style={styles.modalRejectBtnText}>✕ Reject</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
@@ -482,14 +482,14 @@ export const MobileListingModerationQueue: React.FC = () => {
       </Modal>
 
       {/* ========================================================= */}
-      {/* AC-60 & AC-61: REJECTION FEEDBACK MODAL                   */}
+      {/* REJECTION FEEDBACK MODAL                                  */}
       {/* ========================================================= */}
       <Modal visible={!!rejectModalTarget} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxHeight: 380 }]}>
-            <Text style={styles.modalTitle}>⚠️ Reject Listing (AC-60)</Text>
+            <Text style={styles.modalTitle}>⚠️ Reject Listing</Text>
             <Text style={{ color: '#94a3b8', fontSize: 11, marginTop: 4 }}>
-              Provide constructive feedback to help the seller update their listing to meet accessibility standards (AC-61).
+              Provide constructive feedback to help the seller update their listing to meet accessibility standards.
             </Text>
 
             <TextInput
@@ -515,7 +515,7 @@ export const MobileListingModerationQueue: React.FC = () => {
                 {actionLoading ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Confirm Rejection (AC-60)</Text>
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Confirm Rejection</Text>
                 )}
               </TouchableOpacity>
             </View>

@@ -73,7 +73,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
             <span className="text-xl">🛍️</span>
             <div>
               <h3 id="listing-modal-title" className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">
-                Marketplace Listing Inspector (AC-58)
+                Marketplace Listing Inspector
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Audit accessibility claims, alt-text quality & seller credentials
@@ -282,12 +282,12 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
             </div>
           )}
 
-          {/* Rejection Input Section (AC-61) */}
+          {/* Rejection Input Section */}
           {isRejecting && (
             <div className="p-4 rounded-2xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 space-y-3 animate-fadeIn">
               <div className="flex items-center justify-between">
                 <h5 className="font-extrabold text-xs text-rose-700 dark:text-rose-300">
-                  Select or Enter Rejection Reason (AC-61)
+                  Select or Enter Rejection Reason
                 </h5>
                 <button
                   type="button"
@@ -334,7 +334,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
                   disabled={isActionLoading}
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-md transition-all flex items-center space-x-1"
                 >
-                  {isActionLoading ? <span>Processing...</span> : <span>Confirm Rejection (AC-60)</span>}
+                  {isActionLoading ? <span>Processing...</span> : <span>Confirm Rejection</span>}
                 </button>
               </div>
             </div>
@@ -359,7 +359,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
                 className="px-4 py-2.5 rounded-2xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition-colors flex items-center space-x-1"
               >
                 <span>✕</span>
-                <span>Reject Listing (AC-60)</span>
+                <span>Reject Listing</span>
               </button>
 
               <button
@@ -373,7 +373,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
                 ) : (
                   <>
                     <span>✓</span>
-                    <span>Approve Listing (AC-59)</span>
+                    <span>Approve Listing</span>
                   </>
                 )}
               </button>

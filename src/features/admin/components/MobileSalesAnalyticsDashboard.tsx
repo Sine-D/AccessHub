@@ -113,7 +113,7 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
             color: highContrast ? '#000000' : '#ffffff',
           }}
         >
-          📊 Sales Analytics Dashboard (AC-63–67)
+          📊 Sales Analytics Dashboard
         </Text>
         <Text
           style={{
@@ -236,7 +236,7 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
         }}
       >
         <Text style={{ fontSize: 13, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#ffffff', marginBottom: 10 }}>
-          Filter Sales Reports (AC-67)
+          Filter Sales Reports
         </Text>
 
         {/* Date Range Selector */}
@@ -351,7 +351,7 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
         }}
       >
         <Text style={{ fontSize: 13, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#ffffff', marginBottom: 12 }}>
-          Monthly Sales Timeline (AC-66)
+          Monthly Sales Timeline
         </Text>
 
         {loading ? (

@@ -65,7 +65,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
   // AC-54: Approve Verification
   const handleApprove = async (req: VendorVerificationRequest) => {
     Alert.alert(
-      'Approve Verification (AC-54)',
+      'Approve Verification',
       `Are you sure you want to approve "${req.vendorName}"? This assigns the badge "${req.disabilityBadge || 'Verified Disabled Artisan'}".`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -145,7 +145,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
         disabilityBadge: newBadge,
       });
 
-      Alert.alert('Request Submitted (AC-52)', 'New vendor verification request added to the queue.');
+      Alert.alert('Request Submitted', 'New vendor verification request added to the queue.');
       setCreateModalVisible(false);
       setNewName('');
       setNewDocNumber('');
@@ -180,7 +180,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
       {/* Header Info */}
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>🏢 Vendor Verification (AC-51)</Text>
+          <Text style={styles.headerTitle}>🏢 Vendor Verification</Text>
           <Text style={styles.headerSubtitle}>Review disability credentials & medical documents</Text>
         </View>
         <TouchableOpacity
@@ -189,7 +189,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
           accessibilityRole="button"
           accessibilityLabel="Submit new vendor verification request"
         >
-          <Text style={styles.newBtnText}>➕ New (AC-52)</Text>
+          <Text style={styles.newBtnText}>➕ New Request</Text>
         </TouchableOpacity>
       </View>
 
@@ -360,7 +360,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
                     accessibilityRole="button"
                     accessibilityLabel={`Inspect documents for ${req.vendorName}`}
                   >
-                    <Text style={styles.inspectBtnText}>👁️ Inspect Docs (AC-53)</Text>
+                    <Text style={styles.inspectBtnText}>👁️ Inspect Docs</Text>
                   </TouchableOpacity>
 
                   {isPending && (
@@ -371,7 +371,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
                         accessibilityRole="button"
                         accessibilityLabel={`Approve ${req.vendorName}`}
                       >
-                        <Text style={styles.approveBtnText}>✓ Approve (AC-54)</Text>
+                        <Text style={styles.approveBtnText}>✓ Approve</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -380,7 +380,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
                         accessibilityRole="button"
                         accessibilityLabel={`Reject ${req.vendorName}`}
                       >
-                        <Text style={styles.rejectBtnText}>✕ Reject (AC-55)</Text>
+                        <Text style={styles.rejectBtnText}>✕ Reject</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -400,7 +400,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
             {selectedRequest && (
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>📄 Document Inspector (AC-53)</Text>
+                  <Text style={styles.modalTitle}>📄 Document Inspector</Text>
                   <TouchableOpacity onPress={() => setSelectedRequest(null)} style={styles.closeBtn}>
                     <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>✕</Text>
                   </TouchableOpacity>
@@ -498,7 +498,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
       <Modal visible={!!rejectModalTarget} transparent animationType="fade" accessibilityViewIsModal={true}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxHeight: 380 }]}>
-            <Text style={styles.modalTitle}>⚠️ Reject Verification (AC-55)</Text>
+            <Text style={styles.modalTitle}>⚠️ Reject Verification</Text>
             <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 4 }}>
               Provide clear feedback explaining why {rejectModalTarget?.vendorName}'s application cannot be verified.
             </Text>
@@ -535,7 +535,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
                 {actionLoading ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Confirm Rejection (AC-55)</Text>
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Confirm Rejection</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -544,14 +544,14 @@ export const MobileVendorVerificationQueue: React.FC = () => {
       </Modal>
 
       {/* ========================================================= */}
-      {/* AC-52: CREATE VERIFICATION REQUEST MODAL                  */}
+      {/* CREATE VERIFICATION REQUEST MODAL                         */}
       {/* ========================================================= */}
       <Modal visible={createModalVisible} transparent animationType="slide" accessibilityViewIsModal={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>➕ New Verification Request (AC-52)</Text>
+                <Text style={styles.modalTitle}>➕ New Verification Request</Text>
                 <TouchableOpacity onPress={() => setCreateModalVisible(false)} style={styles.closeBtn}>
                   <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>✕</Text>
                 </TouchableOpacity>
@@ -621,7 +621,7 @@ export const MobileVendorVerificationQueue: React.FC = () => {
                 {actionLoading ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.submitFormBtnText}>Submit Verification Request (AC-52)</Text>
+                  <Text style={styles.submitFormBtnText}>Submit Verification Request</Text>
                 )}
               </TouchableOpacity>
             </ScrollView>

@@ -63,7 +63,7 @@ export const AccessibilityComplianceDashboard: React.FC<AccessibilityComplianceD
           <div className="flex items-center space-x-2">
             <CheckCircle2 className="w-7 h-7 text-teal-400" />
             <h2 className="text-xl font-extrabold tracking-tight">
-              Accessibility Compliance Monitoring (AC-68–71)
+              Accessibility Compliance Monitoring
             </h2>
           </div>
           <p className="text-xs text-slate-300 pt-1 max-w-xl">

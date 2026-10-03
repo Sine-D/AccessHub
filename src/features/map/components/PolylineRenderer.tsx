@@ -50,7 +50,7 @@ export const PolylineRenderer: React.FC<PolylineRendererProps> = ({
     >
       <div className="absolute top-2 left-2 z-10 flex items-center space-x-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold text-white backdrop-blur-sm">
         <span className="h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
-        <span>Polyline Overlay (AC-231)</span>
+        <span>Polyline Overlay</span>
       </div>
 
       <svg

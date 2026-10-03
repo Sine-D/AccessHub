@@ -104,14 +104,14 @@ export const SalesAnalyticsDashboard: React.FC = () => {
         <div>
           <div className="flex items-center space-x-2">
             <TrendingUp className="w-7 h-7 text-teal-400" />
-            <h2 className="text-xl font-extrabold tracking-tight">Sales Analytics Dashboard (AC-63–67)</h2>
+            <h2 className="text-xl font-extrabold tracking-tight">Sales Analytics Dashboard</h2>
             <span className="px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[10px] font-black border border-teal-400/30 flex items-center space-x-1">
               <Sparkles className="w-3 h-3 text-amber-300" />
               <span>Real-World Charts</span>
             </span>
           </div>
           <p className="text-xs text-slate-300 pt-1 max-w-xl">
-            Track gross sales GMV (AC-64), active vendors (AC-65), monthly revenue graph (AC-66), category market share, and filtered reports (AC-67).
+            Track gross sales GMV, active vendors, monthly revenue graph, category market share, and filtered reports.
           </p>
         </div>
 
@@ -139,7 +139,7 @@ export const SalesAnalyticsDashboard: React.FC = () => {
           <div className="flex items-center space-x-2">
             <Filter className="w-4 h-4 text-teal-600 dark:text-teal-400" />
             <h3 className="font-extrabold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
-              Filter Reports (AC-67)
+              Filter Reports
             </h3>
           </div>
 
@@ -208,7 +208,7 @@ export const SalesAnalyticsDashboard: React.FC = () => {
         {/* Total Sales (AC-64) */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Total Sales (AC-64)</span>
+            <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Total Sales</span>
             <div className="w-8 h-8 rounded-xl bg-teal-500/10 text-teal-600 flex items-center justify-center">
               <DollarSign className="w-4 h-4" />
             </div>
@@ -243,7 +243,7 @@ export const SalesAnalyticsDashboard: React.FC = () => {
         {/* Total Vendors (AC-65) */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Total Vendors (AC-65)</span>
+            <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Total Vendors</span>
             <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
               <Users className="w-4 h-4" />
             </div>

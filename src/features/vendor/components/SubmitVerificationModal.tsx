@@ -97,7 +97,7 @@ export const SubmitVerificationModal: React.FC<SubmitVerificationModalProps> = (
           <div className="flex items-center space-x-2">
             <ShieldCheck className="w-5 h-5 text-teal-500" />
             <h3 id="submit-modal-title" className="font-extrabold text-sm sm:text-base">
-              Submit Vendor Verification Request (AC-52)
+              Submit Vendor Verification Request
             </h3>
           </div>
           <button
@@ -238,7 +238,7 @@ export const SubmitVerificationModal: React.FC<SubmitVerificationModalProps> = (
               disabled={isSubmitting}
               className="w-full min-h-[48px] py-3.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs shadow-lg shadow-teal-600/30 transition-all mt-2 focus:ring-2 focus:ring-teal-500"
             >
-              {isSubmitting ? 'Submitting Request...' : 'Submit Verification Request (AC-52)'}
+              {isSubmitting ? 'Submitting Request...' : 'Submit Verification Request'}
             </button>
           </form>
         )}

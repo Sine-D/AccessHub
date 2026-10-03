@@ -1207,7 +1207,7 @@ React.FC = () => {
                       aria-hidden="true"
                       className="h-4 w-4"
                     />
-                    Navigate (AC-230)
+                    Route Preview
                   </button>
                 </div>
               </section>

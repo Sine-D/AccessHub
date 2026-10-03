@@ -99,7 +99,7 @@ export const VendorVerificationModal: React.FC<VendorVerificationModalProps> = (
           <div className="flex items-center space-x-2">
             <ShieldCheck className="w-5 h-5 text-teal-500" />
             <h3 id="modal-title" className="font-extrabold text-sm sm:text-base">
-              Vendor Verification Document Inspector (AC-53)
+              Vendor Verification Document Inspector
             </h3>
           </div>
           <button
@@ -240,7 +240,7 @@ export const VendorVerificationModal: React.FC<VendorVerificationModalProps> = (
                   className="flex-1 min-h-[48px] py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 transition-all focus:ring-2 focus:ring-emerald-500"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Approve & Grant Badge (AC-54)</span>
+                  <span>Approve & Grant Badge</span>
                 </button>
 
                 <button
@@ -267,7 +267,7 @@ export const VendorVerificationModal: React.FC<VendorVerificationModalProps> = (
 
             <div className="space-y-1">
               <label className="text-xs font-extrabold text-slate-700 dark:text-slate-300">
-                Rejection Reason / Feedback (Required for AC-55)
+                Rejection Reason / Feedback
               </label>
               <textarea
                 required
@@ -286,7 +286,7 @@ export const VendorVerificationModal: React.FC<VendorVerificationModalProps> = (
                 className="flex-1 min-h-[48px] py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs shadow-lg shadow-red-600/30 flex items-center justify-center space-x-1.5 transition-all"
               >
                 <XCircle className="w-4 h-4" />
-                <span>Confirm Rejection (AC-55)</span>
+                <span>Confirm Rejection</span>
               </button>
 
               <button
