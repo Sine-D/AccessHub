@@ -38,12 +38,18 @@ import {
 } from './mock/data';
 
 import { saveRatingWithVerification } from './services/ratingsService';
+import {
+  calculateAccessibleRoute,
+  RouteType,
+  RoutePreviewResult,
+} from './services/routeService';
 import { CreateAccountScreen } from './features/auth/screens/CreateAccountScreen';
 import { MobileVendorVerificationQueue } from './features/admin/components/MobileVendorVerificationQueue';
 import { MobileListingModerationQueue } from './features/admin/components/MobileListingModerationQueue';
 import { MobileFraudModerationQueue } from './features/admin/components/MobileFraudModerationQueue';
 import { MobileAccessibilityBadgeManager } from './features/admin/components/MobileAccessibilityBadgeManager';
 import { MobileSalesAnalyticsDashboard } from './features/admin/components/MobileSalesAnalyticsDashboard';
+import { MobileAccessibilityComplianceDashboard } from './features/admin/components/MobileAccessibilityComplianceDashboard';
 import { AdminUnauthorizedState } from './features/admin/components/AdminStates';
 import { useAppState } from './core/hooks/useAppState';
 import { supabase } from './core/supabase';
@@ -71,10 +77,11 @@ type MobileTab =
   | 'map'
   | 'search_results'
   | 'admin'
-  | 'profile';
+  | 'profile'
+  | 'bookedProviders';
 
 export default function AppMobile() {
-  const { userRole, setUserRole, currentUser, setCurrentUser, setActiveScreen } = useAppState();
+  const { userRole, setUserRole, currentUser, setCurrentUser, setActiveScreen, bookingRequests, addBookingRequest } = useAppState();
   const isAdmin = userRole === 'admin' || currentUser?.role === 'admin';
 
   const [activeTab, setActiveTab] = useState<MobileTab>(isAdmin ? 'admin' : 'splash');
@@ -140,9 +147,69 @@ export default function AppMobile() {
   const [bookingHours, setBookingHours] = useState('2');
   const [bookingPaymentOption, setBookingPaymentOption] = useState<'50_50' | 'full'>('50_50');
   const [bookingSuccessAlert, setBookingSuccessAlert] = useState(false);
-  const [adminTab, setAdminTab] = useState<'vendors' | 'listings' | 'reviews' | 'freelancers' | 'accounts' | 'bookings' | 'badges' | 'analytics'>('vendors');
+  const [adminTab, setAdminTab] = useState<'vendors' | 'listings' | 'reviews' | 'freelancers' | 'accounts' | 'bookings' | 'badges' | 'analytics' | 'compliance'>('vendors');
   const [mobileUsers, setMobileUsers] = useState<any[]>([]);
   const [selectedMobileProfile, setSelectedMobileProfile] = useState<any | null>(null);
+
+  // --- NEW BOOKINGS STATE ---
+  const [bookedProvidersList, setBookedProvidersList] = useState<any[]>([]);
+  const [loadingBooked, setLoadingBooked] = useState(false);
+  const [selectedBookedProvider, setSelectedBookedProvider] = useState<any | null>(null);
+
+  // AC-230: Map pin details & step-free route preview (mobile)
+  const [selectedMapPin, setSelectedMapPin] = useState<typeof mockMapPins[0] | null>(null);
+  const [mapRouteModalOpen, setMapRouteModalOpen] = useState(false);
+  const [mapRouteMode, setMapRouteMode] = useState<RouteType>('step_free_wheelchair');
+  const [mapRouteResult, setMapRouteResult] = useState<RoutePreviewResult | null>(null);
+
+  const fetchBookedProviders = async () => {
+    // mockCurrentUser has ID 'u1' which breaks Supabase UUID validation. Using a static valid UUID for test purposes.
+    const userId = '00000000-0000-0000-0000-000000000000';
+    setLoadingBooked(true);
+    try {
+      const { data, error } = await supabase
+        .from('service_bookings')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setBookedProvidersList(data);
+      } else if (error) {
+        console.log('Supabase fetch failed.', error);
+      }
+    } catch (err) {
+      console.log('Error fetching bookings', err);
+    } finally {
+      setLoadingBooked(false);
+    }
+  };
+
+  const handleDeleteBookedProvider = async (id: string) => {
+    if (!id) return;
+
+    // Optimistic UI update
+    setBookedProvidersList(prev => prev.filter(b => b.id !== id));
+
+    try {
+      const { error } = await supabase
+        .from('service_bookings')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.log('Error deleting booking from Supabase', error);
+      }
+    } catch (err) {
+      console.log('Error in delete booking', err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'bookedProviders') {
+      fetchBookedProviders();
+    }
+  }, [activeTab, currentUser]);
 
   // Real-world Mobile Login State
   const [loginModalVisible, setLoginModalVisible] = useState(false);
@@ -217,6 +284,7 @@ export default function AppMobile() {
   };
 
   const [mobileBookingRequests, setMobileBookingRequests] = useState<ServiceBookingRequest[]>([]);
+  const [adminDbBookings, setAdminDbBookings] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchMobileData = async () => {
@@ -244,6 +312,11 @@ export default function AppMobile() {
             skills: item.skills || ['Freelancer']
           }));
           setMobileServices(formattedServices);
+        }
+
+        const { data: bData } = await supabase.from('service_bookings').select('*').order('created_at', { ascending: false });
+        if (bData) {
+          setAdminDbBookings(bData);
         }
 
         const { data: aData } = await supabase.from('freelancer_applications').select('*').eq('status', 'pending');
@@ -295,6 +368,15 @@ export default function AppMobile() {
   const [formDescription, setFormDescription] = useState('');
   const [formSkills, setFormSkills] = useState<string[]>(['Accessibility', 'Freelancer']);
 
+  // Proposal Form States
+  const [isProposalFormOpen, setIsProposalFormOpen] = useState(false);
+  const [proposalJobId, setProposalJobId] = useState('');
+  const [proposalJobTitle, setProposalJobTitle] = useState('');
+  const [proposalCoverLetter, setProposalCoverLetter] = useState('');
+  const [proposalBidAmount, setProposalBidAmount] = useState('');
+  const [proposalDeliveryTime, setProposalDeliveryTime] = useState('');
+  const [mobileProposals, setMobileProposals] = useState<any[]>([]);
+
   const pickImageFromLocalStorage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -305,7 +387,7 @@ export default function AppMobile() {
       });
 
       if (!result.canceled && result.assets) {
-        const newImages = result.assets.map(asset => 
+        const newImages = result.assets.map(asset =>
           asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri
         );
         setFormRatingImages(prev => [...prev, ...newImages]);
@@ -379,7 +461,95 @@ export default function AppMobile() {
       'Application Submitted! 🛡️',
       `Your freelancer application for "${formServiceTitle}" has been sent to the Admin Dashboard for review. Once approved (OK), it will immediately publish to Navbar Services!`,
       [
-        { text: 'OK', onPress: () => {} },
+        { text: 'OK', onPress: () => { } },
+        { text: 'Open Admin Queue', onPress: () => setIsAdminModalOpen(true) }
+      ]
+    );
+  };
+
+  const handleProposalSubmit = async () => {
+    if (!proposalCoverLetter.trim() || !proposalBidAmount.trim() || !proposalDeliveryTime.trim()) {
+      Alert.alert('Validation Error', 'Please fill in all proposal fields (Cover Letter, Bid Amount, and Delivery Time).');
+      return;
+    }
+
+    const tempId = `prop-${Date.now()}`;
+    const newProposal = {
+      id: tempId,
+      jobId: proposalJobId,
+      jobTitle: proposalJobTitle,
+      coverLetter: proposalCoverLetter,
+      bidAmount: Number(proposalBidAmount) || 0,
+      deliveryTime: proposalDeliveryTime,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+
+    setMobileProposals(prev => [newProposal, ...prev]);
+
+    // Construct a freelancer application representation for the Admin Dashboard
+    const proposalApp: FreelancerServiceApplication = {
+      id: tempId,
+      name: mockCurrentUser?.name || 'Freelancer',
+      age: 25,
+      district: 'Colombo',
+      address: 'Sri Lanka',
+      guardianName: 'N/A',
+      guardianPhone: 'N/A',
+      phone: '0770000000',
+      isFreelancer: true,
+      rating: 5,
+      ratingImages: [],
+      serviceTitle: `${proposalJobTitle} Proposal`,
+      hourlyRate: Number(proposalBidAmount) || 0,
+      category: 'Services',
+      description: `Delivery Time: ${proposalDeliveryTime}\nCover Letter: ${proposalCoverLetter}`,
+      skills: ['Proposal'],
+      status: 'pending',
+      createdAt: new Date().toLocaleString()
+    };
+
+    setMobilePendingApps(prev => [proposalApp, ...prev]);
+
+    setIsProposalFormOpen(false);
+
+    try {
+      const { data, error } = await supabase.from('freelancer_applications').insert([{
+        name: proposalApp.name,
+        age: proposalApp.age,
+        district: proposalApp.district,
+        address: proposalApp.address,
+        guardian_name: proposalApp.guardianName,
+        guardian_phone: proposalApp.guardianPhone,
+        phone: proposalApp.phone,
+        is_freelancer: proposalApp.isFreelancer,
+        rating: proposalApp.rating,
+        rating_images: proposalApp.ratingImages,
+        service_title: proposalApp.serviceTitle,
+        hourly_rate: proposalApp.hourlyRate,
+        category: proposalApp.category,
+        description: proposalApp.description,
+        skills: proposalApp.skills,
+        status: proposalApp.status
+      }]).select();
+
+      if (!error && data && data.length > 0) {
+        const realId = data[0].id;
+        setMobilePendingApps(prev => prev.map(item => item.id === tempId ? { ...item, id: realId } : item));
+      }
+    } catch (err) {
+      console.error('Error inserting proposal to Supabase freelancer queue:', err);
+    }
+
+    setProposalCoverLetter('');
+    setProposalBidAmount('');
+    setProposalDeliveryTime('');
+
+    Alert.alert(
+      'Proposal Submitted! 🚀',
+      `Your proposal for "${proposalJobTitle}" has been sent successfully. It is now pending approval in the Admin Freelancers Queue!`,
+      [
+        { text: 'OK', onPress: () => { } },
         { text: 'Open Admin Queue', onPress: () => setIsAdminModalOpen(true) }
       ]
     );
@@ -509,6 +679,11 @@ export default function AppMobile() {
           setMobileServices(formattedServices);
         } else {
           setMobileServices([]);
+        }
+
+        const { data: bData } = await supabase.from('service_bookings').select('*').order('created_at', { ascending: false });
+        if (bData) {
+          setAdminDbBookings(bData);
         }
 
         // Fetch real pending apps from Supabase
@@ -676,7 +851,12 @@ export default function AppMobile() {
   }, [activeTab]);
 
   const speakText = (text: string) => {
-    if (ttsActive) {
+    if (Platform.OS === 'web' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.95;
+      window.speechSynthesis.speak(utterance);
+    } else if (ttsActive) {
       Alert.alert('🔊 Voice Reader', text);
     }
   };
@@ -1403,7 +1583,7 @@ export default function AppMobile() {
                 style={[
                   styles.scaleBtn,
                   fontScale === s &&
-                    styles.scaleBtnActive,
+                  styles.scaleBtnActive,
                 ]}
                 onPress={() => setFontScale(s)}
               >
@@ -1890,6 +2070,12 @@ export default function AppMobile() {
                 >
                   🤝 Inclusive Services
                 </Text>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('bookedProviders')}
+                  style={{ backgroundColor: '#2563eb', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Booked Providers</Text>
+                </TouchableOpacity>
               </View>
 
               {/* SEARCH BAR FOR SERVICES */}
@@ -2013,29 +2199,29 @@ export default function AppMobile() {
 
                     if (cat === 'handcraft') {
                       matchCategory = serviceCat.includes('handcraft') || serviceCat.includes('craft') || serviceCat.includes('handbag') || serviceCat.includes('tailor') ||
-                                      serviceTitle.includes('handcraft') || serviceTitle.includes('craft') || serviceTitle.includes('making') || serviceTitle.includes('handbag') || serviceTitle.includes('tailor') ||
-                                      serviceDesc.includes('craft') || serviceDesc.includes('hand') ||
-                                      serviceSkills.some((s: string) => s.includes('craft') || s.includes('hand') || s.includes('making') || s.includes('tailor'));
+                        serviceTitle.includes('handcraft') || serviceTitle.includes('craft') || serviceTitle.includes('making') || serviceTitle.includes('handbag') || serviceTitle.includes('tailor') ||
+                        serviceDesc.includes('craft') || serviceDesc.includes('hand') ||
+                        serviceSkills.some((s: string) => s.includes('craft') || s.includes('hand') || s.includes('making') || s.includes('tailor'));
                     } else if (cat === 'designing') {
-                      matchCategory = serviceCat.includes('design') || 
-                                      serviceTitle.includes('design') || serviceTitle.includes('ux') || serviceTitle.includes('ui') || serviceTitle.includes('graphic') ||
-                                      serviceDesc.includes('design') || serviceDesc.includes('ux') ||
-                                      serviceSkills.some((s: string) => s.includes('design') || s.includes('ux') || s.includes('ui'));
+                      matchCategory = serviceCat.includes('design') ||
+                        serviceTitle.includes('design') || serviceTitle.includes('ux') || serviceTitle.includes('ui') || serviceTitle.includes('graphic') ||
+                        serviceDesc.includes('design') || serviceDesc.includes('ux') ||
+                        serviceSkills.some((s: string) => s.includes('design') || s.includes('ux') || s.includes('ui'));
                     } else if (cat === 'development') {
                       matchCategory = serviceCat.includes('dev') || serviceCat.includes('code') || serviceCat.includes('software') || serviceCat.includes('web') ||
-                                      serviceTitle.includes('dev') || serviceTitle.includes('code') || serviceTitle.includes('software') || serviceTitle.includes('web') || serviceTitle.includes('tech') ||
-                                      serviceDesc.includes('dev') || serviceDesc.includes('code') || serviceDesc.includes('software') ||
-                                      serviceSkills.some((s: string) => s.includes('dev') || s.includes('code') || s.includes('web') || s.includes('react') || s.includes('software') || s.includes('tech'));
+                        serviceTitle.includes('dev') || serviceTitle.includes('code') || serviceTitle.includes('software') || serviceTitle.includes('web') || serviceTitle.includes('tech') ||
+                        serviceDesc.includes('dev') || serviceDesc.includes('code') || serviceDesc.includes('software') ||
+                        serviceSkills.some((s: string) => s.includes('dev') || s.includes('code') || s.includes('web') || s.includes('react') || s.includes('software') || s.includes('tech'));
                     } else if (cat === 'translation') {
                       matchCategory = serviceCat.includes('transla') || serviceCat.includes('sign') || serviceCat.includes('language') || serviceCat.includes('interpret') ||
-                                      serviceTitle.includes('transla') || serviceTitle.includes('sign') || serviceTitle.includes('language') || serviceTitle.includes('interpret') || serviceTitle.includes('braille') ||
-                                      serviceDesc.includes('transla') || serviceDesc.includes('sign') || serviceDesc.includes('language') ||
-                                      serviceSkills.some((s: string) => s.includes('transla') || s.includes('sign') || s.includes('language') || s.includes('braille') || s.includes('interpreter'));
+                        serviceTitle.includes('transla') || serviceTitle.includes('sign') || serviceTitle.includes('language') || serviceTitle.includes('interpret') || serviceTitle.includes('braille') ||
+                        serviceDesc.includes('transla') || serviceDesc.includes('sign') || serviceDesc.includes('language') ||
+                        serviceSkills.some((s: string) => s.includes('transla') || s.includes('sign') || s.includes('language') || s.includes('braille') || s.includes('interpreter'));
                     } else if (cat === 'editing') {
                       matchCategory = serviceCat.includes('edit') || serviceCat.includes('video') || serviceCat.includes('audio') || serviceCat.includes('media') ||
-                                      serviceTitle.includes('edit') || serviceTitle.includes('video') || serviceTitle.includes('audio') || serviceTitle.includes('media') ||
-                                      serviceDesc.includes('edit') || serviceDesc.includes('video') || serviceDesc.includes('audio') ||
-                                      serviceSkills.some((s: string) => s.includes('edit') || s.includes('video') || s.includes('audio') || s.includes('media'));
+                        serviceTitle.includes('edit') || serviceTitle.includes('video') || serviceTitle.includes('audio') || serviceTitle.includes('media') ||
+                        serviceDesc.includes('edit') || serviceDesc.includes('video') || serviceDesc.includes('audio') ||
+                        serviceSkills.some((s: string) => s.includes('edit') || s.includes('video') || s.includes('audio') || s.includes('media'));
                     } else {
                       matchCategory = serviceCat.includes(cat) || serviceTitle.includes(cat) || serviceDesc.includes(cat) || serviceSkills.some((s: string) => s.includes(cat));
                     }
@@ -2191,6 +2377,207 @@ export default function AppMobile() {
             </View>
           )}
 
+          {/* BOOKED PROVIDERS TAB */}
+          {activeTab === 'bookedProviders' && (
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    dynamicText(18),
+                    { color: textColor, marginBottom: 0 },
+                  ]}
+                >
+                  ✅ Booked Providers
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('services')}
+                  style={{ backgroundColor: '#4c1d95', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Back to Services</Text>
+                </TouchableOpacity>
+              </View>
+
+              {loadingBooked ? (
+                <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 20, textAlign: 'center' }}>
+                  Loading your booked providers from database...
+                </Text>
+              ) : (() => {
+                const combinedBookings = [
+                  ...bookingRequests.map(b => ({
+                    id: b.id,
+                    service_title: b.serviceTitle,
+                    provider_name: b.providerName,
+                    total_budget: b.totalBudget,
+                    status: b.status === 'in_progress' ? 'accepted' : b.status,
+                    created_at: b.createdAt
+                  })),
+                  ...bookedProvidersList
+                ].filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
+
+                if (combinedBookings.length === 0) {
+                  return (
+                    <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 20, textAlign: 'center' }}>
+                      You haven't booked any providers yet. Find one from the services page!
+                    </Text>
+                  );
+                }
+                return (
+                  <ScrollView style={{ marginTop: 10, paddingBottom: 20 }}>
+                    {combinedBookings.map((booking, index) => {
+                      const status = booking.status?.toLowerCase() || 'pending';
+                      return (
+                        <TouchableOpacity
+                          key={booking.id || index}
+                          onPress={() => setSelectedBookedProvider(booking)}
+                          style={{ backgroundColor: '#1b1436', padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#4c1d95' }}
+                        >
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <View style={{ flex: 1, paddingRight: 10 }}>
+                              <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>
+                                {booking.service_title}
+                              </Text>
+                              <Text style={{ color: '#fbbf24', fontSize: 14, fontWeight: 'bold' }}>
+                                Provider: {booking.provider_name}
+                              </Text>
+                            </View>
+                            {status === 'pending' && (
+                              <TouchableOpacity
+                                onPress={() => handleDeleteBookedProvider(booking.id)}
+                                style={{ padding: 6, backgroundColor: '#dc2626', borderRadius: 8 }}
+                              >
+                                <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Delete</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+                            <Text style={{ color: status === 'accepted' ? '#34d399' : status === 'canceled' ? '#f87171' : '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>
+                              Status: {booking.status?.toUpperCase() || 'PENDING'}
+                            </Text>
+                            <Text style={{ color: '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>
+                              Budget: LKR {booking.total_budget?.toLocaleString()}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </ScrollView>
+                )
+              })()}
+              {/* Detailed Booked Provider Modal Overlay */}
+              {selectedBookedProvider && (
+                <Modal visible={true} transparent animationType="fade">
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'rgba(15, 23, 42, 0.90)',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      padding: 16,
+                    }}
+                  >
+                    <View
+                      style={{
+                        backgroundColor: cardBg,
+                        borderRadius: 24,
+                        padding: 24,
+                        width: '100%',
+                        maxWidth: 520,
+                        height: 500, // Makes the box long vertically
+                        maxHeight: '90%',
+                        borderColor: '#4c1d95',
+                        borderWidth: 1,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 10 },
+                        shadowOpacity: 0.5,
+                        shadowRadius: 20,
+                        elevation: 10,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', paddingBottom: 10 }}>
+                        <Text style={{ color: '#ffffff', fontSize: 20, fontWeight: 'bold' }}>Booking Details</Text>
+                        <TouchableOpacity
+                          onPress={() => setSelectedBookedProvider(null)}
+                          style={{
+                            padding: 6,
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                            borderRadius: 16,
+                            width: 32,
+                            height: 32,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: 'bold' }}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <ScrollView style={{ flexShrink: 1 }}>
+                        {(() => {
+                          const status = (selectedBookedProvider.status || 'pending').toLowerCase();
+                          let bgColor = 'rgba(251, 191, 36, 0.1)';
+                          let borderColor = '#fbbf24';
+                          let titleColor = '#fbbf24';
+                          let mainColor = '#f59e0b';
+                          let subtitleColor = '#fde68a';
+                          let message = 'Provider will review and accept your task soon.';
+                          let displayStatus = 'PENDING';
+
+                          if (status === 'accepted' || status === 'in_progress') {
+                            bgColor = 'rgba(52, 211, 153, 0.1)';
+                            borderColor = '#34d399';
+                            titleColor = '#34d399';
+                            mainColor = '#10b981';
+                            subtitleColor = '#a7f3d0';
+                            message = 'Booking accepted! The provider has taken your task.';
+                            displayStatus = 'TAKEN';
+                          } else if (status === 'canceled' || status === 'rejected') {
+                            bgColor = 'rgba(239, 68, 68, 0.1)';
+                            borderColor = '#ef4444';
+                            titleColor = '#ef4444';
+                            mainColor = '#dc2626';
+                            subtitleColor = '#fecaca';
+                            message = 'This booking has been canceled.';
+                            displayStatus = 'CANCELED';
+                          }
+
+                          return (
+                            <View style={{ backgroundColor: bgColor, padding: 16, borderRadius: 12, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor }}>
+                              <Text style={{ color: titleColor, fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>CURRENT STATUS</Text>
+                              <Text style={{ color: mainColor, fontSize: 24, fontWeight: '900', letterSpacing: 2 }}>{displayStatus}</Text>
+                              <Text style={{ color: subtitleColor, fontSize: 11, marginTop: 6, textAlign: 'center' }}>
+                                {message}
+                              </Text>
+                            </View>
+                          );
+                        })()}
+
+                        <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Service Title</Text>
+                        <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: 'bold', marginBottom: 16 }}>{selectedBookedProvider.service_title}</Text>
+
+                        <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Assigned Provider</Text>
+                        <Text style={{ color: '#fbbf24', fontSize: 16, fontWeight: 'bold', marginBottom: 16 }}>{selectedBookedProvider.provider_name}</Text>
+
+                        <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Total Escrow Budget</Text>
+                        <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: 'bold', marginBottom: 16 }}>LKR {selectedBookedProvider.total_budget?.toLocaleString()}</Text>
+
+                        <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Booking Date</Text>
+                        <Text style={{ color: '#ffffff', fontSize: 14, marginBottom: 16 }}>{new Date(selectedBookedProvider.created_at).toLocaleDateString()}</Text>
+                      </ScrollView>
+
+                      <TouchableOpacity
+                        onPress={() => setSelectedBookedProvider(null)}
+                        style={{ backgroundColor: '#4c1d95', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 20 }}
+                      >
+                        <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 16 }}>Close Details</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </Modal>
+              )}
+            </View>
+          )}
+
           {/* Service Booking & Milestone Escrow Payment Modal Overlay */}
           {selectedMobileBookingService && (
             <View
@@ -2284,7 +2671,7 @@ export default function AppMobile() {
                         const pct = bookingPaymentOption === 'full' ? 100 : 50;
                         const deposit = Math.round((total * pct) / 100);
                         const msg = `Voice confirmation for checkout. Provider: ${selectedMobileBookingService.providerName}. Service: ${selectedMobileBookingService.title}. Total budget LKR ${total.toLocaleString()} for ${hrs} hours. Escrow deposit required now is LKR ${deposit.toLocaleString()} under ${bookingPaymentOption === 'full' ? '100 percent upfront' : '50 50 split'}.`;
-                        
+
                         if (Platform.OS === 'web' && 'speechSynthesis' in window) {
                           window.speechSynthesis.cancel();
                           const utterance = new SpeechSynthesisUtterance(msg);
@@ -2477,7 +2864,7 @@ export default function AppMobile() {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    onPress={() => {
+                    onPress={async () => {
                       if (selectedMobileBookingService) {
                         const hours = Number(bookingHours) || 2;
                         const rate = selectedMobileBookingService.hourlyRate || 4500;
@@ -2493,7 +2880,7 @@ export default function AppMobile() {
                           serviceTitle: selectedMobileBookingService.title,
                           providerName: selectedMobileBookingService.providerName,
                           providerAvatar: selectedMobileBookingService.providerAvatar,
-                          clientName: 'Saman Kumara (Buyer)',
+                          clientName: currentUser?.name || 'Customer',
                           projectTitle: bookingProjectTitle || `${selectedMobileBookingService.title} Task`,
                           description: bookingDescription || 'Detailed task instructions and requirements.',
                           totalBudget: total,
@@ -2506,7 +2893,28 @@ export default function AppMobile() {
                           createdAt: new Date().toISOString()
                         };
 
+                        addBookingRequest(newBooking);
                         setMobileBookingRequests(prev => [newBooking, ...prev]);
+
+                        // 🔥 OPTIMISTIC UI UPDATE + REAL SUPABASE DATABASE INSERTION
+                        const supabaseBookingData = {
+                          // mock IDs like 'u1' break UUID column types. Using static valid UUIDs for test purposes.
+                          user_id: '00000000-0000-0000-0000-000000000000',
+                          provider_id: '11111111-1111-1111-1111-111111111111',
+                          provider_name: selectedMobileBookingService.providerName,
+                          service_title: selectedMobileBookingService.title,
+                          total_budget: total,
+                          status: 'pending',
+                          created_at: new Date().toISOString()
+                        };
+
+                        setBookedProvidersList(prev => [supabaseBookingData, ...prev]);
+
+                        try {
+                          await supabase.from('service_bookings').insert([supabaseBookingData]);
+                        } catch (e) {
+                          console.log('Supabase insert failed', e);
+                        }
                       }
 
                       setBookingSuccessAlert(true);
@@ -2734,7 +3142,7 @@ export default function AppMobile() {
                 ].map((f) => {
                   const isActive =
                     jobFilter[
-                      f.key as keyof typeof jobFilter
+                    f.key as keyof typeof jobFilter
                     ];
 
                   return (
@@ -2745,7 +3153,7 @@ export default function AppMobile() {
                           ...prev,
                           [f.key]:
                             !prev[
-                              f.key as keyof typeof prev
+                            f.key as keyof typeof prev
                             ],
                         }))
                       }
@@ -2947,8 +3355,9 @@ export default function AppMobile() {
                         },
                       ]}
                       onPress={() => {
-                        setFormServiceTitle(job.title + ' Service');
-                        setIsFreelancerFormOpen(true);
+                        setProposalJobId(job.id);
+                        setProposalJobTitle(job.title);
+                        setIsProposalFormOpen(true);
                       }}
                       accessibilityRole="button"
                       accessibilityLabel={`Apply for ${job.title} at ${job.company}`}
@@ -3088,33 +3497,54 @@ export default function AppMobile() {
                   (review) => Boolean(review.photoUri),
                 ).length;
 
+                const isSelectedPin = selectedMapPin?.id === pin.id;
+
                 return (
-                  <View
+                  <TouchableOpacity
                     key={pin.id}
+                    activeOpacity={0.85}
+                    onPress={() => setSelectedMapPin(pin)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${pin.title}. ${pin.badge}. ${pin.distance}`}
+                    accessibilityHint="Tap to view details and navigate"
+                    accessibilityState={{ selected: isSelectedPin }}
                     style={[
                       styles.mapCard,
                       {
                         backgroundColor: cardBg,
+                        borderWidth: isSelectedPin ? 2 : 1,
+                        borderColor: isSelectedPin
+                          ? (highContrast ? '#00ff00' : '#2563eb')
+                          : (highContrast ? '#ffffff' : '#e2e8f0'),
                       },
                     ]}
                   >
                     <Image
                       source={{ uri: pin.image }}
                       style={styles.mapImg}
+                      accessibilityIgnoresInvertColors
                     />
 
                     <View style={{ padding: 12 }}>
-                      <Text
-                        style={[
-                          styles.mapPinTitle,
-                          dynamicText(15),
-                          {
-                            color: textColor,
-                          },
-                        ]}
-                      >
-                        {pin.title}
-                      </Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                        <Text
+                          style={[
+                            styles.mapPinTitle,
+                            dynamicText(15),
+                            {
+                              color: textColor,
+                              flex: 1,
+                            },
+                          ]}
+                        >
+                          {pin.title}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: highContrast ? '#333300' : '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: highContrast ? '#ffff00' : '#b45309' }}>
+                            ⭐ {pin.accessibilityRating.toFixed(1)}
+                          </Text>
+                        </View>
+                      </View>
 
                       <Text
                         style={[
@@ -3126,21 +3556,51 @@ export default function AppMobile() {
                           },
                         ]}
                       >
-                        📍 {pin.address} (
-                        {pin.distance})
+                        📍 {pin.address} ({pin.distance})
                       </Text>
 
-                      <Text
-                        style={[
-                          styles.badgeTag,
-                          {
-                            color: accentColor,
-                            marginTop: 6,
-                          },
-                        ]}
+                      {/* AC-86 - AC-90: Awarded Accessibility Badge Banner */}
+                      <View
+                        style={{
+                          marginTop: 8,
+                          padding: 8,
+                          borderRadius: 10,
+                          backgroundColor: highContrast ? '#003300' : '#f0fdf4',
+                          borderWidth: 1,
+                          borderColor: highContrast ? '#00ff00' : '#bbf7d0',
+                        }}
                       >
-                        ♿ {pin.badge}
-                      </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: highContrast ? '#ffff00' : '#15803d' }}>
+                            {pin.id === 'mp1' ? '🥇 Gold Accessibility Badge' : pin.id === 'mp2' ? '🥈 Silver Accessibility Badge' : '🏆 100% Barrier-Free Badge'}
+                          </Text>
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: highContrast ? '#ffffff' : '#166534', backgroundColor: highContrast ? '#006600' : '#dcfce7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                            ✓ VERIFIED
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 11, fontWeight: '600', color: highContrast ? '#ffffff' : '#166534', marginTop: 3 }}>
+                          ♿ {pin.badge}
+                        </Text>
+                      </View>
+
+                      {/* Accessibility Feature Badges */}
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+                        {pin.accessibilityFeatures.map((feat) => (
+                          <View
+                            key={feat}
+                            style={{
+                              backgroundColor: highContrast ? '#112233' : '#e0f2fe',
+                              borderRadius: 6,
+                              paddingHorizontal: 7,
+                              paddingVertical: 3,
+                            }}
+                          >
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: highContrast ? '#00ffff' : '#0369a1' }}>
+                              ✓ {feat}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
 
                       {photoCount > 0 && (
                         <Text
@@ -3148,54 +3608,80 @@ export default function AppMobile() {
                             styles.photoCountText,
                             {
                               color: accentColor,
+                              marginTop: 6,
                             },
                           ]}
                         >
-                          📷 {photoCount} photo
-                          {photoCount === 1
-                            ? ''
-                            : 's'}{' '}
-                          submitted
+                          📷 {photoCount} photo{photoCount === 1 ? '' : 's'} submitted
                         </Text>
                       )}
 
-                      <TouchableOpacity
-                        onPress={() => setSelectedMobilePlace(pin)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`View details for ${pin.title}`}
-                        style={{
-                          marginTop: 10,
-                          minHeight: 44,
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          borderRadius: 12,
-                          backgroundColor: primaryButtonBg,
-                        }}
-                      >
-                        <Text style={{ color: primaryButtonText, fontWeight: '900' }}>View accessible details</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() =>
-                          setReviewModalLocationId(
-                            pin.id,
-                          )
-                        }
-                        accessibilityRole="button"
-                        accessibilityLabel={`Write a review for ${pin.title}`}
-                        style={{ marginTop: 10 }}
-                      >
-                        <Text
+                      {/* AC-230 Action buttons */}
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setSelectedMapPin(pin);
+                            const result = calculateAccessibleRoute(pin, 'step_free_wheelchair');
+                            setMapRouteResult(result);
+                            setMapRouteMode('step_free_wheelchair');
+                            setMapRouteModalOpen(true);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Open step-free route preview to ${pin.title}`}
                           style={{
-                            color: accentColor,
-                            fontWeight: '600',
+                            flex: 1,
+                            minHeight: 44,
+                            backgroundColor: highContrast ? '#0000cc' : '#2563eb',
+                            borderRadius: 10,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            paddingVertical: 10,
+                            paddingHorizontal: 12,
                           }}
                         >
-                          Write a Review
-                        </Text>
-                      </TouchableOpacity>
+                          <Text
+                            style={{
+                              color: '#ffffff',
+                              fontWeight: '700',
+                              fontSize: fontScale === 'xl' ? 13 : fontScale === 'lg' ? 12 : 11,
+                            }}
+                          >
+                            🗺️ Route Preview
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() =>
+                            setReviewModalLocationId(
+                              pin.id,
+                            )
+                          }
+                          accessibilityRole="button"
+                          accessibilityLabel={`Write a review for ${pin.title}`}
+                          style={{
+                            flex: 1,
+                            minHeight: 44,
+                            backgroundColor: highContrast ? '#006600' : '#0d9488',
+                            borderRadius: 10,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            paddingVertical: 10,
+                            paddingHorizontal: 12,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: '#ffffff',
+                              fontWeight: '700',
+                              fontSize: fontScale === 'xl' ? 13 : fontScale === 'lg' ? 12 : 11,
+                            }}
+                          >
+                            ✍️ Write Review
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
 
@@ -3210,7 +3696,9 @@ export default function AppMobile() {
                   setReviewModalLocationId(null)
                 }
               >
-                <View
+                <TouchableOpacity
+                  activeOpacity={1}
+                  onPress={() => setReviewModalLocationId(null)}
                   style={{
                     flex: 1,
                     justifyContent: 'flex-end',
@@ -3218,7 +3706,9 @@ export default function AppMobile() {
                       'rgba(0,0,0,0.5)',
                   }}
                 >
-                  <View
+                  <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={(e) => e.stopPropagation()}
                     style={{
                       backgroundColor: cardBg,
                       borderTopLeftRadius: 16,
@@ -3230,6 +3720,7 @@ export default function AppMobile() {
                         locationId={
                           reviewModalLocationId
                         }
+                        onCancel={() => setReviewModalLocationId(null)}
                         onSubmit={async (data) => {
                           const newReview =
                             addReview(data);
@@ -3269,6 +3760,167 @@ export default function AppMobile() {
                         }}
                       />
                     )}
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              </Modal>
+
+              {/* AC-230: Mobile Step-Free & Tactile Route Preview Modal */}
+              <Modal
+                visible={mapRouteModalOpen}
+                animationType="slide"
+                transparent
+                onRequestClose={() => setMapRouteModalOpen(false)}
+              >
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+                  <View
+                    style={{
+                      backgroundColor: cardBg,
+                      borderTopLeftRadius: 24,
+                      borderTopRightRadius: 24,
+                      maxHeight: '85%',
+                      padding: 16,
+                    }}
+                  >
+                    {/* Header */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[dynamicText(16), { fontWeight: '800', color: textColor }]}>
+                          🗺️ Step-Free Route Preview (AC-230)
+                        </Text>
+                        <Text style={[dynamicText(12), { color: subTextColor, marginTop: 2 }]}>
+                          Destination: {selectedMapPin?.title}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => setMapRouteModalOpen(false)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Close route preview"
+                        style={{
+                          padding: 8,
+                          borderRadius: 20,
+                          backgroundColor: highContrast ? '#333333' : '#334155',
+                          minWidth: 44,
+                          minHeight: 44,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ fontWeight: '800', color: textColor }}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Mode Toggle */}
+                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (selectedMapPin) {
+                            setMapRouteMode('step_free_wheelchair');
+                            setMapRouteResult(calculateAccessibleRoute(selectedMapPin, 'step_free_wheelchair'));
+                          }
+                        }}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: mapRouteMode === 'step_free_wheelchair' }}
+                        style={{
+                          flex: 1,
+                          minHeight: 44,
+                          backgroundColor: mapRouteMode === 'step_free_wheelchair' ? (highContrast ? '#0000cc' : '#2563eb') : (highContrast ? '#222' : '#334155'),
+                          borderRadius: 12,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          paddingHorizontal: 8,
+                        }}
+                      >
+                        <Text style={{ color: mapRouteMode === 'step_free_wheelchair' ? '#fff' : textColor, fontWeight: '700', fontSize: 11 }}>
+                          ♿ Step-Free Route
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (selectedMapPin) {
+                            setMapRouteMode('tactile_paving_audio');
+                            setMapRouteResult(calculateAccessibleRoute(selectedMapPin, 'tactile_paving_audio'));
+                          }
+                        }}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: mapRouteMode === 'tactile_paving_audio' }}
+                        style={{
+                          flex: 1,
+                          minHeight: 44,
+                          backgroundColor: mapRouteMode === 'tactile_paving_audio' ? (highContrast ? '#006600' : '#0d9488') : (highContrast ? '#222' : '#334155'),
+                          borderRadius: 12,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          paddingHorizontal: 8,
+                        }}
+                      >
+                        <Text style={{ color: mapRouteMode === 'tactile_paving_audio' ? '#fff' : textColor, fontWeight: '700', fontSize: 11 }}>
+                          🦯 Tactile Route
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* KPI Metrics */}
+                    {mapRouteResult && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: highContrast ? '#000000' : '#0f172a', borderRadius: 12, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: highContrast ? '#ffff00' : '#334155' }}>
+                        <View style={{ alignItems: 'center', flex: 1 }}>
+                          <Text style={{ fontSize: 10, color: subTextColor, fontWeight: '700' }}>DISTANCE</Text>
+                          <Text style={{ fontSize: 13, color: textColor, fontWeight: '800' }}>{mapRouteResult.summary.totalDistanceMeters}m</Text>
+                        </View>
+                        <View style={{ alignItems: 'center', flex: 1 }}>
+                          <Text style={{ fontSize: 10, color: subTextColor, fontWeight: '700' }}>EST. TIME</Text>
+                          <Text style={{ fontSize: 13, color: '#60a5fa', fontWeight: '800' }}>~{mapRouteResult.summary.totalDurationMinutes}m</Text>
+                        </View>
+                        <View style={{ alignItems: 'center', flex: 1 }}>
+                          <Text style={{ fontSize: 10, color: subTextColor, fontWeight: '700' }}>STEP-FREE</Text>
+                          <Text style={{ fontSize: 13, color: '#4ade80', fontWeight: '800' }}>{mapRouteResult.summary.stepFreeScorePercentage}%</Text>
+                        </View>
+                        <View style={{ alignItems: 'center', flex: 1 }}>
+                          <Text style={{ fontSize: 10, color: subTextColor, fontWeight: '700' }}>TACTILE</Text>
+                          <Text style={{ fontSize: 13, color: '#2dd4bf', fontWeight: '800' }}>{mapRouteResult.summary.tactileCoveragePercentage}%</Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Navigation Steps */}
+                    <ScrollView style={{ flexShrink: 1, marginBottom: 12 }}>
+                      {mapRouteResult?.steps.map((step) => (
+                        <View
+                          key={step.id}
+                          style={{
+                            backgroundColor: highContrast ? '#111827' : '#0f172a',
+                            borderRadius: 12,
+                            padding: 12,
+                            marginBottom: 8,
+                            borderWidth: 1,
+                            borderColor: highContrast ? '#ffff00' : '#334155',
+                          }}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: textColor }}>
+                            {step.stepNumber}. {step.instruction}
+                          </Text>
+                          <Text style={{ fontSize: 11, color: subTextColor, marginTop: 4 }}>
+                            📏 {step.distanceMeters}m {step.slopeGradientPercent ? `• Slope: ${step.slopeGradientPercent}%` : ''} {step.hasRamp ? '• Ramp ✓' : ''} {step.hasElevator ? '• Elevator 🛗' : ''}
+                          </Text>
+                        </View>
+                      ))}
+                    </ScrollView>
+
+                    {/* Close Action */}
+                    <TouchableOpacity
+                      onPress={() => setMapRouteModalOpen(false)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Close route modal"
+                      style={{
+                        minHeight: 44,
+                        backgroundColor: highContrast ? '#333333' : '#334155',
+                        borderRadius: 12,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ fontWeight: '800', color: textColor }}>Close Route Preview</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </Modal>
@@ -3428,544 +4080,670 @@ export default function AppMobile() {
               </View>
             ) : (
               <View style={{ padding: 16 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    dynamicText(18),
-                    { color: textColor },
-                  ]}
-                >
-                  🛡️ Admin Dashboard
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      dynamicText(18),
+                      { color: textColor },
+                    ]}
+                  >
+                    🛡️ Admin Dashboard
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                    <TouchableOpacity
+                      onPress={() => setAdminTab(adminTab === 'accounts' ? 'freelancers' : 'accounts')}
+                      style={{
+                        backgroundColor: adminTab === 'accounts' ? '#f59e0b' : 'rgba(245, 158, 11, 0.2)',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 12,
+                        borderColor: '#f59e0b',
+                        borderWidth: 1,
+                      }}
+                    >
+                      <Text style={{ color: adminTab === 'accounts' ? '#000' : '#f59e0b', fontSize: 11, fontWeight: 'bold' }}>
+                        📊 Account Dashboard
+                      </Text>
+                    </TouchableOpacity>
+
+                    <View style={{ backgroundColor: '#0284c7', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }}>
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
+                        {mobilePendingApps.length} Pending
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Sub-Tab Navigation Bar */}
+                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
                   <TouchableOpacity
-                    onPress={() => setAdminTab(adminTab === 'accounts' ? 'freelancers' : 'accounts')}
+                    onPress={() => setAdminTab('vendors')}
                     style={{
-                      backgroundColor: adminTab === 'accounts' ? '#f59e0b' : 'rgba(245, 158, 11, 0.2)',
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
+                      flex: 1,
+                      paddingVertical: 10,
                       borderRadius: 12,
-                      borderColor: '#f59e0b',
+                      backgroundColor: adminTab === 'vendors' ? '#6366f1' : cardBg,
+                      alignItems: 'center',
+                      borderColor: '#6366f1',
                       borderWidth: 1,
                     }}
                   >
-                    <Text style={{ color: adminTab === 'accounts' ? '#000' : '#f59e0b', fontSize: 11, fontWeight: 'bold' }}>
-                      📊 Account Dashboard
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                      🏢 Vendors
                     </Text>
                   </TouchableOpacity>
 
-                  <View style={{ backgroundColor: '#0284c7', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }}>
-                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
-                      {mobilePendingApps.length} Pending
+                  <TouchableOpacity
+                    onPress={() => setAdminTab('listings')}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      backgroundColor: adminTab === 'listings' ? '#38bdf8' : cardBg,
+                      alignItems: 'center',
+                      borderColor: '#38bdf8',
+                      borderWidth: 1,
+                    }}
+                  >
+                    <Text style={{ color: adminTab === 'listings' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                      🛍️ Listings
                     </Text>
-                  </View>
-                </View>
-              </View>
+                  </TouchableOpacity>
 
               {/* Sub-Tab Navigation Bar */}
-              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
+                style={{ marginBottom: 16 }}
+              >
                 <TouchableOpacity
                   onPress={() => setAdminTab('vendors')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Vendors"
+                  accessibilityState={{ selected: adminTab === 'vendors' }}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    minHeight: 44,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'vendors' ? '#6366f1' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#6366f1',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     🏢 Vendors
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('listings')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Listings"
+                  accessibilityState={{ selected: adminTab === 'listings' }}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    minHeight: 44,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'listings' ? '#38bdf8' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#38bdf8',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: adminTab === 'listings' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: adminTab === 'listings' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     🛍️ Listings
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('freelancers')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Freelancers"
+                  accessibilityState={{ selected: adminTab === 'freelancers' }}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    minHeight: 44,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'freelancers' ? '#0284c7' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#0284c7',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     🛠️ Freelancers
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('bookings')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Bookings"
+                  accessibilityState={{ selected: adminTab === 'bookings' }}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    minHeight: 44,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'bookings' ? '#10b981' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#10b981',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     💳 Bookings
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('reviews')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Fraud Queue"
+                  accessibilityState={{ selected: adminTab === 'reviews' }}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    minHeight: 44,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'reviews' ? '#ef4444' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#ef4444',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     🚨 Fraud Queue
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('badges')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Accessibility Badges"
+                  accessibilityState={{ selected: adminTab === 'badges' }}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    minHeight: 44,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'badges' ? '#0d9488' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#0d9488',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     🏅 Badges
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('accounts')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Account Verification"
+                  accessibilityState={{ selected: adminTab === 'accounts' }}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    minHeight: 44,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'accounts' ? '#f59e0b' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#f59e0b',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: adminTab === 'accounts' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: adminTab === 'accounts' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 12 }}>
                     📊 Account
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => setAdminTab('analytics')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Sales Analytics"
+                  accessibilityState={{ selected: adminTab === 'analytics' }}
                   style={{
-                    flex: 1,
+                    paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    minHeight: 44,
+                    borderRadius: 14,
                     backgroundColor: adminTab === 'analytics' ? '#0284c7' : cardBg,
                     alignItems: 'center',
+                    justifyContent: 'center',
                     borderColor: '#0284c7',
                     borderWidth: 1,
                   }}
                 >
-                  <Text style={{ color: adminTab === 'analytics' ? '#fff' : '#94a3b8', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: adminTab === 'analytics' ? '#fff' : '#94a3b8', fontWeight: 'bold', fontSize: 12 }}>
                     📈 Sales
                   </Text>
                 </TouchableOpacity>
-              </View>
 
-              {/* SALES ANALYTICS DASHBOARD (AC-63 to AC-67) */}
-              {adminTab === 'analytics' && (
-                <MobileSalesAnalyticsDashboard highContrast={highContrast} onSpeak={speakText} />
-              )}
-
-              {/* ACCESSIBILITY BADGES MANAGER (AC-86 to AC-90) */}
-              {adminTab === 'badges' && (
-                <MobileAccessibilityBadgeManager highContrast={highContrast} onSpeak={speakText} />
-              )}
-
-              {/* VENDOR VERIFICATION QUEUE VIEW */}
-              {adminTab === 'vendors' && (
-                <MobileVendorVerificationQueue />
-              )}
-
-              {/* FRAUD MODERATION QUEUE VIEW (AC-252 to AC-263) */}
-              {adminTab === 'reviews' && (
-                <MobileFraudModerationQueue />
-              )}
-
-              {/* MARKETPLACE LISTING MODERATION VIEW (AC-57 to AC-62) */}
-              {adminTab === 'listings' && (
-                <MobileListingModerationQueue />
-              )}
-
-              {/* ACCOUNT DASHBOARD VIEW */}
-              {adminTab === 'accounts' && (
-                <View style={{ gap: 14 }}>
-                  <Text style={{ color: '#94a3b8', fontSize: 12 }}>
-                    Financial & Account Management Overview (Live Supabase Sync)
+                <TouchableOpacity
+                  onPress={() => setAdminTab('compliance')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Admin tab Compliance Monitoring"
+                  accessibilityState={{ selected: adminTab === 'compliance' }}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    minHeight: 44,
+                    borderRadius: 14,
+                    backgroundColor: adminTab === 'compliance' ? '#10b981' : cardBg,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderColor: '#10b981',
+                    borderWidth: 1,
+                  }}
+                >
+                  <Text style={{ color: adminTab === 'compliance' ? '#fff' : '#94a3b8', fontWeight: 'bold', fontSize: 12 }}>
+                    ✅ Compliance
                   </Text>
+                </TouchableOpacity>
+              </ScrollView>
 
-                  {/* Financial Stats Grid */}
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                    <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
-                      <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Total Buyers</Text>
-                      <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', marginTop: 2 }}>
-                        {mobileUsers.filter(u => (u.role || '').toLowerCase() === 'buyer').length || mobileUsers.length}
-                      </Text>
-                      <Text style={{ color: '#34d399', fontSize: 10, marginTop: 2 }}>● Supabase Synced</Text>
+                {/* ACCESSIBILITY BADGES MANAGER (AC-86 to AC-90) */}
+                {adminTab === 'badges' && (
+                  <MobileAccessibilityBadgeManager highContrast={highContrast} onSpeak={speakText} />
+                )}
+
+                {/* VENDOR VERIFICATION QUEUE VIEW */}
+                {adminTab === 'vendors' && (
+                  <MobileVendorVerificationQueue />
+                )}
+
+                {/* FRAUD MODERATION QUEUE VIEW (AC-252 to AC-263) */}
+                {adminTab === 'reviews' && (
+                  <MobileFraudModerationQueue />
+                )}
+
+                {/* MARKETPLACE LISTING MODERATION VIEW (AC-57 to AC-62) */}
+                {adminTab === 'listings' && (
+                  <MobileListingModerationQueue />
+                )}
+
+                {/* ACCOUNT DASHBOARD VIEW */}
+                {adminTab === 'accounts' && (
+                  <View style={{ gap: 14 }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 12 }}>
+                      Financial & Account Management Overview (Live Supabase Sync)
+                    </Text>
+
+                    {/* Financial Stats Grid */}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                      <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
+                        <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Total Buyers</Text>
+                        <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', marginTop: 2 }}>
+                          {mobileUsers.filter(u => (u.role || '').toLowerCase() === 'buyer').length || mobileUsers.length}
+                        </Text>
+                        <Text style={{ color: '#34d399', fontSize: 10, marginTop: 2 }}>● Supabase Synced</Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
+                        <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Verified Freelancers</Text>
+                        <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', marginTop: 2 }}>
+                          {mobileServices.length}
+                        </Text>
+                        <Text style={{ color: '#38bdf8', fontSize: 10, marginTop: 2 }}>✔ Live Verified Services</Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
+                        <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Escrow Volume</Text>
+                        <Text style={{ color: '#fbbf24', fontSize: 16, fontWeight: 'bold', marginTop: 2 }}>
+                          LKR {mobileServices.reduce((acc, s) => acc + (s.hourlyRate * 3), 0).toLocaleString()}
+                        </Text>
+                        <Text style={{ color: '#94a3b8', fontSize: 10, marginTop: 2 }}>🔒 Protected in Vault</Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
+                        <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Platform Revenue</Text>
+                        <Text style={{ color: '#34d399', fontSize: 16, fontWeight: 'bold', marginTop: 2 }}>
+                          LKR {Math.round(mobileServices.reduce((acc, s) => acc + (s.hourlyRate * 3), 0) * 0.10).toLocaleString()}
+                        </Text>
+                        <Text style={{ color: '#34d399', fontSize: 10, marginTop: 2 }}>10% Service Fee</Text>
+                      </View>
                     </View>
 
-                    <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
-                      <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Verified Freelancers</Text>
-                      <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', marginTop: 2 }}>
-                        {mobileServices.length}
-                      </Text>
-                      <Text style={{ color: '#38bdf8', fontSize: 10, marginTop: 2 }}>✔ Live Verified Services</Text>
+                    {/* Orders Sent to Freelancers Section */}
+                    <View style={{ backgroundColor: cardBg, padding: 14, borderRadius: 18, borderColor: '#334155', borderWidth: 1 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                        <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>
+                          📦 Orders Sent to Freelancers ({mobileBookingRequests.length})
+                        </Text>
+                        <TouchableOpacity onPress={() => setAdminTab('bookings')}>
+                          <Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold' }}>View Freelancer Queue ➔</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {mobileBookingRequests.length === 0 ? (
+                        <View style={{ padding: 16, alignItems: 'center', borderColor: '#334155', borderWidth: 1, borderRadius: 14, borderStyle: 'dashed' }}>
+                          <Text style={{ color: subTextColor, fontSize: 12 }}>No orders sent to freelancers yet.</Text>
+                        </View>
+                      ) : (
+                        mobileBookingRequests.map((req) => (
+                          <View key={req.id} style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 14, marginBottom: 10, borderColor: '#334155', borderWidth: 1 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ color: req.status === 'in_progress' || req.status === 'accepted' ? '#34d399' : '#fbbf24', fontSize: 10, fontWeight: 'bold' }}>
+                                  ● {req.status === 'in_progress' || req.status === 'accepted' ? '✓ Accepted by Freelancer' : `Dispatched ➔ Awaiting Freelancer Acceptance (${req.providerName})`}
+                                </Text>
+                                <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13, marginTop: 2 }}>{req.projectTitle}</Text>
+                                <Text style={{ color: subTextColor, fontSize: 11, marginTop: 2 }}>
+                                  Client: <Text style={{ color: textColor, fontWeight: 'bold' }}>{req.clientName}</Text> ➔ Target Freelancer: <Text style={{ color: '#38bdf8', fontWeight: 'bold' }}>{req.providerName}</Text> ({req.serviceTitle})
+                                </Text>
+                              </View>
+                              <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 12 }}>LKR {req.totalBudget.toLocaleString()}</Text>
+                            </View>
+
+                            <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: 8, borderRadius: 8, marginVertical: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
+                              <Text style={{ color: '#34d399', fontSize: 11, fontWeight: 'bold' }}>
+                                💳 Deposit: LKR {req.upfrontDeposit.toLocaleString()}
+                              </Text>
+                              <Text style={{ color: subTextColor, fontSize: 10 }}>
+                                Balance: LKR {req.remainingBalance.toLocaleString()}
+                              </Text>
+                            </View>
+
+                            {req.status === 'pending' ? (
+                              <View style={{ flexDirection: 'row', gap: 8 }}>
+                                <TouchableOpacity
+                                  style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 8, borderRadius: 10, alignItems: 'center' }}
+                                  onPress={() => {
+                                    setMobileBookingRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'in_progress' } : r));
+                                    Alert.alert('Order Accepted! 🎉', `Freelancer ${req.providerName} accepted order for ${req.projectTitle}. Work started.`);
+                                  }}
+                                >
+                                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>Accept Order as Freelancer ({req.providerName}) (OK)</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                  style={{ backgroundColor: '#7f1d1d', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, alignItems: 'center' }}
+                                  onPress={() => {
+                                    setMobileBookingRequests(prev => prev.filter(r => r.id !== req.id));
+                                  }}
+                                >
+                                  <Text style={{ color: '#fca5a5', fontWeight: 'bold', fontSize: 11 }}>Decline</Text>
+                                </TouchableOpacity>
+                              </View>
+                            ) : (
+                              <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', padding: 8, borderRadius: 10, alignItems: 'center' }}>
+                                <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 11 }}>✓ Order Accepted by Freelancer {req.providerName} & Work Started</Text>
+                              </View>
+                            )}
+                          </View>
+                        ))
+                      )}
                     </View>
 
-                    <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
-                      <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Escrow Volume</Text>
-                      <Text style={{ color: '#fbbf24', fontSize: 16, fontWeight: 'bold', marginTop: 2 }}>
-                        LKR {mobileServices.reduce((acc, s) => acc + (s.hourlyRate * 3), 0).toLocaleString()}
+                    {/* Registered Seller Profiles Section */}
+                    <View style={{ backgroundColor: cardBg, padding: 14, borderRadius: 18, borderColor: '#334155', borderWidth: 1 }}>
+                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 14, marginBottom: 10 }}>
+                        🛍️ Registered Sellers & Handicraft Creators ({mobileUsers.filter(u => (u.role || '').toLowerCase() === 'seller').length})
                       </Text>
-                      <Text style={{ color: '#94a3b8', fontSize: 10, marginTop: 2 }}>🔒 Protected in Vault</Text>
+
+                      {mobileUsers.filter(u => (u.role || '').toLowerCase() === 'seller').length === 0 ? (
+                        <View style={{ padding: 14, alignItems: 'center', borderColor: '#334155', borderWidth: 1, borderRadius: 14, borderStyle: 'dashed' }}>
+                          <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 12 }}>No Sellers registered in Supabase yet.</Text>
+                          <Text style={{ color: subTextColor, fontSize: 11, marginTop: 4, textAlign: 'center' }}>
+                            Run the SQL Query provided below to add a new Seller profile!
+                          </Text>
+                        </View>
+                      ) : (
+                        mobileUsers.filter(u => (u.role || '').toLowerCase() === 'seller').map((seller, idx) => (
+                          <View key={seller.id || idx} style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)', padding: 12, borderRadius: 14, marginBottom: 10, borderColor: '#a855f7', borderWidth: 1 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 14 }}>{seller.name || 'Kasun Kalhara'}</Text>
+                                  <View style={{ backgroundColor: '#a855f7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>✓ Verified Seller</Text>
+                                  </View>
+                                </View>
+                                <Text style={{ color: '#38bdf8', fontSize: 11, marginTop: 2 }}>📍 {seller.location || 'Sri Lanka'} • {seller.email}</Text>
+                              </View>
+                              <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 13 }}>★ {seller.rating || 5.0}</Text>
+                            </View>
+
+                            {seller.bio ? (
+                              <Text style={{ color: subTextColor, fontSize: 11, marginTop: 6, fontStyle: 'italic', backgroundColor: 'rgba(0,0,0,0.2)', padding: 6, borderRadius: 8 }}>
+                                "{seller.bio}"
+                              </Text>
+                            ) : null}
+
+                            <TouchableOpacity
+                              onPress={() => setSelectedMobileProfile({ ...seller, role: 'seller' })}
+                              style={{ marginTop: 8, backgroundColor: '#a855f7', paddingVertical: 10, borderRadius: 12, alignItems: 'center' }}
+                            >
+                              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>View Profile & Accept Orders</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ))
+                      )}
                     </View>
 
-                    <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
-                      <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Platform Revenue</Text>
-                      <Text style={{ color: '#34d399', fontSize: 16, fontWeight: 'bold', marginTop: 2 }}>
-                        LKR {Math.round(mobileServices.reduce((acc, s) => acc + (s.hourlyRate * 3), 0) * 0.10).toLocaleString()}
+                    {/* Registered Accounts Queue */}
+                    <View style={{ backgroundColor: cardBg, padding: 14, borderRadius: 18, borderColor: '#334155', borderWidth: 1 }}>
+                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 14, marginBottom: 10 }}>
+                        👥 Registered User Accounts (Supabase Database)
                       </Text>
-                      <Text style={{ color: '#34d399', fontSize: 10, marginTop: 2 }}>10% Service Fee</Text>
+
+                      {mobileUsers.length === 0 ? (
+                        <View style={{ padding: 16, alignItems: 'center', borderColor: '#334155', borderWidth: 1, borderRadius: 14, borderStyle: 'dashed' }}>
+                          <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>
+                            No users in Supabase <Text style={{ color: '#f59e0b' }}>public.users</Text> table yet.
+                          </Text>
+                          <Text style={{ color: subTextColor, fontSize: 11, marginTop: 4, textAlign: 'center' }}>
+                            Run the SQL Query in Supabase or complete sign-up to populate real users.
+                          </Text>
+                        </View>
+                      ) : (
+                        mobileUsers.map((user, idx) => (
+                          <View key={user.id || idx} style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 10, borderRadius: 12, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <View>
+                              <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>{user.name || 'Registered User'}</Text>
+                              <Text style={{ color: '#38bdf8', fontSize: 11 }}>{user.role || 'Buyer'}</Text>
+                              <Text style={{ color: subTextColor, fontSize: 10 }}>{user.email || user.id}</Text>
+                            </View>
+                            <TouchableOpacity
+                              onPress={() => setSelectedMobileProfile(user)}
+                              style={{ backgroundColor: '#9333ea', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, flexDirection: 'row', alignItems: 'center' }}
+                            >
+                              <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>View Profile & Accept Orders</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ))
+                      )}
                     </View>
                   </View>
+                )}
 
-                  {/* Orders Sent to Freelancers Section */}
-                  <View style={{ backgroundColor: cardBg, padding: 14, borderRadius: 18, borderColor: '#334155', borderWidth: 1 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>
-                        📦 Orders Sent to Freelancers ({mobileBookingRequests.length})
-                      </Text>
-                      <TouchableOpacity onPress={() => setAdminTab('bookings')}>
-                        <Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold' }}>View Freelancer Queue ➔</Text>
-                      </TouchableOpacity>
-                    </View>
+                {/* ESCROW BOOKINGS / FREELANCER ORDERS QUEUE VIEW */}
+                {adminTab === 'bookings' && (
+                  <View style={{ gap: 14 }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 12 }}>
+                      Client Orders Dispatched to Freelancers ({mobileBookingRequests.length})
+                    </Text>
 
-                    {mobileBookingRequests.length === 0 ? (
-                      <View style={{ padding: 16, alignItems: 'center', borderColor: '#334155', borderWidth: 1, borderRadius: 14, borderStyle: 'dashed' }}>
-                        <Text style={{ color: subTextColor, fontSize: 12 }}>No orders sent to freelancers yet.</Text>
-                      </View>
-                    ) : (
-                      mobileBookingRequests.map((req) => (
-                        <View key={req.id} style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 14, marginBottom: 10, borderColor: '#334155', borderWidth: 1 }}>
+                    {(() => {
+                      const combinedAdminBookings = [
+                        ...mobileBookingRequests,
+                        ...bookedProvidersList.map(b => ({
+                          id: b.id,
+                          serviceTitle: b.service_title,
+                          providerName: b.provider_name,
+                          clientName: 'Customer',
+                          projectTitle: `${b.service_title} Task`,
+                          totalBudget: b.total_budget,
+                          paymentType: 'full_upfront',
+                          upfrontDeposit: b.total_budget,
+                          remainingBalance: 0,
+                          description: '',
+                          status: b.status === 'accepted' ? 'in_progress' : (b.status || 'pending'),
+                          createdAt: b.created_at
+                        }))
+                      ].filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
+
+                      if (combinedAdminBookings.length === 0) {
+                        return (
+                          <View style={{ backgroundColor: cardBg, padding: 24, borderRadius: 20, alignItems: 'center', borderColor: '#334155', borderWidth: 1 }}>
+                            <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 15 }}>No Orders Sent to Freelancers</Text>
+                            <Text style={{ color: subTextColor, fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+                              When a client books a freelancer through the form, the order details will appear here for freelancer acceptance.
+                            </Text>
+                          </View>
+                        );
+                      }
+
+                      return combinedAdminBookings.map((req) => (
+                        <View key={req.id} style={{ backgroundColor: cardBg, padding: 16, borderRadius: 20, marginBottom: 12, borderColor: '#334155', borderWidth: 1 }}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <View style={{ flex: 1 }}>
-                              <Text style={{ color: req.status === 'in_progress' || req.status === 'accepted' ? '#34d399' : '#fbbf24', fontSize: 10, fontWeight: 'bold' }}>
+                              <Text style={{ color: req.status === 'in_progress' || req.status === 'accepted' ? '#34d399' : '#fbbf24', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>
                                 ● {req.status === 'in_progress' || req.status === 'accepted' ? '✓ Accepted by Freelancer' : `Dispatched ➔ Awaiting Freelancer Acceptance (${req.providerName})`}
                               </Text>
-                              <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13, marginTop: 2 }}>{req.projectTitle}</Text>
-                              <Text style={{ color: subTextColor, fontSize: 11, marginTop: 2 }}>
+                              <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 15, marginTop: 2 }}>{req.projectTitle}</Text>
+                              <Text style={{ color: subTextColor, fontSize: 12, marginTop: 2 }}>
                                 Client: <Text style={{ color: textColor, fontWeight: 'bold' }}>{req.clientName}</Text> ➔ Target Freelancer: <Text style={{ color: '#38bdf8', fontWeight: 'bold' }}>{req.providerName}</Text> ({req.serviceTitle})
                               </Text>
                             </View>
-                            <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 12 }}>LKR {req.totalBudget.toLocaleString()}</Text>
+                            <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 14 }}>LKR {req.totalBudget.toLocaleString()}</Text>
                           </View>
 
-                          <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: 8, borderRadius: 8, marginVertical: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
-                            <Text style={{ color: '#34d399', fontSize: 11, fontWeight: 'bold' }}>
-                              💳 Deposit: LKR {req.upfrontDeposit.toLocaleString()}
-                            </Text>
-                            <Text style={{ color: subTextColor, fontSize: 10 }}>
+                          <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: 10, borderRadius: 12, marginVertical: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
+                            <View>
+                              <Text style={{ color: '#94a3b8', fontSize: 10 }}>Payment Option: {req.paymentType === 'full_upfront' ? '100% Upfront' : 'Milestone Split'}</Text>
+                              <Text style={{ color: '#34d399', fontSize: 12, fontWeight: 'bold', marginTop: 2 }}>
+                                💳 Deposit: LKR {req.upfrontDeposit.toLocaleString()}
+                              </Text>
+                            </View>
+                            <Text style={{ color: subTextColor, fontSize: 11, alignSelf: 'flex-end' }}>
                               Balance: LKR {req.remainingBalance.toLocaleString()}
                             </Text>
                           </View>
 
-                          {req.status === 'pending' ? (
-                            <View style={{ flexDirection: 'row', gap: 8 }}>
-                              <TouchableOpacity
-                                style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 8, borderRadius: 10, alignItems: 'center' }}
-                                onPress={() => {
-                                  setMobileBookingRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'in_progress' } : r));
-                                  Alert.alert('Order Accepted! 🎉', `Freelancer ${req.providerName} accepted order for ${req.projectTitle}. Work started.`);
-                                }}
-                              >
-                                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>Accept Order as Freelancer ({req.providerName}) (OK)</Text>
-                              </TouchableOpacity>
-
-                              <TouchableOpacity
-                                style={{ backgroundColor: '#7f1d1d', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, alignItems: 'center' }}
-                                onPress={() => {
-                                  setMobileBookingRequests(prev => prev.filter(r => r.id !== req.id));
-                                }}
-                              >
-                                <Text style={{ color: '#fca5a5', fontWeight: 'bold', fontSize: 11 }}>Decline</Text>
-                              </TouchableOpacity>
-                            </View>
-                          ) : (
-                            <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', padding: 8, borderRadius: 10, alignItems: 'center' }}>
-                              <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 11 }}>✓ Order Accepted by Freelancer {req.providerName} & Work Started</Text>
-                            </View>
-                          )}
-                        </View>
-                      ))
-                    )}
-                  </View>
-
-                  {/* Registered Seller Profiles Section */}
-                  <View style={{ backgroundColor: cardBg, padding: 14, borderRadius: 18, borderColor: '#334155', borderWidth: 1 }}>
-                    <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 14, marginBottom: 10 }}>
-                      🛍️ Registered Sellers & Handicraft Creators ({mobileUsers.filter(u => (u.role || '').toLowerCase() === 'seller').length})
-                    </Text>
-
-                    {mobileUsers.filter(u => (u.role || '').toLowerCase() === 'seller').length === 0 ? (
-                      <View style={{ padding: 14, alignItems: 'center', borderColor: '#334155', borderWidth: 1, borderRadius: 14, borderStyle: 'dashed' }}>
-                        <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 12 }}>No Sellers registered in Supabase yet.</Text>
-                        <Text style={{ color: subTextColor, fontSize: 11, marginTop: 4, textAlign: 'center' }}>
-                          Run the SQL Query provided below to add a new Seller profile!
-                        </Text>
-                      </View>
-                    ) : (
-                      mobileUsers.filter(u => (u.role || '').toLowerCase() === 'seller').map((seller, idx) => (
-                        <View key={seller.id || idx} style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)', padding: 12, borderRadius: 14, marginBottom: 10, borderColor: '#a855f7', borderWidth: 1 }}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <View style={{ flex: 1 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 14 }}>{seller.name || 'Kasun Kalhara'}</Text>
-                                <View style={{ backgroundColor: '#a855f7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>✓ Verified Seller</Text>
-                                </View>
-                              </View>
-                              <Text style={{ color: '#38bdf8', fontSize: 11, marginTop: 2 }}>📍 {seller.location || 'Sri Lanka'} • {seller.email}</Text>
-                            </View>
-                            <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 13 }}>★ {seller.rating || 5.0}</Text>
-                          </View>
-
-                          {seller.bio ? (
-                            <Text style={{ color: subTextColor, fontSize: 11, marginTop: 6, fontStyle: 'italic', backgroundColor: 'rgba(0,0,0,0.2)', padding: 6, borderRadius: 8 }}>
-                              "{seller.bio}"
+                          {req.description ? (
+                            <Text style={{ color: subTextColor, fontSize: 11, fontStyle: 'italic', marginBottom: 10 }}>
+                              "{req.description}"
                             </Text>
                           ) : null}
 
-                          <TouchableOpacity
-                            onPress={() => setSelectedMobileProfile({ ...seller, role: 'seller' })}
-                            style={{ marginTop: 8, backgroundColor: '#a855f7', paddingVertical: 10, borderRadius: 12, alignItems: 'center' }}
-                          >
-                            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>View Profile & Accept Orders</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))
-                    )}
-                  </View>
+                          {req.status === 'pending' ? (
+                            <View style={{ flexDirection: 'row', gap: 8 }}>
+                              <TouchableOpacity
+                                style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 10, borderRadius: 12, alignItems: 'center' }}
+                                onPress={async () => {
+                                  setMobileBookingRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'in_progress' } : r));
+                                  setBookedProvidersList(prev => prev.map(r => r.id === req.id ? { ...r, status: 'accepted' } : r));
+                                  try { await supabase.from('service_bookings').update({ status: 'accepted' }).eq('id', req.id); } catch (e) { }
+                                  Alert.alert('Order Accepted! 🎉', `Freelancer ${req.providerName} accepted order for ${req.projectTitle}. Locked in Vault.`);
+                                }}
+                              >
+                                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>Accept Order as Freelancer ({req.providerName}) (OK)</Text>
+                              </TouchableOpacity>
 
-                  {/* Registered Accounts Queue */}
-                  <View style={{ backgroundColor: cardBg, padding: 14, borderRadius: 18, borderColor: '#334155', borderWidth: 1 }}>
-                    <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 14, marginBottom: 10 }}>
-                      👥 Registered User Accounts (Supabase Database)
+                              <TouchableOpacity
+                                style={{ backgroundColor: '#7f1d1d', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, alignItems: 'center' }}
+                                onPress={async () => {
+                                  setMobileBookingRequests(prev => prev.filter(r => r.id !== req.id));
+                                  setBookedProvidersList(prev => prev.map(r => r.id === req.id ? { ...r, status: 'canceled' } : r));
+                                  try { await supabase.from('service_bookings').update({ status: 'canceled' }).eq('id', req.id); } catch (e) { }
+                                }}
+                              >
+                                <Text style={{ color: '#fca5a5', fontWeight: 'bold', fontSize: 12 }}>Decline</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ) : (
+                            <View style={{ backgroundColor: req.status === 'canceled' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)', padding: 10, borderRadius: 12, alignItems: 'center' }}>
+                              <Text style={{ color: req.status === 'canceled' ? '#fca5a5' : '#34d399', fontWeight: 'bold', fontSize: 12 }}>
+                                {req.status === 'canceled' ? '❌ Order Declined/Canceled' : `✓ Order Accepted by Freelancer ${req.providerName} & Work Started`}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      ));
+                    })()}
+                  </View>
+                )}
+
+                {/* FREELANCERS QUEUE VIEW */}
+                {adminTab === 'freelancers' && (
+                  <>
+                    <Text style={{ color: subTextColor, fontSize: 12, marginBottom: 16 }}>
+                      Review and approve freelancer applications. Approved services immediately display on the Navbar Services tab.
                     </Text>
 
-                    {mobileUsers.length === 0 ? (
-                      <View style={{ padding: 16, alignItems: 'center', borderColor: '#334155', borderWidth: 1, borderRadius: 14, borderStyle: 'dashed' }}>
-                        <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>
-                          No users in Supabase <Text style={{ color: '#f59e0b' }}>public.users</Text> table yet.
-                        </Text>
-                        <Text style={{ color: subTextColor, fontSize: 11, marginTop: 4, textAlign: 'center' }}>
-                          Run the SQL Query in Supabase or complete sign-up to populate real users.
+                    {mobilePendingApps.length === 0 ? (
+                      <View style={{ backgroundColor: cardBg, padding: 24, borderRadius: 20, alignItems: 'center', borderColor: '#334155', borderWidth: 1 }}>
+                        <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 16 }}>All Applications Approved! ✨</Text>
+                        <Text style={{ color: subTextColor, fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+                          There are currently no pending freelancer registration applications in the queue.
                         </Text>
                       </View>
                     ) : (
-                      mobileUsers.map((user, idx) => (
-                        <View key={user.id || idx} style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 10, borderRadius: 12, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <View>
-                            <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>{user.name || 'Registered User'}</Text>
-                            <Text style={{ color: '#38bdf8', fontSize: 11 }}>{user.role || 'Buyer'}</Text>
-                            <Text style={{ color: subTextColor, fontSize: 10 }}>{user.email || user.id}</Text>
+                      mobilePendingApps.map((app) => (
+                        <View key={app.id} style={{ backgroundColor: cardBg, padding: 16, borderRadius: 20, marginBottom: 14, borderColor: '#334155', borderWidth: 1 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 15 }}>{app.name} (Age: {app.age})</Text>
+                            <View style={{ backgroundColor: '#0284c7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                              <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>Pending OK</Text>
+                            </View>
                           </View>
-                          <TouchableOpacity 
-                            onPress={() => setSelectedMobileProfile(user)}
-                            style={{ backgroundColor: '#9333ea', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, flexDirection: 'row', alignItems: 'center' }}
+                          <Text style={{ color: accentColor, fontWeight: 'bold', fontSize: 12 }}>📍 {app.district} District • {app.isFreelancer ? 'Freelancer (YES)' : 'Staff (NO)'}</Text>
+
+                          <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 10, borderRadius: 12, marginVertical: 8 }}>
+                            <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>{app.serviceTitle}</Text>
+                            <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 12 }}>LKR {app.hourlyRate} / hr</Text>
+                            <Text style={{ color: '#fbbf24', fontSize: 11, marginTop: 2 }}>★ Rating Score: {app.rating}.0 / 5.0</Text>
+
+                            {app.ratingImages && app.ratingImages.length > 0 && (
+                              <View style={{ marginTop: 8 }}>
+                                <Text style={{ color: subTextColor, fontSize: 10, marginBottom: 4 }}>Uploaded Rating Proof Photos ({app.ratingImages.length}):</Text>
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                                  {app.ratingImages.map((img, i) => (
+                                    <Image key={i} source={{ uri: img }} style={{ width: 50, height: 50, borderRadius: 8 }} />
+                                  ))}
+                                </View>
+                              </View>
+                            )}
+                          </View>
+
+                          <View style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: 10, borderRadius: 12, marginBottom: 12 }}>
+                            <Text style={{ color: '#f59e0b', fontWeight: 'bold', fontSize: 11 }}>📱 Phone: {app.phone}</Text>
+                            <Text style={{ color: '#f59e0b', fontSize: 11 }}>🛡️ Guardian: {app.guardianName} ({app.guardianPhone})</Text>
+                            {app.address ? <Text style={{ color: subTextColor, fontSize: 11, marginTop: 2 }}>🏠 Address: {app.address}</Text> : null}
+                          </View>
+
+                          <TouchableOpacity
+                            style={{ backgroundColor: '#10b981', padding: 12, borderRadius: 14, alignItems: 'center' }}
+                            onPress={() => handleAdminApproveApp(app.id, app.name)}
                           >
-                            <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>View Profile & Accept Orders</Text>
+                            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>
+                              Approve & Add to Navbar Services (OK)
+                            </Text>
                           </TouchableOpacity>
                         </View>
                       ))
                     )}
-                  </View>
-                </View>
-              )}
-
-              {/* ESCROW BOOKINGS / FREELANCER ORDERS QUEUE VIEW */}
-              {adminTab === 'bookings' && (
-                <View style={{ gap: 14 }}>
-                  <Text style={{ color: '#94a3b8', fontSize: 12 }}>
-                    Client Orders Dispatched to Freelancers ({mobileBookingRequests.length})
-                  </Text>
-
-                  {mobileBookingRequests.length === 0 ? (
-                    <View style={{ backgroundColor: cardBg, padding: 24, borderRadius: 20, alignItems: 'center', borderColor: '#334155', borderWidth: 1 }}>
-                      <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 15 }}>No Orders Sent to Freelancers</Text>
-                      <Text style={{ color: subTextColor, fontSize: 12, marginTop: 4, textAlign: 'center' }}>
-                        When a client books a freelancer through the form, the order details will appear here for freelancer acceptance.
-                      </Text>
-                    </View>
-                  ) : (
-                    mobileBookingRequests.map((req) => (
-                      <View key={req.id} style={{ backgroundColor: cardBg, padding: 16, borderRadius: 20, marginBottom: 12, borderColor: '#334155', borderWidth: 1 }}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ color: req.status === 'in_progress' || req.status === 'accepted' ? '#34d399' : '#fbbf24', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>
-                              ● {req.status === 'in_progress' || req.status === 'accepted' ? '✓ Accepted by Freelancer' : `Dispatched ➔ Awaiting Freelancer Acceptance (${req.providerName})`}
-                            </Text>
-                            <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 15, marginTop: 2 }}>{req.projectTitle}</Text>
-                            <Text style={{ color: subTextColor, fontSize: 12, marginTop: 2 }}>
-                              Client: <Text style={{ color: textColor, fontWeight: 'bold' }}>{req.clientName}</Text> ➔ Target Freelancer: <Text style={{ color: '#38bdf8', fontWeight: 'bold' }}>{req.providerName}</Text> ({req.serviceTitle})
-                            </Text>
-                          </View>
-                          <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 14 }}>LKR {req.totalBudget.toLocaleString()}</Text>
-                        </View>
-
-                        <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: 10, borderRadius: 12, marginVertical: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
-                          <View>
-                            <Text style={{ color: '#94a3b8', fontSize: 10 }}>Payment Option: {req.paymentType === 'full_upfront' ? '100% Upfront' : 'Milestone Split'}</Text>
-                            <Text style={{ color: '#34d399', fontSize: 12, fontWeight: 'bold', marginTop: 2 }}>
-                              💳 Deposit: LKR {req.upfrontDeposit.toLocaleString()}
-                            </Text>
-                          </View>
-                          <Text style={{ color: subTextColor, fontSize: 11, alignSelf: 'flex-end' }}>
-                            Balance: LKR {req.remainingBalance.toLocaleString()}
-                          </Text>
-                        </View>
-
-                        {req.description ? (
-                          <Text style={{ color: subTextColor, fontSize: 11, fontStyle: 'italic', marginBottom: 10 }}>
-                            "{req.description}"
-                          </Text>
-                        ) : null}
-
-                        {req.status === 'pending' ? (
-                          <View style={{ flexDirection: 'row', gap: 8 }}>
-                            <TouchableOpacity
-                              style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 10, borderRadius: 12, alignItems: 'center' }}
-                              onPress={() => {
-                                setMobileBookingRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'in_progress' } : r));
-                                Alert.alert('Order Accepted! 🎉', `Freelancer ${req.providerName} accepted order for ${req.projectTitle}. Locked in Vault.`);
-                              }}
-                            >
-                              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>Accept Order as Freelancer ({req.providerName}) (OK)</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                              style={{ backgroundColor: '#7f1d1d', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, alignItems: 'center' }}
-                              onPress={() => {
-                                setMobileBookingRequests(prev => prev.filter(r => r.id !== req.id));
-                              }}
-                            >
-                              <Text style={{ color: '#fca5a5', fontWeight: 'bold', fontSize: 12 }}>Decline</Text>
-                            </TouchableOpacity>
-                          </View>
-                        ) : (
-                          <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', padding: 10, borderRadius: 12, alignItems: 'center' }}>
-                            <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 12 }}>✓ Order Accepted by Freelancer {req.providerName} & Work Started</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))
-                  )}
-                </View>
-              )}
-
-              {/* FREELANCERS QUEUE VIEW */}
-              {adminTab === 'freelancers' && (
-                <>
-                  <Text style={{ color: subTextColor, fontSize: 12, marginBottom: 16 }}>
-                    Review and approve freelancer applications. Approved services immediately display on the Navbar Services tab.
-                  </Text>
-
-              {mobilePendingApps.length === 0 ? (
-                <View style={{ backgroundColor: cardBg, padding: 24, borderRadius: 20, alignItems: 'center', borderColor: '#334155', borderWidth: 1 }}>
-                  <Text style={{ color: '#34d399', fontWeight: 'bold', fontSize: 16 }}>All Applications Approved! ✨</Text>
-                  <Text style={{ color: subTextColor, fontSize: 12, marginTop: 4, textAlign: 'center' }}>
-                    There are currently no pending freelancer registration applications in the queue.
-                  </Text>
-                </View>
-              ) : (
-                mobilePendingApps.map((app) => (
-                  <View key={app.id} style={{ backgroundColor: cardBg, padding: 16, borderRadius: 20, marginBottom: 14, borderColor: '#334155', borderWidth: 1 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 15 }}>{app.name} (Age: {app.age})</Text>
-                      <View style={{ backgroundColor: '#0284c7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
-                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>Pending OK</Text>
-                      </View>
-                    </View>
-                    <Text style={{ color: accentColor, fontWeight: 'bold', fontSize: 12 }}>📍 {app.district} District • {app.isFreelancer ? 'Freelancer (YES)' : 'Staff (NO)'}</Text>
-                    
-                    <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 10, borderRadius: 12, marginVertical: 8 }}>
-                      <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 13 }}>{app.serviceTitle}</Text>
-                      <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 12 }}>LKR {app.hourlyRate} / hr</Text>
-                      <Text style={{ color: '#fbbf24', fontSize: 11, marginTop: 2 }}>★ Rating Score: {app.rating}.0 / 5.0</Text>
-                      
-                      {app.ratingImages && app.ratingImages.length > 0 && (
-                        <View style={{ marginTop: 8 }}>
-                          <Text style={{ color: subTextColor, fontSize: 10, marginBottom: 4 }}>Uploaded Rating Proof Photos ({app.ratingImages.length}):</Text>
-                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                            {app.ratingImages.map((img, i) => (
-                              <Image key={i} source={{ uri: img }} style={{ width: 50, height: 50, borderRadius: 8 }} />
-                            ))}
-                          </View>
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: 10, borderRadius: 12, marginBottom: 12 }}>
-                      <Text style={{ color: '#f59e0b', fontWeight: 'bold', fontSize: 11 }}>📱 Phone: {app.phone}</Text>
-                      <Text style={{ color: '#f59e0b', fontSize: 11 }}>🛡️ Guardian: {app.guardianName} ({app.guardianPhone})</Text>
-                      {app.address ? <Text style={{ color: subTextColor, fontSize: 11, marginTop: 2 }}>🏠 Address: {app.address}</Text> : null}
-                    </View>
-
-                    <TouchableOpacity
-                      style={{ backgroundColor: '#10b981', padding: 12, borderRadius: 14, alignItems: 'center' }}
-                      onPress={() => handleAdminApproveApp(app.id, app.name)}
-                    >
-                      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>
-                        Approve & Add to Navbar Services (OK)
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ))
-              )}
-                </>
-              )}
-            </View>
-          )
-        )}
+                  </>
+                )}
+              </View>
+            )
+          )}
         </ScrollView>
 
         {/* USER PROFILE & ORDER ACCEPTANCE MODAL FOR MOBILE */}
@@ -4179,7 +4957,7 @@ export default function AppMobile() {
                 <Text style={{ fontSize: 12, fontWeight: 'bold', color: accentColor, marginBottom: 8, textTransform: 'uppercase' }}>
                   1. Personal Details
                 </Text>
-                
+
                 <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Applicant Name *</Text>
                 <TextInput
                   style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12, marginBottom: 10 }}
@@ -4236,7 +5014,7 @@ export default function AppMobile() {
                 <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#f59e0b', marginTop: 6, marginBottom: 8, textTransform: 'uppercase' }}>
                   2. Guardian Details (භාරකරුගේ විස්තර)
                 </Text>
-                
+
                 <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Guardian Name</Text>
@@ -4265,7 +5043,7 @@ export default function AppMobile() {
                 <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#38bdf8', marginTop: 6, marginBottom: 8, textTransform: 'uppercase' }}>
                   3. Freelancer Status (Freelancer Yes / No)
                 </Text>
-                
+
                 <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
                   <TouchableOpacity
                     style={{ flex: 1, backgroundColor: formIsFreelancer ? accentColor : themeBg, padding: 12, borderRadius: 12, alignItems: 'center' }}
@@ -4380,6 +5158,67 @@ export default function AppMobile() {
           </View>
         </Modal>
 
+        {/* Proposal Submission Form Modal */}
+        <Modal
+          visible={isProposalFormOpen}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setIsProposalFormOpen(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: cardBg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '85%' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
+                  📝 Submit Proposal for {proposalJobTitle}
+                </Text>
+                <TouchableOpacity onPress={() => setIsProposalFormOpen(false)}>
+                  <Text style={{ color: '#94a3b8', fontSize: 16, fontWeight: 'bold' }}>Close</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Cover Letter</Text>
+                <TextInput
+                  style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12, marginBottom: 14, minHeight: 80, textAlignVertical: 'top' }}
+                  placeholder="Why are you the best fit for this job?"
+                  multiline
+                  placeholderTextColor="#64748b"
+                  value={proposalCoverLetter}
+                  onChangeText={setProposalCoverLetter}
+                />
+
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Bid Amount (LKR)</Text>
+                <TextInput
+                  style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12, marginBottom: 14 }}
+                  placeholder="e.g. 5000"
+                  keyboardType="numeric"
+                  placeholderTextColor="#64748b"
+                  value={proposalBidAmount}
+                  onChangeText={setProposalBidAmount}
+                />
+
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: textColor, marginBottom: 2 }}>Estimated Delivery Time</Text>
+                <TextInput
+                  style={{ backgroundColor: themeBg, borderColor: '#334155', borderWidth: 1, borderRadius: 10, padding: 10, color: textColor, fontSize: 12, marginBottom: 14 }}
+                  placeholder="e.g. 3 Days"
+                  placeholderTextColor="#64748b"
+                  value={proposalDeliveryTime}
+                  onChangeText={setProposalDeliveryTime}
+                />
+
+                <TouchableOpacity
+                  style={{ backgroundColor: '#10b981', padding: 14, borderRadius: 14, alignItems: 'center', marginTop: 6 }}
+                  onPress={handleProposalSubmit}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>
+                    Send Proposal
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
         {/* Admin Review Queue Modal */}
         <Modal
           visible={isAdminModalOpen}
@@ -4409,7 +5248,7 @@ export default function AppMobile() {
                     <View key={app.id} style={{ backgroundColor: themeBg, padding: 14, borderRadius: 16, marginBottom: 12, borderColor: '#334155', borderWidth: 1 }}>
                       <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 14 }}>{app.name} (Age: {app.age})</Text>
                       <Text style={{ color: accentColor, fontWeight: 'bold', fontSize: 11, marginTop: 2 }}>📍 {app.district} District • {app.isFreelancer ? 'Freelancer (YES)' : 'Staff (NO)'}</Text>
-                      
+
                       <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 10, marginVertical: 8 }}>
                         <Text style={{ color: textColor, fontWeight: 'bold', fontSize: 12 }}>{app.serviceTitle}</Text>
                         <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 11 }}>LKR {app.hourlyRate} / hr</Text>

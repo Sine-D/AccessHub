@@ -44,15 +44,16 @@ export const PhotoPicker: React.FC<PhotoPickerProps> = ({ value, onChange }) => 
 const styles = StyleSheet.create({
   button: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: '#475569',
+    backgroundColor: '#0F172A',
     borderRadius: 8,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: 'center',
     marginTop: 8,
   },
   buttonText: {
-    color: '#2563EB',
-    fontWeight: '600',
+    color: '#60A5FA',
+    fontWeight: '700',
     fontSize: 14,
   },
 });

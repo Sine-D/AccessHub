@@ -23,7 +23,7 @@
     "@vis.gl/react-google-maps": "^1.9.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
-    "expo": "^57.0.25",
+    "expo": "~57.0.26",
     "expo-asset": "~57.0.18",
     "expo-auth-session": "~57.0.13",
     "expo-crypto": "~57.0.3",

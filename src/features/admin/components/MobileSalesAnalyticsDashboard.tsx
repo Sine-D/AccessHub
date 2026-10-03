@@ -251,16 +251,21 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
             <TouchableOpacity
               key={item.value}
               onPress={() => handleDateRangeChange(item.value)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: filter.dateRange === item.value }}
+              accessibilityLabel={`Filter by date range: ${item.label}`}
               style={{
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 8,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                minHeight: 44,
+                justifyContent: 'center',
+                borderRadius: 10,
                 backgroundColor: filter.dateRange === item.value ? '#0284c7' : '#334155',
               }}
             >
               <Text
                 style={{
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: 'bold',
                   color: filter.dateRange === item.value ? '#ffffff' : '#94a3b8',
                 }}
@@ -278,16 +283,21 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
             <TouchableOpacity
               key={cat}
               onPress={() => handleCategoryChange(cat)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: filter.category === cat }}
+              accessibilityLabel={`Filter by category: ${cat}`}
               style={{
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 8,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                minHeight: 44,
+                justifyContent: 'center',
+                borderRadius: 10,
                 backgroundColor: filter.category === cat ? '#0d9488' : '#334155',
               }}
             >
               <Text
                 style={{
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: 'bold',
                   color: filter.category === cat ? '#ffffff' : '#94a3b8',
                 }}
@@ -305,16 +315,21 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
             <TouchableOpacity
               key={dist}
               onPress={() => handleDistrictChange(dist)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: filter.district === dist }}
+              accessibilityLabel={`Filter by district: ${dist}`}
               style={{
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 8,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                minHeight: 44,
+                justifyContent: 'center',
+                borderRadius: 10,
                 backgroundColor: filter.district === dist ? '#d97706' : '#334155',
               }}
             >
               <Text
                 style={{
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: 'bold',
                   color: filter.district === dist ? '#ffffff' : '#94a3b8',
                 }}
