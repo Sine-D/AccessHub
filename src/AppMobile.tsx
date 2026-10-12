@@ -3969,46 +3969,9 @@ export default function AppMobile() {
                     </View>
                   </View>
                 </View>
-
                 {/* Sub-Tab Navigation Bar */}
-                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
-                  <TouchableOpacity
-                    onPress={() => setAdminTab('vendors')}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      borderRadius: 12,
-                      backgroundColor: adminTab === 'vendors' ? '#6366f1' : cardBg,
-                      alignItems: 'center',
-                      borderColor: '#6366f1',
-                      borderWidth: 1,
-                    }}
-                  >
-                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>
-                      🏢 Vendors
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => setAdminTab('listings')}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      borderRadius: 12,
-                      backgroundColor: adminTab === 'listings' ? '#38bdf8' : cardBg,
-                      alignItems: 'center',
-                      borderColor: '#38bdf8',
-                      borderWidth: 1,
-                    }}
-                  >
-                    <Text style={{ color: adminTab === 'listings' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 11 }}>
-                      🛍️ Listings
-                    </Text>
-                  </TouchableOpacity>
-
-              {/* Sub-Tab Navigation Bar */}
-              <ScrollView
-                horizontal
+                <ScrollView
+                  horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
                 style={{ marginBottom: 16 }}
