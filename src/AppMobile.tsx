@@ -1466,7 +1466,7 @@ export default function AppMobile() {
                   },
                 ]}
               >
-                AccessLink
+                AccessHub
               </Text>
 
               <Text
@@ -2406,6 +2406,7 @@ export default function AppMobile() {
                 </Text>
               ) : (() => {
                 const combinedBookings = [
+                  ...bookedProvidersList,
                   ...bookingRequests.map(b => ({
                     id: b.id,
                     service_title: b.serviceTitle,
@@ -2413,9 +2414,8 @@ export default function AppMobile() {
                     total_budget: b.totalBudget,
                     status: b.status === 'in_progress' ? 'accepted' : b.status,
                     created_at: b.createdAt
-                  })),
-                  ...bookedProvidersList
-                ].filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
+                  }))
+                ].filter((v, i, a) => a.findIndex(t => t.id === v.id || (t.service_title === v.service_title && t.provider_name === v.provider_name)) === i);
 
                 if (combinedBookings.length === 0) {
                   return (
@@ -2953,7 +2953,7 @@ export default function AppMobile() {
                     Booking & Escrow Deposit Confirmed!
                   </Text>
                   <Text style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', lineHeight: 20 }}>
-                    Initial Escrow Deposit logged into Vault. Freelancer {selectedMobileBookingService.providerName} has been notified via AccessLink Messages!
+                    Initial Escrow Deposit logged into Vault. Freelancer {selectedMobileBookingService.providerName} has been notified via AccessHub Messages!
                   </Text>
                 </View>
               )}
@@ -4566,7 +4566,7 @@ export default function AppMobile() {
                           status: b.status === 'accepted' ? 'in_progress' : (b.status || 'pending'),
                           createdAt: b.created_at
                         }))
-                      ].filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
+                      ].filter((v, i, a) => a.findIndex(t => t.id === v.id || (t.serviceTitle === v.serviceTitle && t.providerName === v.providerName)) === i);
 
                       if (combinedAdminBookings.length === 0) {
                         return (
@@ -4579,8 +4579,8 @@ export default function AppMobile() {
                         );
                       }
 
-                      return combinedAdminBookings.map((req) => (
-                        <View key={req.id} style={{ backgroundColor: cardBg, padding: 16, borderRadius: 20, marginBottom: 12, borderColor: '#334155', borderWidth: 1 }}>
+                      return combinedAdminBookings.map((req, idx) => (
+                        <View key={req.id || `fallback-${idx}`} style={{ backgroundColor: cardBg, padding: 16, borderRadius: 20, marginBottom: 12, borderColor: '#334155', borderWidth: 1 }}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <View style={{ flex: 1 }}>
                               <Text style={{ color: req.status === 'in_progress' || req.status === 'accepted' ? '#34d399' : '#fbbf24', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>
@@ -4591,7 +4591,7 @@ export default function AppMobile() {
                                 Client: <Text style={{ color: textColor, fontWeight: 'bold' }}>{req.clientName}</Text> ➔ Target Freelancer: <Text style={{ color: '#38bdf8', fontWeight: 'bold' }}>{req.providerName}</Text> ({req.serviceTitle})
                               </Text>
                             </View>
-                            <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 14 }}>LKR {req.totalBudget.toLocaleString()}</Text>
+                            <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 14 }}>LKR {Number(req.totalBudget || 0).toLocaleString()}</Text>
                           </View>
 
                           <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: 10, borderRadius: 12, marginVertical: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -4618,8 +4618,12 @@ export default function AppMobile() {
                                 style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 10, borderRadius: 12, alignItems: 'center' }}
                                 onPress={async () => {
                                   setMobileBookingRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'in_progress' } : r));
-                                  setBookedProvidersList(prev => prev.map(r => r.id === req.id ? { ...r, status: 'accepted' } : r));
-                                  try { await supabase.from('service_bookings').update({ status: 'accepted' }).eq('id', req.id); } catch (e) { }
+                                  const realBooking = bookedProvidersList.find(b => b.service_title === req.serviceTitle && b.provider_name === req.providerName);
+                                  const updateId = realBooking?.id || req.id;
+                                  setBookedProvidersList(prev => prev.map(r => r.id === updateId ? { ...r, status: 'accepted' } : r));
+                                  if (updateId && !updateId.startsWith('bk-')) {
+                                    try { await supabase.from('service_bookings').update({ status: 'accepted' }).eq('id', updateId); } catch (e) { }
+                                  }
                                   Alert.alert('Order Accepted! 🎉', `Freelancer ${req.providerName} accepted order for ${req.projectTitle}. Locked in Vault.`);
                                 }}
                               >
@@ -4630,8 +4634,12 @@ export default function AppMobile() {
                                 style={{ backgroundColor: '#7f1d1d', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, alignItems: 'center' }}
                                 onPress={async () => {
                                   setMobileBookingRequests(prev => prev.filter(r => r.id !== req.id));
-                                  setBookedProvidersList(prev => prev.map(r => r.id === req.id ? { ...r, status: 'canceled' } : r));
-                                  try { await supabase.from('service_bookings').update({ status: 'canceled' }).eq('id', req.id); } catch (e) { }
+                                  const realBooking = bookedProvidersList.find(b => b.service_title === req.serviceTitle && b.provider_name === req.providerName);
+                                  const updateId = realBooking?.id || req.id;
+                                  setBookedProvidersList(prev => prev.map(r => r.id === updateId ? { ...r, status: 'canceled' } : r));
+                                  if (updateId && !updateId.startsWith('bk-')) {
+                                    try { await supabase.from('service_bookings').update({ status: 'canceled' }).eq('id', updateId); } catch (e) { }
+                                  }
                                 }}
                               >
                                 <Text style={{ color: '#fca5a5', fontWeight: 'bold', fontSize: 12 }}>Decline</Text>
@@ -4770,8 +4778,14 @@ export default function AppMobile() {
                     {req.status === 'pending' ? (
                       <TouchableOpacity
                         style={{ backgroundColor: '#10b981', paddingVertical: 10, borderRadius: 10, alignItems: 'center', marginTop: 8 }}
-                        onPress={() => {
+                        onPress={async () => {
                           setMobileBookingRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'in_progress' } : r));
+                          const realBooking = bookedProvidersList.find(b => b.service_title === req.serviceTitle && b.provider_name === req.providerName);
+                          const updateId = realBooking?.id || req.id;
+                          setBookedProvidersList(prev => prev.map(r => r.id === updateId ? { ...r, status: 'accepted' } : r));
+                          if (updateId && !updateId.startsWith('bk-')) {
+                            try { await supabase.from('service_bookings').update({ status: 'accepted' }).eq('id', updateId); } catch (e) { }
+                          }
                           Alert.alert('Order Accepted! 🎉', `Accepted order for ${selectedMobileProfile?.name}. Work started.`);
                         }}
                       >
