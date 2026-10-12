@@ -83,7 +83,7 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
             <div>
               <div className="flex items-center space-x-2">
                 <h1 className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-blue-400 via-teal-300 to-amber-300 bg-clip-text text-transparent">
-                  AccessLink
+                  AccessHub
                 </h1>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
                   FYP High-Fidelity UI
