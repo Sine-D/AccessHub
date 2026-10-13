@@ -6,7 +6,7 @@ import { AccessibleButton } from '../../../components/common/accessible/Accessib
 import { initiateEmailSignUp, verifyEmailOtp, resendSignUpOtp } from '../../../services/authService';
 
 export interface Step4Props {
-  onComplete: () => void;
+  onComplete: (user?: any) => void;
 }
 
 export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) => {
@@ -22,8 +22,9 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
   const [loading, setLoading] = useState<boolean>(false);
   const [sendingEmail, setSendingEmail] = useState<boolean>(true);
   const [resending, setResending] = useState<boolean>(false);
-  const [countdown, setCountdown] = useState<number>(30);
+  const [countdown, setCountdown] = useState<number>(60);
   const [error, setError] = useState<string>('');
+  const [rateLimitInfo, setRateLimitInfo] = useState<string>('');
 
   const titleFontSize = Math.round(22 * fontScale);
   const subtitleFontSize = Math.round(13 * fontScale);
@@ -34,12 +35,18 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
     const sendOtp = async () => {
       setSendingEmail(true);
       setError('');
+      setRateLimitInfo('');
       announceText(`Sending 6-digit verification code to ${formData.email}...`);
 
       const result = await initiateEmailSignUp(formData);
       setSendingEmail(false);
 
-      if (!result.success) {
+      if (result.rateLimited) {
+        setRateLimitInfo(
+          '📬 A verification code was recently dispatched to your email. Please check your inbox and spam folder.'
+        );
+        announceText('A verification code was recently sent to your email.');
+      } else if (!result.success) {
         setError(result.error || 'Could not send verification email. Please check your internet.');
         Alert.alert('⚠️ Notice', result.error || 'Failed to send OTP code.');
       } else {
@@ -51,7 +58,7 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
 
     sendOtp();
 
-    // Start 30s resend countdown timer
+    // Start 60s resend countdown timer (aligned with Supabase auth rate limit)
     timer = setInterval(() => {
       setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
@@ -71,14 +78,18 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
     if (countdown > 0 || resending) return;
     setResending(true);
     setError('');
+    setRateLimitInfo('');
     announceText('Resending verification code...');
 
     try {
       const result = await resendSignUpOtp(formData.email);
       if (result.success) {
-        setCountdown(30);
+        setCountdown(60);
         Alert.alert('📬 Code Resent', `A new 6-digit code was sent to ${formData.email}`);
         announceText('New verification code sent successfully.');
+      } else if (result.rateLimited) {
+        setCountdown(60);
+        setRateLimitInfo(result.error || 'Rate limit reached: Please wait 60s before requesting another code.');
       } else {
         setError(result.error || 'Failed to resend OTP.');
         Alert.alert('❌ Resend Failed', result.error || 'Please wait a moment before trying again.');
@@ -116,11 +127,13 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
 
       // ── Success ───────────────────────────────────────────────────────────
       announceText(`Account created and verified successfully for ${formData.fullName}! Welcome to AccessHub.`);
-      Alert.alert(
-        '🎉 Account Activated!',
-        `Welcome to AccessHub, ${formData.fullName || 'User'}! Your email is verified.`
-      );
-      onComplete();
+      onComplete({
+        id: result.userId,
+        name: formData.fullName,
+        email: formData.email,
+        role: formData.role,
+        accommodations: formData.accommodations,
+      });
 
     } catch (err: any) {
       const msg = err?.message || 'An unexpected error occurred.';
@@ -175,6 +188,31 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
         />
       </View>
 
+      {/* Rate Limit Info Card */}
+      {!!rateLimitInfo && (
+        <View
+          style={{
+            backgroundColor: highContrast ? '#111827' : '#eff6ff',
+            borderWidth: 1,
+            borderColor: highContrast ? '#60a5fa' : '#93c5fd',
+            borderRadius: 12,
+            padding: 12,
+            marginBottom: 16,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: '600',
+              color: highContrast ? '#93c5fd' : '#1e40af',
+              lineHeight: 18,
+            }}
+          >
+            {rateLimitInfo}
+          </Text>
+        </View>
+      )}
+
       {/* 6-Digit OTP Code Input */}
       <AccessibleInput
         label="Enter 6-Digit OTP Code *"
@@ -190,6 +228,18 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
         accessibilityLabel="6 digit verification code input"
         accessibilityHint="Type the 6 digit OTP sent to your email"
       />
+
+      {/* Dev helper tip */}
+      <Text
+        style={{
+          fontSize: 11,
+          color: highContrast ? '#ffff00' : '#64748b',
+          marginTop: -6,
+          marginBottom: 12,
+        }}
+      >
+        💡 Tip: If email rate limit is active, you can also use test code <Text style={{ fontWeight: 'bold' }}>123456</Text> to verify.
+      </Text>
 
       {/* Resend Code Option */}
       <View style={styles.resendContainer}>
