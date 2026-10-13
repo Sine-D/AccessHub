@@ -1,3 +1,4 @@
+import './src/core/suppressWarnings';
 import React from 'react';
 import { registerRootComponent } from 'expo';
 import AppMobile from './src/AppMobile';
