@@ -1,10 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl =
-  process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
+function sanitizeSupabaseUrl(url?: string): string {
+  if (!url) return '';
+  return url.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+}
 
-const supabaseAnonKey =
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim();
+const rawSupabaseUrl =
+  process.env.EXPO_PUBLIC_SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL;
+
+const supabaseUrl = sanitizeSupabaseUrl(rawSupabaseUrl);
+
+const supabaseAnonKey = (
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY
+)?.trim();
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl && supabaseAnonKey,

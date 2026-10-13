@@ -44,6 +44,18 @@ export async function initiateEmailSignUp(formData: RegistrationFormData): Promi
       return { success: false, error: signUpError.message };
     }
 
+    // When email enumeration protection is enabled in Supabase, an already registered user
+    // returns a user object with an empty `identities` array without throwing an error.
+    if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      const resendRes = await resendSignUpOtp(formData.email);
+      if (!resendRes.success) {
+        return {
+          success: false,
+          error: resendRes.error || 'This email is already registered. Please click "Resend Code" or sign in.',
+        };
+      }
+    }
+
     const userId = data?.user?.id;
     return { success: true, userId };
   } catch (err: any) {
