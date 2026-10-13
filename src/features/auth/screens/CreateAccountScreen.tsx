@@ -16,7 +16,7 @@ import { Step4AudioOtpVerification } from '../components/Step4AudioOtpVerificati
 
 export interface CreateAccountScreenProps {
   onCancel?: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (user?: any) => void;
 }
 
 export const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({
@@ -40,9 +40,9 @@ export const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({
     if (onCancel) onCancel();
   };
 
-  const handleSuccess = () => {
+  const handleSuccess = (user?: any) => {
     resetForm();
-    if (onSuccess) onSuccess();
+    if (onSuccess) onSuccess(user);
   };
 
   const themeBg = highContrast ? '#000000' : '#ffffff';
