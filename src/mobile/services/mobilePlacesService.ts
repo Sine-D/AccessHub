@@ -36,6 +36,10 @@ const toMapPin = (row: Record<string, any>): MapPin => ({
   image: String(row.image ?? ''),
 });
 
+// accesshub_places table is not yet created in Supabase database.
+// Enable via EXPO_PUBLIC_ENABLE_PLACES_TABLE='true' once the migration is executed.
+let placesTableAvailable = process.env.EXPO_PUBLIC_ENABLE_PLACES_TABLE === 'true';
+
 export async function listMobilePlaces(signal?: AbortSignal): Promise<MapPin[]> {
   const base = apiBase();
   if (base) {
@@ -52,13 +56,20 @@ export async function listMobilePlaces(signal?: AbortSignal): Promise<MapPin[]> 
     }
   }
 
-  if (isSupabaseConfigured) {
-    const { data, error } = await supabase
-      .from('accesshub_places')
-      .select('id,title,type,lat,lng,address,badge,accessibility_features,accessibility_rating,image')
-      .eq('published', true)
-      .order('id');
-    if (!error && data?.length) return data.map(toMapPin);
+  if (isSupabaseConfigured && placesTableAvailable) {
+    try {
+      const { data, error } = await supabase
+        .from('accesshub_places')
+        .select('id,title,type,lat,lng,address,badge,accessibility_features,accessibility_rating,image')
+        .eq('published', true)
+        .order('id');
+      if (!error && data?.length) return data.map(toMapPin);
+      if (error) {
+        placesTableAvailable = false;
+      }
+    } catch {
+      placesTableAvailable = false;
+    }
   }
 
   return mockMapPins.map((place) => ({ ...place, accessibilityFeatures: [...place.accessibilityFeatures] }));
@@ -81,34 +92,41 @@ export async function getMobilePlaceDetails(placeId: string, signal?: AbortSigna
     }
   }
 
-  if (isSupabaseConfigured) {
-    const { data, error } = await supabase
-      .from('accesshub_places')
-      .select('id,title,type,lat,lng,address,badge,accessibility_features,accessibility_rating,image,description,contact_phone,website,opening_hours,community_rating,community_review_count,verification_badge,last_verified_at')
-      .eq('id', placeId)
-      .eq('published', true)
-      .maybeSingle();
-    if (!error && data) {
-      const pin = toMapPin(data);
-      const candidateVerification = data.community_rating === null && !data.verification_badge && !data.last_verified_at
-        ? null
-        : {
-            status: data.last_verified_at ? 'verified' : 'unverified',
-            rating: typeof data.community_rating === 'number' ? data.community_rating : null,
-            reviewCount: Number(data.community_review_count ?? 0),
-            badge: data.verification_badge ? String(data.verification_badge) : null,
-            lastVerifiedAt: data.last_verified_at ? String(data.last_verified_at) : null,
-          };
-      return {
-        ...pin,
-        description: String(data.description ?? 'No additional description is available.'),
-        contactPhone: data.contact_phone ? String(data.contact_phone) : null,
-        website: data.website ? String(data.website) : null,
-        openingHours: Array.isArray(data.opening_hours) ? data.opening_hours.map(String) : [],
-        verification: candidateVerification && isCommunityVerificationSummary(candidateVerification)
-          ? candidateVerification
-          : null,
-      };
+  if (isSupabaseConfigured && placesTableAvailable) {
+    try {
+      const { data, error } = await supabase
+        .from('accesshub_places')
+        .select('id,title,type,lat,lng,address,badge,accessibility_features,accessibility_rating,image,description,contact_phone,website,opening_hours,community_rating,community_review_count,verification_badge,last_verified_at')
+        .eq('id', placeId)
+        .eq('published', true)
+        .maybeSingle();
+      if (!error && data) {
+        const pin = toMapPin(data);
+        const candidateVerification = data.community_rating === null && !data.verification_badge && !data.last_verified_at
+          ? null
+          : {
+              status: data.last_verified_at ? 'verified' : 'unverified',
+              rating: typeof data.community_rating === 'number' ? data.community_rating : null,
+              reviewCount: Number(data.community_review_count ?? 0),
+              badge: data.verification_badge ? String(data.verification_badge) : null,
+              lastVerifiedAt: data.last_verified_at ? String(data.last_verified_at) : null,
+            };
+        return {
+          ...pin,
+          description: String(data.description ?? 'No additional description is available.'),
+          contactPhone: data.contact_phone ? String(data.contact_phone) : null,
+          website: data.website ? String(data.website) : null,
+          openingHours: Array.isArray(data.opening_hours) ? data.opening_hours.map(String) : [],
+          verification: candidateVerification && isCommunityVerificationSummary(candidateVerification)
+            ? candidateVerification
+            : null,
+        };
+      }
+      if (error) {
+        placesTableAvailable = false;
+      }
+    } catch {
+      placesTableAvailable = false;
     }
   }
 
