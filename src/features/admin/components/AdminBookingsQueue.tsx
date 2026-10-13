@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../../../core/supabase';
-import { createClient } from '@supabase/supabase-js';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { AdminEmptyState } from './AdminStates';
 import { useAccessibility } from '../../../core/hooks/useAccessibility';
