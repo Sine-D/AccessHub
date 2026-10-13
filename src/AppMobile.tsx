@@ -44,6 +44,7 @@ import {
   RoutePreviewResult,
 } from './services/routeService';
 import { CreateAccountScreen } from './features/auth/screens/CreateAccountScreen';
+import { ModernProfileScreen } from './features/profile';
 import { MobileVendorVerificationQueue } from './features/admin/components/MobileVendorVerificationQueue';
 import { MobileListingModerationQueue } from './features/admin/components/MobileListingModerationQueue';
 import { MobileFraudModerationQueue } from './features/admin/components/MobileFraudModerationQueue';
@@ -94,7 +95,13 @@ export default function AppMobile() {
       // Ignore
     }
     setUserRole('customer');
-    setCurrentUser((prev) => ({ ...prev, role: 'customer' }));
+    setCurrentUser((prev) => ({
+      ...prev,
+      name: 'Guest User',
+      email: '',
+      role: 'customer',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300',
+    }));
     setActiveTab('auth');
     if (setActiveScreen) {
       setActiveScreen('auth');
@@ -102,11 +109,13 @@ export default function AppMobile() {
   };
 
   const [highContrast, setHighContrast] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [fontScale, setFontScale] = useState<'md' | 'lg' | 'xl'>('md');
   const [ttsActive, setTtsActive] = useState(false);
 
   const [aiModalVisible, setAiModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [marketplaceCategory, setMarketplaceCategory] = useState('All');
   const [mobileSearchQuery, setMobileSearchQuery] = useState<SearchQuery | null>(null);
   const [selectedMobilePlace, setSelectedMobilePlace] = useState<MapPin | null>(null);
   const [mobilePlaces, setMobilePlaces] = useState<MapPin[]>(mockMapPins);
@@ -226,47 +235,101 @@ export default function AppMobile() {
     try {
       const trimmedEmail = loginEmail.trim().toLowerCase();
       let detectedRole: UserRole = 'customer';
-      let userName = 'Kavindi Perera';
+      let userObj: any = null;
 
-      // 1. Attempt Supabase Auth
-      if (loginEmail && loginPassword) {
-        try {
-          const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
-            email: trimmedEmail,
-            password: loginPassword,
-          });
+      // 1. Quick Demo credentials support
+      if (trimmedEmail.includes('admin') || trimmedEmail === 'admin@accesslink.lk') {
+        detectedRole = 'admin';
+        userObj = {
+          id: 'admin-001',
+          name: 'System Administrator',
+          email: 'admin@accesslink.lk',
+          role: 'admin',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+          bio: 'System Administrator & AccessHub Platform Coordinator.',
+          location: 'Colombo 03, Sri Lanka',
+          isVerified: true,
+        };
+      } else if (trimmedEmail === 'kavindi.p@accesslink.lk' && loginPassword === 'user123') {
+        detectedRole = 'customer';
+        userObj = {
+          id: 'usr-kavindi',
+          name: 'Kavindi Perera',
+          email: 'kavindi.p@accesslink.lk',
+          role: 'customer',
+          avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300',
+          bio: 'Accessibility advocate and buyer supporting inclusive artisans in Sri Lanka.',
+          location: 'Kandy, Sri Lanka',
+          isVerified: true,
+        };
+      } else if (loginEmail && loginPassword) {
+        // Real Supabase Authentication
+        const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+          email: trimmedEmail,
+          password: loginPassword,
+        });
 
-          if (!authErr && authData?.user) {
-            const { data: profile } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', authData.user.id)
-              .maybeSingle();
+        if (authErr) {
+          throw new Error(authErr.message || 'Invalid email or password.');
+        }
 
-            if (profile?.role) detectedRole = profile.role as UserRole;
-            if (profile?.name) userName = profile.name;
+        if (authData?.user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', authData.user.id)
+            .maybeSingle();
+
+          if (profile) {
+            userObj = {
+              id: profile.id,
+              name: profile.name || authData.user.email?.split('@')[0] || 'User',
+              email: profile.email || authData.user.email,
+              role: (profile.role as UserRole) || 'customer',
+              avatar: profile.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300',
+              bio: profile.bio || 'Inclusive member of AccessHub.',
+              location: profile.location || 'Colombo, Sri Lanka',
+              accommodations: profile.accommodations || {},
+              isVerified: profile.is_verified ?? true,
+            };
+            detectedRole = userObj.role;
+          } else {
+            // First time login profile setup
+            userObj = {
+              id: authData.user.id,
+              name: authData.user.user_metadata?.full_name || authData.user.email?.split('@')[0] || 'User',
+              email: authData.user.email,
+              role: (authData.user.user_metadata?.role as UserRole) || 'customer',
+              avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300',
+              bio: 'Member of AccessHub inclusive community.',
+              location: 'Colombo, Sri Lanka',
+              isVerified: true,
+            };
+            detectedRole = userObj.role;
+            await supabase.from('users').upsert({
+              id: userObj.id,
+              name: userObj.name,
+              email: userObj.email,
+              role: userObj.role,
+              avatar: userObj.avatar,
+              bio: userObj.bio,
+              location: userObj.location,
+            });
           }
-        } catch (e) {
-          // offline fallback
         }
       }
 
-      // 2. Real-world credential & role detection:
-      if (trimmedEmail.includes('admin') || trimmedEmail === 'admin@accesslink.lk') {
-        detectedRole = 'admin';
-        userName = 'System Administrator';
-      }
-
       setUserRole(detectedRole);
-      setCurrentUser((prev) => ({
-        ...prev,
-        name: userName,
-        role: detectedRole,
-      }));
+      if (userObj) {
+        setCurrentUser((prev) => ({
+          ...prev,
+          ...userObj,
+        }));
+      }
 
       setLoginModalVisible(false);
 
-      // 3. Real-world Role-Based Redirection:
+      // Role-Based Redirection: Admins go to admin dashboard, users go to home page
       if (detectedRole === 'admin') {
         setActiveTab('admin');
         if (setActiveScreen) {
@@ -923,13 +986,14 @@ export default function AppMobile() {
     );
   };
 
-  const themeBg = highContrast ? '#000000' : '#0f172a';
-  const cardBg = highContrast ? '#111111' : '#1e293b';
-  const textColor = highContrast ? '#ffff00' : '#f8fafc';
-  const subTextColor = highContrast ? '#ffffff' : '#94a3b8';
-  const accentColor = highContrast ? '#ffff00' : '#38bdf8';
-  const primaryButtonBg = highContrast ? '#ffff00' : '#2563eb';
+  const themeBg = highContrast ? '#000000' : isDarkMode ? '#0f172a' : '#f8fafc';
+  const cardBg = highContrast ? '#111111' : isDarkMode ? '#1e293b' : '#ffffff';
+  const textColor = highContrast ? '#ffff00' : isDarkMode ? '#f8fafc' : '#0f172a';
+  const subTextColor = highContrast ? '#ffffff' : isDarkMode ? '#94a3b8' : '#64748b';
+  const accentColor = highContrast ? '#ffff00' : isDarkMode ? '#38bdf8' : '#0d9488';
+  const primaryButtonBg = highContrast ? '#ffff00' : isDarkMode ? '#2563eb' : '#0d9488';
   const primaryButtonText = highContrast ? '#000000' : '#ffffff';
+  const borderColor = highContrast ? '#ffff00' : isDarkMode ? '#334155' : '#e2e8f0';
 
   if (activeTab === 'splash') {
     return (
@@ -958,10 +1022,10 @@ export default function AppMobile() {
           >
             <Image
               source={require('./assets/images/access_hub_logo.png')}
+              resizeMode="contain"
               style={{
                 width: 320,
                 height: 320,
-                resizeMode: 'contain',
               }}
             />
           </TouchableOpacity>
@@ -1004,10 +1068,10 @@ export default function AppMobile() {
             >
               <Image
                 source={require('./assets/images/Onboarding.png')}
+                resizeMode="contain"
                 style={{
                   width: 280,
                   height: 280,
-                  resizeMode: 'contain',
                   marginBottom: 24,
                 }}
               />
@@ -1119,10 +1183,10 @@ export default function AppMobile() {
             >
               <Image
                 source={require('./assets/images/signup_login.jpg')}
+                resizeMode="contain"
                 style={{
                   width: 280,
                   height: 260,
-                  resizeMode: 'contain',
                   marginBottom: 20,
                 }}
               />
@@ -1420,7 +1484,23 @@ export default function AppMobile() {
     return (
       <CreateAccountScreen
         onCancel={() => setActiveTab('auth')}
-        onSuccess={() => setActiveTab('home')}
+        onSuccess={(createdUser) => {
+          if (createdUser) {
+            setCurrentUser((prev) => ({
+              ...prev,
+              id: createdUser.id || prev.id,
+              name: createdUser.name || prev.name,
+              email: createdUser.email || prev.email,
+              role: createdUser.role || prev.role,
+              accommodations: createdUser.accommodations || prev.accommodations,
+            }));
+            setUserRole(createdUser.role || 'customer');
+          }
+          setActiveTab('home');
+          if (setActiveScreen) {
+            setActiveScreen('home');
+          }
+        }}
       />
     );
   }
@@ -1436,8 +1516,8 @@ export default function AppMobile() {
         ]}
       >
         <StatusBar
-          barStyle="light-content"
-          backgroundColor={themeBg}
+          barStyle={isDarkMode || highContrast ? 'light-content' : 'dark-content'}
+          backgroundColor={highContrast ? '#000000' : isDarkMode ? '#1e293b' : '#ffffff'}
         />
 
         {/* Top Header */}
@@ -1446,15 +1526,29 @@ export default function AppMobile() {
             styles.header,
             {
               backgroundColor: highContrast
-                ? '#000'
-                : '#1e293b',
+                ? '#000000'
+                : isDarkMode
+                  ? '#1e293b'
+                  : '#ffffff',
+              borderBottomColor: highContrast
+                ? '#ffff00'
+                : isDarkMode
+                  ? '#334155'
+                  : '#e2e8f0',
             },
           ]}
         >
           <View style={styles.brandRow}>
-            <View style={styles.logoBadge}>
-              <Text style={styles.logoText}>A</Text>
-            </View>
+            <Image
+              source={require('./assets/images/access_hub_logo.png')}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 9,
+                marginRight: 10,
+              }}
+              resizeMode="contain"
+            />
 
             <View>
               <Text
@@ -1483,71 +1577,90 @@ export default function AppMobile() {
             </View>
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity
-              style={[
-                styles.aiButton,
-                {
-                  backgroundColor: highContrast
-                    ? '#ffff00'
-                    : '#0d9488',
-                },
-              ]}
-              onPress={() => setAiModalVisible(true)}
-            >
-              <Text
-                style={[
-                  styles.aiButtonText,
-                  {
-                    color: highContrast
-                      ? '#000'
-                      : '#fff',
-                  },
-                ]}
-              >
-                ✨ AI Hub
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.logoutButtonHeader,
-                {
-                  backgroundColor: highContrast
-                    ? '#ff0000'
-                    : '#dc2626',
-                },
-              ]}
-              onPress={handleLogout}
-              accessibilityRole="button"
-              accessibilityLabel="Log out of application"
-            >
-              <Text style={styles.logoutButtonText}>
-                🚪 Logout
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
 
-        {/* Accessibility Control Toolbar */}
+        {/* Accessibility Control Toolbar - Modern Redesigned Dock */}
         <View
-          style={[
-            styles.a11yBar,
-            {
-              backgroundColor: highContrast
-                ? '#222'
-                : '#334155',
-            },
-          ]}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 12,
+            paddingVertical: 9,
+            backgroundColor: highContrast
+              ? '#000000'
+              : isDarkMode
+                ? '#1e293b'
+                : '#ffffff',
+            borderBottomWidth: 1,
+            borderBottomColor: highContrast
+              ? '#ffff00'
+              : isDarkMode
+                ? '#334155'
+                : '#f1f5f9',
+            gap: 6,
+          }}
         >
+          {/* 1. Theme Mode Pill Chip */}
           <TouchableOpacity
-            style={[
-              styles.a11yChip,
-              ttsActive && styles.a11yChipActive,
-            ]}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              paddingHorizontal: 10,
+              paddingVertical: 7,
+              borderRadius: 20,
+              backgroundColor: highContrast
+                ? '#333333'
+                : isDarkMode
+                  ? 'rgba(59, 130, 246, 0.15)'
+                  : 'rgba(13, 148, 136, 0.12)',
+              borderWidth: 1,
+              borderColor: highContrast
+                ? '#ffff00'
+                : isDarkMode
+                  ? '#3b82f6'
+                  : '#0d9488',
+            }}
+            onPress={() => setIsDarkMode(!isDarkMode)}
+            accessibilityRole="button"
+            accessibilityLabel={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            <Text style={{ fontSize: 13 }}>{isDarkMode ? '🌙' : '☀️'}</Text>
+            <Text
+              style={{
+                fontSize: 11,
+                fontWeight: '800',
+                color: highContrast
+                  ? '#ffff00'
+                  : isDarkMode
+                    ? '#60a5fa'
+                    : '#0d9488',
+              }}
+            >
+              {isDarkMode ? 'Dark' : 'Light'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* 2. TTS Voice Simulator Pill Chip */}
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              paddingHorizontal: 10,
+              paddingVertical: 7,
+              borderRadius: 20,
+              backgroundColor: ttsActive
+                ? (highContrast ? '#ffff00' : '#10b981')
+                : (highContrast ? '#1e293b' : isDarkMode ? '#0f172a' : '#f8fafc'),
+              borderWidth: 1,
+              borderColor: ttsActive
+                ? (highContrast ? '#ffff00' : '#059669')
+                : (highContrast ? '#555555' : isDarkMode ? '#334155' : '#e2e8f0'),
+            }}
             onPress={() => {
               setTtsActive(!ttsActive);
-
               Alert.alert(
                 'Screen Reader Simulator',
                 !ttsActive
@@ -1555,45 +1668,102 @@ export default function AppMobile() {
                   : 'TTS Deactivated.',
               );
             }}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle Screen Reader"
           >
-            <Text style={styles.a11yChipText}>
-              🔊 {ttsActive ? 'TTS ON' : 'TTS'}
+            <Text style={{ fontSize: 13 }}>🔊</Text>
+            <Text
+              style={{
+                fontSize: 11,
+                fontWeight: '700',
+                color: ttsActive
+                  ? (highContrast ? '#000000' : '#ffffff')
+                  : (highContrast ? '#ffffff' : textColor),
+              }}
+            >
+              {ttsActive ? 'TTS ON' : 'TTS'}
             </Text>
           </TouchableOpacity>
 
+          {/* 3. High Contrast Toggle Pill Chip */}
           <TouchableOpacity
-            style={[
-              styles.a11yChip,
-              highContrast && styles.a11yChipActive,
-            ]}
-            onPress={() =>
-              setHighContrast(!highContrast)
-            }
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              paddingHorizontal: 10,
+              paddingVertical: 7,
+              borderRadius: 20,
+              backgroundColor: highContrast
+                ? '#ffff00'
+                : (isDarkMode ? '#0f172a' : '#f8fafc'),
+              borderWidth: 1,
+              borderColor: highContrast
+                ? '#ffff00'
+                : (isDarkMode ? '#334155' : '#e2e8f0'),
+            }}
+            onPress={() => setHighContrast(!highContrast)}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle High Contrast"
           >
-            <Text style={styles.a11yChipText}>
-              👁️{' '}
-              {highContrast
-                ? 'Contrast ON'
-                : 'Contrast'}
+            <Text style={{ fontSize: 13 }}>👁️</Text>
+            <Text
+              style={{
+                fontSize: 11,
+                fontWeight: '700',
+                color: highContrast
+                  ? '#000000'
+                  : textColor,
+              }}
+            >
+              {highContrast ? 'Contrast ON' : 'Contrast'}
             </Text>
           </TouchableOpacity>
 
-          <View style={styles.scaleGroup}>
-            {(['md', 'lg', 'xl'] as const).map((s) => (
-              <TouchableOpacity
-                key={s}
-                style={[
-                  styles.scaleBtn,
-                  fontScale === s &&
-                  styles.scaleBtnActive,
-                ]}
-                onPress={() => setFontScale(s)}
-              >
-                <Text style={styles.scaleBtnText}>
-                  {s.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          {/* 4. Font Scale Segmented Control (MD | LG | XL) */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: highContrast ? '#1e293b' : isDarkMode ? '#0f172a' : '#f1f5f9',
+              borderRadius: 20,
+              padding: 2.5,
+              borderWidth: 1,
+              borderColor: highContrast ? '#ffff00' : isDarkMode ? '#334155' : '#e2e8f0',
+              gap: 2,
+            }}
+          >
+            {(['md', 'lg', 'xl'] as const).map((s) => {
+              const isSelected = fontScale === s;
+              return (
+                <TouchableOpacity
+                  key={s}
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 4.5,
+                    borderRadius: 16,
+                    backgroundColor: isSelected
+                      ? (highContrast ? '#ffff00' : isDarkMode ? '#3b82f6' : '#0d9488')
+                      : 'transparent',
+                  }}
+                  onPress={() => setFontScale(s)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Set font size to ${s.toUpperCase()}`}
+                >
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      fontWeight: isSelected ? '800' : '600',
+                      color: isSelected
+                        ? (highContrast ? '#000000' : '#ffffff')
+                        : subTextColor,
+                    }}
+                  >
+                    {s.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -1604,527 +1774,694 @@ export default function AppMobile() {
         >
           {/* HOME */}
           {activeTab === 'home' && (
-            <View>
+            <View style={{ gap: 18 }}>
+              {/* Modern Hero Greeting Card */}
               <View
-                style={[
-                  styles.heroCard,
-                  {
-                    backgroundColor: cardBg,
-                  },
-                ]}
+                style={{
+                  backgroundColor: cardBg,
+                  borderRadius: 24,
+                  borderWidth: 1,
+                  borderColor: highContrast ? '#ffff00' : '#e2e8f0',
+                  padding: 20,
+                  elevation: 4,
+                  shadowColor: '#0f172a',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.08,
+                  shadowRadius: 12,
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
               >
-                <Text
-                  style={[
-                    styles.heroBadge,
-                    {
-                      color: accentColor,
-                    },
-                  ]}
-                >
-                  WELCOME BACK 👋
-                </Text>
+                {/* Subtle Top Accent Bar */}
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 5,
+                    backgroundColor: highContrast ? '#ffff00' : '#0d9488',
+                  }}
+                />
 
-                <Text
-                  style={[
-                    styles.heroTitle,
-                    dynamicText(20),
-                    {
-                      color: textColor,
-                    },
-                  ]}
-                >
-                  {mockCurrentUser.name}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.heroSub,
-                    dynamicText(12),
-                    {
-                      color: subTextColor,
-                    },
-                  ]}
-                >
-                  Empowering disabled entrepreneurs and barrier-free
-                  digital commerce across Sri Lanka.
-                </Text>
-
-                <View style={styles.statsRow}>
-                  <View style={styles.statBox}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <View style={{ flex: 1, marginRight: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 0.8, color: accentColor, textTransform: 'uppercase' }}>
+                        Welcome Back 👋
+                      </Text>
+                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981' }} />
+                    </View>
                     <Text
                       style={[
-                        styles.statValue,
+                        dynamicText(22),
                         {
-                          color: accentColor,
+                          fontWeight: '900',
+                          color: textColor,
+                          letterSpacing: -0.5,
                         },
                       ]}
+                      numberOfLines={1}
                     >
-                      LKR{' '}
-                      {(
-                        (mockCurrentUser.totalEarnings ??
-                          0) / 1000
-                      ).toFixed(0)}
-                      k
+                      {currentUser?.name || mockCurrentUser.name}
                     </Text>
+                    <Text style={[dynamicText(12), { color: subTextColor, marginTop: 4, lineHeight: 18 }]}>
+                      Empowering inclusive commerce & barrier-free careers across Sri Lanka.
+                    </Text>
+                  </View>
 
-                    <Text
-                      style={[
-                        styles.statLabel,
-                        {
-                          color: subTextColor,
-                        },
-                      ]}
-                    >
+                  <Image
+                    source={{
+                      uri: currentUser?.avatar || mockCurrentUser.avatar,
+                    }}
+                    style={{
+                      width: 58,
+                      height: 58,
+                      borderRadius: 29,
+                      borderWidth: 2.5,
+                      borderColor: highContrast ? '#ffff00' : '#0d9488',
+                      backgroundColor: '#cbd5e1',
+                    }}
+                  />
+                </View>
+
+                {/* Live Stats Pill Cards */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    gap: 10,
+                    marginTop: 6,
+                    paddingTop: 14,
+                    borderTopWidth: 1,
+                    borderTopColor: highContrast ? '#333333' : '#f1f5f9',
+                  }}
+                >
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor: highContrast ? '#1e293b' : '#f0fdf4',
+                      borderRadius: 14,
+                      paddingVertical: 10,
+                      paddingHorizontal: 8,
+                      borderWidth: 1,
+                      borderColor: highContrast ? '#334155' : '#bbf7d0',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: highContrast ? '#86efac' : '#15803d' }}>
+                      LKR {(((currentUser?.totalEarnings ?? mockCurrentUser.totalEarnings ?? 48000)) / 1000).toFixed(0)}k
+                    </Text>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: highContrast ? '#bbf7d0' : '#166534', marginTop: 2 }}>
                       Earnings
                     </Text>
                   </View>
 
-                  <View style={styles.statBox}>
-                    <Text
-                      style={[
-                        styles.statValue,
-                        {
-                          color: accentColor,
-                        },
-                      ]}
-                    >
-                      {mockCurrentUser.totalOrders ?? 0}
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor: highContrast ? '#1e293b' : '#eff6ff',
+                      borderRadius: 14,
+                      paddingVertical: 10,
+                      paddingHorizontal: 8,
+                      borderWidth: 1,
+                      borderColor: highContrast ? '#334155' : '#bfdbfe',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: highContrast ? '#93c5fa' : '#1d4ed8' }}>
+                      {currentUser?.totalOrders ?? mockCurrentUser.totalOrders ?? 14}
                     </Text>
-
-                    <Text
-                      style={[
-                        styles.statLabel,
-                        {
-                          color: subTextColor,
-                        },
-                      ]}
-                    >
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: highContrast ? '#bfdbfe' : '#1e40af', marginTop: 2 }}>
                       Orders
                     </Text>
                   </View>
 
-                  <View style={styles.statBox}>
-                    <Text
-                      style={[
-                        styles.statValue,
-                        {
-                          color: accentColor,
-                        },
-                      ]}
-                    >
-                      ⭐ {mockCurrentUser.rating}
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor: highContrast ? '#1e293b' : '#fffbeb',
+                      borderRadius: 14,
+                      paddingVertical: 10,
+                      paddingHorizontal: 8,
+                      borderWidth: 1,
+                      borderColor: highContrast ? '#334155' : '#fde68a',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: highContrast ? '#fde047' : '#b45309' }}>
+                      ⭐ {currentUser?.rating ?? mockCurrentUser.rating ?? 4.9}
                     </Text>
-
-                    <Text
-                      style={[
-                        styles.statLabel,
-                        {
-                          color: subTextColor,
-                        },
-                      ]}
-                    >
-                      Rating
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: highContrast ? '#fde68a' : '#92400e', marginTop: 2 }}>
+                      Reputation
                     </Text>
                   </View>
                 </View>
               </View>
 
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  dynamicText(16),
-                  {
-                    color: textColor,
-                  },
-                ]}
-              >
-                🚀 Inclusive Suite
-              </Text>
+              {/* Quick Navigation Suite */}
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <Text style={[styles.sectionTitle, dynamicText(16), { color: textColor, marginBottom: 0 }]}>
+                    🚀 Inclusive Suite
+                  </Text>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: accentColor }}>
+                    Explore All
+                  </Text>
+                </View>
 
-              <View style={styles.quickGrid}>
-                <TouchableOpacity
-                  style={[
-                    styles.quickCard,
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                  {[
                     {
-                      backgroundColor: cardBg,
+                      id: 'marketplace' as const,
+                      title: 'Marketplace',
+                      sub: 'Adaptive Goods',
+                      icon: '🛒',
+                      bg: highContrast ? '#1e293b' : '#f0fdfa',
+                      border: highContrast ? '#ffff00' : '#99f6e4',
                     },
-                  ]}
-                  onPress={() =>
-                    setActiveTab('marketplace')
-                  }
-                >
-                  <Text style={styles.quickIcon}>
-                    🛒
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.quickText,
-                      dynamicText(12),
-                      {
-                        color: textColor,
-                      },
-                    ]}
-                  >
-                    Marketplace
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.quickCard,
                     {
-                      backgroundColor: cardBg,
+                      id: 'services' as const,
+                      title: 'Services',
+                      sub: 'Hire Freelancers',
+                      icon: '🤝',
+                      bg: highContrast ? '#1e293b' : '#faf5ff',
+                      border: highContrast ? '#ffff00' : '#e9d5ff',
                     },
-                  ]}
-                  onPress={() =>
-                    setActiveTab('services')
-                  }
-                >
-                  <Text style={styles.quickIcon}>
-                    🤝
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.quickText,
-                      dynamicText(12),
-                      {
-                        color: textColor,
-                      },
-                    ]}
-                  >
-                    Services
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.quickCard,
                     {
-                      backgroundColor: cardBg,
+                      id: 'jobs' as const,
+                      title: 'Jobs',
+                      sub: 'Inclusive Careers',
+                      icon: '💼',
+                      bg: highContrast ? '#1e293b' : '#eff6ff',
+                      border: highContrast ? '#ffff00' : '#bfdbfe',
                     },
-                  ]}
-                  onPress={() =>
-                    setActiveTab('jobs')
-                  }
-                >
-                  <Text style={styles.quickIcon}>
-                    💼
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.quickText,
-                      dynamicText(12),
-                      {
-                        color: textColor,
-                      },
-                    ]}
-                  >
-                    Jobs
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.quickCard,
                     {
-                      backgroundColor: cardBg,
+                      id: 'map' as const,
+                      title: 'Accessible Map',
+                      sub: 'Barrier-Free Pins',
+                      icon: '🗺️',
+                      bg: highContrast ? '#1e293b' : '#fff7ed',
+                      border: highContrast ? '#ffff00' : '#fed7aa',
                     },
-                  ]}
-                  onPress={() =>
-                    setActiveTab('map')
-                  }
-                >
-                  <Text style={styles.quickIcon}>
-                    🗺️
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.quickText,
-                      dynamicText(12),
-                      {
-                        color: textColor,
-                      },
-                    ]}
-                  >
-                    Map Pins
-                  </Text>
-                </TouchableOpacity>
+                  ].map((portal) => (
+                    <TouchableOpacity
+                      key={portal.id}
+                      onPress={() => setActiveTab(portal.id)}
+                      style={{
+                        flex: 1,
+                        minWidth: '47%',
+                        backgroundColor: cardBg,
+                        borderRadius: 18,
+                        padding: 14,
+                        borderWidth: 1.5,
+                        borderColor: portal.border,
+                        elevation: 2,
+                        shadowColor: '#0f172a',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.05,
+                        shadowRadius: 6,
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Navigate to ${portal.title}`}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <View
+                          style={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: 12,
+                            backgroundColor: portal.bg,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Text style={{ fontSize: 20 }}>{portal.icon}</Text>
+                        </View>
+                        <Text style={{ fontSize: 13, color: subTextColor }}>→</Text>
+                      </View>
+                      <Text style={[dynamicText(14), { fontWeight: '800', color: textColor }]}>
+                        {portal.title}
+                      </Text>
+                      <Text style={[dynamicText(11), { color: subTextColor, marginTop: 2 }]}>
+                        {portal.sub}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
 
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  dynamicText(16),
-                  {
-                    color: textColor,
-                  },
-                ]}
-              >
-                ✨ Featured Assistive Tech
-              </Text>
-
-              {mockProducts.slice(0, 2).map((item) => (
-                <View
-                  key={item.id}
-                  style={[
-                    styles.productCard,
-                    {
-                      backgroundColor: cardBg,
-                    },
-                  ]}
-                >
-                  <Image
-                    source={{ uri: item.image }}
-                    style={styles.productImg}
-                  />
-
-                  <View style={styles.productBody}>
-                    <Text
-                      style={[
-                        styles.badgeTag,
-                        {
-                          color: accentColor,
-                        },
-                      ]}
-                    >
-                      ♿ {item.disabilityBadge}
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.productTitle,
-                        dynamicText(14),
-                        {
-                          color: textColor,
-                        },
-                      ]}
-                    >
-                      {item.title}
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.productPrice,
-                        dynamicText(15),
-                        {
-                          color: accentColor,
-                        },
-                      ]}
-                    >
-                      LKR {item.price.toLocaleString()}
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.sellerName,
-                        dynamicText(11),
-                        {
-                          color: subTextColor,
-                        },
-                      ]}
-                    >
-                      By {item.sellerName}
-                    </Text>
-                  </View>
+              {/* Featured Assistive Tech & Goods */}
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <Text style={[styles.sectionTitle, dynamicText(16), { color: textColor, marginBottom: 0 }]}>
+                    ✨ Featured Adaptive Goods
+                  </Text>
+                  <TouchableOpacity onPress={() => setActiveTab('marketplace')}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: accentColor }}>View Shop →</Text>
+                  </TouchableOpacity>
                 </View>
-              ))}
+
+                {mockProducts.slice(0, 2).map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    onPress={() => {
+                      setCheckoutProduct(item);
+                      setCheckoutModalVisible(true);
+                    }}
+                    style={{
+                      backgroundColor: cardBg,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: highContrast ? '#ffff00' : '#e2e8f0',
+                      padding: 12,
+                      marginBottom: 12,
+                      flexDirection: 'row',
+                      gap: 14,
+                      alignItems: 'center',
+                      elevation: 2,
+                      shadowColor: '#0f172a',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.06,
+                      shadowRadius: 8,
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${item.title}`}
+                  >
+                    <Image
+                      source={{ uri: item.image }}
+                      style={{
+                        width: 90,
+                        height: 90,
+                        borderRadius: 16,
+                        backgroundColor: '#cbd5e1',
+                      }}
+                    />
+
+                    <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                      <View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <View
+                            style={{
+                              backgroundColor: highContrast ? '#333300' : '#ccfbf1',
+                              paddingHorizontal: 8,
+                              paddingVertical: 2,
+                              borderRadius: 8,
+                            }}
+                          >
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: highContrast ? '#ffff00' : '#0f766e' }}>
+                              ♿ {item.disabilityBadge}
+                            </Text>
+                          </View>
+                          <Text style={{ fontSize: 10, color: '#f59e0b', fontWeight: 'bold' }}>
+                            ⭐ {item.sellerRating}
+                          </Text>
+                        </View>
+
+                        <Text
+                          style={[dynamicText(14), { fontWeight: '800', color: textColor, lineHeight: 18 }]}
+                          numberOfLines={1}
+                        >
+                          {item.title}
+                        </Text>
+                        <Text style={[dynamicText(11), { color: subTextColor, marginTop: 2 }]} numberOfLines={1}>
+                          By {item.sellerName}
+                        </Text>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                        <Text style={[dynamicText(15), { fontWeight: '900', color: accentColor }]}>
+                          LKR {item.price.toLocaleString()}
+                        </Text>
+                        <View
+                          style={{
+                            backgroundColor: primaryButtonBg,
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 10,
+                          }}
+                        >
+                          <Text style={{ color: primaryButtonText, fontWeight: '800', fontSize: 11 }}>
+                            Order Now
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           )}
 
           {/* MARKETPLACE */}
           {activeTab === 'marketplace' && (
-            <View>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  dynamicText(18),
-                  {
-                    color: textColor,
-                  },
-                ]}
+            <View style={{ gap: 14 }}>
+              {/* Header */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View>
+                  <Text style={[styles.sectionTitle, dynamicText(20), { color: textColor, marginBottom: 2 }]}>
+                    🛒 Assistive Marketplace
+                  </Text>
+                  <Text style={[dynamicText(12), { color: subTextColor }]}>
+                    Curated adaptive gear, Braille & handcrafted items
+                  </Text>
+                </View>
+              </View>
+
+              {/* Modern Search Bar */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: cardBg,
+                  borderRadius: 16,
+                  borderWidth: 1.5,
+                  borderColor: highContrast ? '#ffff00' : '#e2e8f0',
+                  paddingHorizontal: 14,
+                  paddingVertical: 2,
+                  elevation: 2,
+                  shadowColor: '#0f172a',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 6,
+                }}
               >
-                🛒 Assistive Marketplace
-              </Text>
-
-              <TextInput
-                style={[
-                  styles.searchInput,
-                  {
-                    backgroundColor: cardBg,
-                    color: textColor,
-                  },
-                ]}
-                placeholder="Search adaptive items, Braille clocks..."
-                placeholderTextColor={subTextColor}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-
-              {mockProducts.map((item) => (
-                <View
-                  key={item.id}
+                <Text style={{ fontSize: 16, marginRight: 8 }}>🔍</Text>
+                <TextInput
                   style={[
-                    styles.productCard,
+                    styles.searchInput,
                     {
-                      backgroundColor: cardBg,
+                      flex: 1,
+                      backgroundColor: 'transparent',
+                      color: textColor,
+                      borderWidth: 0,
+                      marginBottom: 0,
+                      paddingVertical: 10,
+                      fontSize: 14,
                     },
                   ]}
-                >
-                  <Image
-                    source={{ uri: item.image }}
-                    style={styles.productImg}
-                  />
+                  placeholder="Search adaptive items, Braille clocks, ramps..."
+                  placeholderTextColor={subTextColor}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  accessibilityRole="search"
+                  accessibilityLabel="Search marketplace products"
+                />
+                {!!searchQuery && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 6 }}>
+                    <Text style={{ color: subTextColor, fontWeight: 'bold' }}>✕</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
 
-                  <View style={styles.productBody}>
-                    <Text
-                      style={[
-                        styles.badgeTag,
-                        {
-                          color: accentColor,
-                        },
-                      ]}
-                    >
-                      ♿ {item.disabilityBadge}
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.productTitle,
-                        dynamicText(14),
-                        {
-                          color: textColor,
-                        },
-                      ]}
-                    >
-                      {item.title}
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.productPrice,
-                        dynamicText(15),
-                        {
-                          color: accentColor,
-                        },
-                      ]}
-                    >
-                      LKR {item.price.toLocaleString()}
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.sellerName,
-                        dynamicText(11),
-                        {
-                          color: subTextColor,
-                        },
-                      ]}
-                    >
-                      Seller: {item.sellerName} (⭐{' '}
-                      {item.sellerRating})
-                    </Text>
-
+              {/* Category Filter Chips */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingBottom: 2 }}
+              >
+                {['All', 'Wheelchair', 'Braille', 'Hearing', 'Ergonomic', 'Handcrafted'].map((cat) => {
+                  const isSelected = marketplaceCategory === cat || (cat === 'All' && marketplaceCategory === 'All');
+                  return (
                     <TouchableOpacity
-                      style={[
-                        styles.buyBtn,
-                        {
-                          backgroundColor:
-                            primaryButtonBg,
-                        },
-                      ]}
-                      onPress={() => {
-                        setCheckoutProduct(item);
-                        setCheckoutModalVisible(true);
+                      key={cat}
+                      onPress={() => setMarketplaceCategory(cat)}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        backgroundColor: isSelected
+                          ? (highContrast ? '#ffff00' : '#0d9488')
+                          : (highContrast ? '#1e293b' : '#f1f5f9'),
+                        borderWidth: 1,
+                        borderColor: isSelected
+                          ? (highContrast ? '#ffff00' : '#0d9488')
+                          : (highContrast ? '#334155' : '#cbd5e1'),
                       }}
                     >
                       <Text
-                        style={[
-                          styles.buyBtnText,
-                          {
-                            color:
-                              primaryButtonText,
-                          },
-                        ]}
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '800',
+                          color: isSelected
+                            ? (highContrast ? '#000000' : '#ffffff')
+                            : (highContrast ? '#ffffff' : '#334155'),
+                        }}
                       >
-                        Order Now
+                        {cat}
                       </Text>
                     </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {/* Products List */}
+              {mockProducts
+                .filter((item) => {
+                  if (searchQuery.trim()) {
+                    const q = searchQuery.toLowerCase().trim();
+                    const matchTitle = item.title.toLowerCase().includes(q);
+                    const matchSeller = item.sellerName.toLowerCase().includes(q);
+                    const matchBadge = item.disabilityBadge?.toLowerCase().includes(q);
+                    if (!matchTitle && !matchSeller && !matchBadge) return false;
+                  }
+                  if (marketplaceCategory !== 'All') {
+                    const c = marketplaceCategory.toLowerCase();
+                    const matchCat = item.category?.toLowerCase().includes(c);
+                    const matchBadge = item.disabilityBadge?.toLowerCase().includes(c);
+                    const matchTitle = item.title.toLowerCase().includes(c);
+                    if (!matchCat && !matchBadge && !matchTitle) return false;
+                  }
+                  return true;
+                })
+                .map((item) => (
+                  <View
+                    key={item.id}
+                    style={{
+                      backgroundColor: cardBg,
+                      borderRadius: 22,
+                      borderWidth: 1,
+                      borderColor: highContrast ? '#ffff00' : '#e2e8f0',
+                      padding: 14,
+                      marginBottom: 12,
+                      flexDirection: 'row',
+                      gap: 14,
+                      elevation: 3,
+                      shadowColor: '#0f172a',
+                      shadowOffset: { width: 0, height: 3 },
+                      shadowOpacity: 0.08,
+                      shadowRadius: 10,
+                    }}
+                  >
+                    <Image
+                      source={{ uri: item.image }}
+                      style={{
+                        width: 105,
+                        height: 105,
+                        borderRadius: 18,
+                        backgroundColor: '#cbd5e1',
+                      }}
+                    />
+
+                    <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                      <View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <View
+                            style={{
+                              backgroundColor: highContrast ? '#333300' : '#ccfbf1',
+                              paddingHorizontal: 8,
+                              paddingVertical: 3,
+                              borderRadius: 8,
+                            }}
+                          >
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: highContrast ? '#ffff00' : '#0f766e' }}>
+                              ♿ {item.disabilityBadge}
+                            </Text>
+                          </View>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#f59e0b' }}>
+                            ⭐ {item.sellerRating}
+                          </Text>
+                        </View>
+
+                        <Text
+                          style={[
+                            dynamicText(14),
+                            {
+                              fontWeight: '800',
+                              color: textColor,
+                              lineHeight: 18,
+                            },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {item.title}
+                        </Text>
+
+                        <Text
+                          style={[
+                            dynamicText(11),
+                            {
+                              color: subTextColor,
+                              marginTop: 2,
+                            },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          Seller: {item.sellerName}
+                        </Text>
+                      </View>
+
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginTop: 8,
+                        }}
+                      >
+                        <Text
+                          style={[
+                            dynamicText(16),
+                            {
+                              fontWeight: '900',
+                              color: accentColor,
+                            },
+                          ]}
+                        >
+                          LKR {item.price.toLocaleString()}
+                        </Text>
+
+                        <TouchableOpacity
+                          style={{
+                            backgroundColor: primaryButtonBg,
+                            paddingHorizontal: 14,
+                            paddingVertical: 8,
+                            borderRadius: 12,
+                            elevation: 2,
+                          }}
+                          onPress={() => {
+                            setCheckoutProduct(item);
+                            setCheckoutModalVisible(true);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Order ${item.title}`}
+                        >
+                          <Text
+                            style={{
+                              color: primaryButtonText,
+                              fontWeight: '800',
+                              fontSize: 12,
+                            }}
+                          >
+                            Order Now 🛍️
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              ))}
+                ))}
             </View>
           )}
 
           {/* SERVICES */}
           {activeTab === 'services' && (
-            <View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    dynamicText(18),
-                    { color: textColor, marginBottom: 0 },
-                  ]}
-                >
-                  🤝 Inclusive Services
-                </Text>
+            <View style={{ gap: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View>
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      dynamicText(20),
+                      { color: textColor, marginBottom: 2 },
+                    ]}
+                  >
+                    🤝 Inclusive Services
+                  </Text>
+                  <Text style={[dynamicText(12), { color: subTextColor }]}>
+                    Hire talented disabled freelancers & service specialists
+                  </Text>
+                </View>
+
                 <TouchableOpacity
                   onPress={() => setActiveTab('bookedProviders')}
-                  style={{ backgroundColor: '#2563eb', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
+                  style={{
+                    backgroundColor: highContrast ? '#333300' : '#0d9488',
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: highContrast ? '#ffff00' : '#0f766e',
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="View your booked providers"
                 >
-                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Booked Providers</Text>
+                  <Text style={{ color: highContrast ? '#ffff00' : '#ffffff', fontSize: 12, fontWeight: '800' }}>
+                    📋 Booked ({bookingRequests.length})
+                  </Text>
                 </TouchableOpacity>
               </View>
 
               {/* SEARCH BAR FOR SERVICES */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: cardBg, borderRadius: 12, borderWidth: 1, borderColor: '#334155', overflow: 'hidden' }}>
-                  <TextInput
-                    style={[
-                      styles.searchInput,
-                      { flex: 1, color: textColor, marginBottom: 0, borderWidth: 0, paddingHorizontal: 12 },
-                    ]}
-                    placeholder="Search services, skills, providers..."
-                    placeholderTextColor={subTextColor}
-                    value={serviceSearch}
-                    onChangeText={setServiceSearch}
-                    accessibilityRole="search"
-                    accessibilityLabel="Search services input"
-                  />
-                  <TouchableOpacity
-                    onPress={startVoiceSearch}
-                    style={{ padding: 12 }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Voice search"
-                  >
-                    <Text style={{ fontSize: 16 }}>🎤</Text>
-                  </TouchableOpacity>
-                </View>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: cardBg,
+                  borderRadius: 16,
+                  borderWidth: 1.5,
+                  borderColor: highContrast ? '#ffff00' : '#e2e8f0',
+                  paddingHorizontal: 14,
+                  paddingVertical: 2,
+                  elevation: 2,
+                  shadowColor: '#0f172a',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 6,
+                }}
+              >
+                <Text style={{ fontSize: 16, marginRight: 8 }}>🔍</Text>
+                <TextInput
+                  style={[
+                    styles.searchInput,
+                    {
+                      flex: 1,
+                      backgroundColor: 'transparent',
+                      color: textColor,
+                      borderWidth: 0,
+                      marginBottom: 0,
+                      paddingVertical: 10,
+                      fontSize: 14,
+                    },
+                  ]}
+                  placeholder="Search skills, web dev, translation, craft..."
+                  placeholderTextColor={subTextColor}
+                  value={serviceSearch}
+                  onChangeText={setServiceSearch}
+                  accessibilityRole="search"
+                  accessibilityLabel="Search services input"
+                />
+                <TouchableOpacity
+                  onPress={startVoiceSearch}
+                  style={{ padding: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Voice search"
+                >
+                  <Text style={{ fontSize: 18 }}>🎤</Text>
+                </TouchableOpacity>
               </View>
-
-              {/* CATEGORY FILTERS TITLE */}
-              <Text style={{ fontSize: 15, fontWeight: 'bold', color: textColor, marginTop: 4, marginBottom: 8 }}>
-                Category Filters
-              </Text>
 
               {/* CATEGORY FILTER PILLS FOR SERVICES */}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 8, paddingBottom: 8 }}
-                style={{ marginBottom: 14 }}
+                contentContainerStyle={{ gap: 8, paddingBottom: 2 }}
               >
                 {[
-                  { id: 'All', label: '[All]' },
-                  { id: 'HandCraft', label: '[Handicrafts]' },
-                  { id: 'Development', label: '[Web Development]' },
-                  { id: 'Designing', label: '[Design]' },
-                  { id: 'Translation', label: '[Translation]' },
-                  { id: 'Editing', label: '[Editing]' }
+                  { id: 'All', label: 'All Services' },
+                  { id: 'HandCraft', label: 'Handicrafts' },
+                  { id: 'Development', label: 'Web & Tech' },
+                  { id: 'Designing', label: 'UI/UX Design' },
+                  { id: 'Translation', label: 'Sign & Translation' },
+                  { id: 'Editing', label: 'Media Editing' }
                 ].map((cat) => {
                   const isSelected = serviceCategory === cat.id;
                   return (
@@ -2135,19 +2472,25 @@ export default function AppMobile() {
                         speakText(`Filter by ${cat.id}`);
                       }}
                       style={{
-                        paddingHorizontal: 22,
-                        paddingVertical: 10,
-                        borderRadius: 24,
-                        backgroundColor: isSelected ? '#f59e0b' : '#1b1436',
-                        borderWidth: 1.5,
-                        borderColor: isSelected ? '#f59e0b' : '#4c1d95',
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        backgroundColor: isSelected
+                          ? (highContrast ? '#ffff00' : '#0d9488')
+                          : (highContrast ? '#1e293b' : '#f1f5f9'),
+                        borderWidth: 1,
+                        borderColor: isSelected
+                          ? (highContrast ? '#ffff00' : '#0d9488')
+                          : (highContrast ? '#334155' : '#cbd5e1'),
                       }}
                     >
                       <Text
                         style={{
                           fontSize: 12,
-                          fontWeight: 'bold',
-                          color: isSelected ? '#000000' : '#e9d5ff',
+                          fontWeight: '800',
+                          color: isSelected
+                            ? (highContrast ? '#000000' : '#ffffff')
+                            : (highContrast ? '#ffffff' : '#334155'),
                         }}
                       >
                         {cat.label}
@@ -2160,36 +2503,34 @@ export default function AppMobile() {
               {mobilePendingApps.length > 0 && (
                 <TouchableOpacity
                   style={{
-                    backgroundColor: '#0f172a',
-                    borderColor: '#334155',
+                    backgroundColor: highContrast ? '#1e293b' : '#f0fdf4',
+                    borderColor: highContrast ? '#ffff00' : '#86efac',
                     borderWidth: 1,
                     padding: 12,
                     borderRadius: 16,
-                    marginBottom: 14,
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                   }}
                   onPress={() => setIsAdminModalOpen(true)}
                 >
-                  <View>
-                    <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 12 }}>
-                      🛡️ Admin Dashboard Queue ({mobilePendingApps.length})
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={{ color: highContrast ? '#ffff00' : '#15803d', fontWeight: 'bold', fontSize: 12 }}>
+                      🛡️ Admin Verification Queue ({mobilePendingApps.length})
                     </Text>
-                    <Text style={{ color: '#94a3b8', fontSize: 10 }}>
-                      Pending freelancer applications waiting for OK approval
+                    <Text style={{ color: subTextColor, fontSize: 10 }}>
+                      Pending freelancer applications waiting for review
                     </Text>
                   </View>
-                  <Text style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: 11 }}>
+                  <Text style={{ color: highContrast ? '#ffff00' : '#16a34a', fontWeight: 'bold', fontSize: 11 }}>
                     Review →
                   </Text>
                 </TouchableOpacity>
               )}
 
-              {/* SERVICES CARDS GRID (3-COLUMN RESPONSIVE LAYOUT MATCHING SCREENSHOT 1) */}
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
+              {/* SERVICES CARDS */}
+              <View style={{ gap: 12 }}>
                 {mobileServices.filter((srv) => {
-                  // Category Pill Filter
                   if (serviceCategory !== 'All') {
                     const cat = serviceCategory.toLowerCase();
                     const serviceCat = srv.category?.toLowerCase() || '';
@@ -2231,7 +2572,6 @@ export default function AppMobile() {
                     if (!matchCategory) return false;
                   }
 
-                  // Search query filter
                   if (!serviceSearch.trim()) return true;
                   const q = serviceSearch.toLowerCase().trim();
                   const matchTitle = srv.title.toLowerCase().includes(q);
@@ -2240,139 +2580,173 @@ export default function AppMobile() {
                   const matchSkills = srv.skills ? srv.skills.some(s => s.toLowerCase().includes(q)) : false;
                   const matchBadge = srv.disabilityBadge ? srv.disabilityBadge.toLowerCase().includes(q) : false;
                   return matchTitle || matchProvider || matchDesc || matchSkills || matchBadge;
-                }).map((srv, idx) => (
+                }).map((srv) => (
                   <View
                     key={srv.id}
                     style={{
-                      flex: 1,
-                      minWidth: 260,
-                      maxWidth: '100%',
-                      margin: 6,
-                      backgroundColor: '#1b1436',
-                      borderRadius: 18,
-                      borderWidth: 1.5,
-                      borderColor: '#4c1d95',
-                      padding: 14,
-                      justifyContent: 'space-between',
+                      backgroundColor: cardBg,
+                      borderRadius: 22,
+                      borderWidth: 1,
+                      borderColor: highContrast ? '#ffff00' : '#e2e8f0',
+                      padding: 16,
+                      elevation: 3,
+                      shadowColor: '#0f172a',
+                      shadowOffset: { width: 0, height: 3 },
+                      shadowOpacity: 0.08,
+                      shadowRadius: 10,
                     }}
                   >
-                    <View>
-                      {/* Provider Header */}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                        <Image
-                          source={{
-                            uri: srv.providerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
-                          }}
-                          style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: 22,
-                            borderWidth: 2,
-                            borderColor: '#8b5cf6',
-                          }}
-                        />
+                    {/* Provider Header */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                      <Image
+                        source={{
+                          uri: srv.providerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+                        }}
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 24,
+                          borderWidth: 2,
+                          borderColor: highContrast ? '#ffff00' : '#0d9488',
+                          backgroundColor: '#cbd5e1',
+                        }}
+                      />
 
-                        <View style={{ marginLeft: 10, flex: 1 }}>
-                          <Text
-                            style={{
-                              color: '#ffffff',
-                              fontWeight: 'bold',
-                              fontSize: 14,
-                            }}
-                          >
-                            {srv.providerName}
+                      <View style={{ marginLeft: 12, flex: 1 }}>
+                        <Text
+                          style={[
+                            dynamicText(15),
+                            {
+                              color: textColor,
+                              fontWeight: '800',
+                            },
+                          ]}
+                        >
+                          {srv.providerName}
+                        </Text>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                          <Text style={{ fontSize: 11, color: '#f59e0b', fontWeight: 'bold' }}>
+                            ✔ Verified Provider
                           </Text>
-
-                          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                            <Text style={{ fontSize: 10, color: '#f59e0b', fontWeight: 'bold' }}>
-                              ✔ Verified Freelancer
+                          {!!srv.disabilityBadge && (
+                            <Text style={{ fontSize: 10, color: subTextColor }}>
+                              • ♿ {srv.disabilityBadge}
                             </Text>
-                          </View>
+                          )}
                         </View>
                       </View>
 
-                      {/* Service Title */}
-                      <Text
+                      <View
                         style={{
-                          color: '#ffffff',
-                          fontWeight: 'bold',
-                          fontSize: 14,
-                          marginBottom: 4,
+                          backgroundColor: highContrast ? '#333300' : '#f0fdfa',
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 10,
+                          borderWidth: 1,
+                          borderColor: highContrast ? '#ffff00' : '#ccfbf1',
                         }}
                       >
-                        {srv.title}
-                      </Text>
-
-                      {/* Description */}
-                      <Text
-                        style={{
-                          color: '#94a3b8',
-                          fontSize: 11,
-                          lineHeight: 16,
-                          marginBottom: 10,
-                        }}
-                        numberOfLines={2}
-                      >
-                        {srv.description || 'Professional freelancer service offered through AccessHub.'}
-                      </Text>
-
-                      {/* Price & Rating */}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 13 }}>
-                          LKR {srv.hourlyRate.toLocaleString()} / hour
-                        </Text>
-
-                        <Text style={{ color: '#fbbf24', fontSize: 12, fontWeight: 'bold' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: highContrast ? '#ffff00' : '#0f766e' }}>
                           ★ {srv.rating || 4.9}
                         </Text>
                       </View>
-
-                      {/* Uploaded Portfolio / Work Proof Photos */}
-                      {srv.portfolioImages && srv.portfolioImages.length > 0 && (
-                        <View style={{ marginBottom: 12 }}>
-                          <Text style={{ fontSize: 10, color: '#94a3b8', fontWeight: 'bold', marginBottom: 4 }}>
-                            📷 Work Proof Photos ({srv.portfolioImages.length}):
-                          </Text>
-                          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                            {srv.portfolioImages.map((img, i) => (
-                              <Image
-                                key={i}
-                                source={{ uri: img }}
-                                style={{
-                                  width: 52,
-                                  height: 40,
-                                  borderRadius: 8,
-                                  borderWidth: 1,
-                                  borderColor: '#4c1d95',
-                                }}
-                              />
-                            ))}
-                          </ScrollView>
-                        </View>
-                      )}
                     </View>
 
-                    {/* Action Button */}
-                    <TouchableOpacity
+                    {/* Service Title */}
+                    <Text
+                      style={[
+                        dynamicText(15),
+                        {
+                          color: textColor,
+                          fontWeight: '800',
+                          marginBottom: 6,
+                        },
+                      ]}
+                    >
+                      {srv.title}
+                    </Text>
+
+                    {/* Description */}
+                    <Text
+                      style={[
+                        dynamicText(12),
+                        {
+                          color: subTextColor,
+                          lineHeight: 18,
+                          marginBottom: 12,
+                        },
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {srv.description || 'Professional freelancer service offered through AccessHub inclusive community.'}
+                    </Text>
+
+                    {/* Portfolio Preview */}
+                    {srv.portfolioImages && srv.portfolioImages.length > 0 && (
+                      <View style={{ marginBottom: 12 }}>
+                        <Text style={{ fontSize: 11, color: subTextColor, fontWeight: '700', marginBottom: 6 }}>
+                          📷 Work Portfolio ({srv.portfolioImages.length}):
+                        </Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                          {srv.portfolioImages.map((img, i) => (
+                            <Image
+                              key={i}
+                              source={{ uri: img }}
+                              style={{
+                                width: 68,
+                                height: 50,
+                                borderRadius: 10,
+                                borderWidth: 1,
+                                borderColor: highContrast ? '#ffff00' : '#cbd5e1',
+                              }}
+                            />
+                          ))}
+                        </ScrollView>
+                      </View>
+                    )}
+
+                    {/* Price & Action Button Footer */}
+                    <View
                       style={{
-                        backgroundColor: idx % 2 === 0 ? '#2563eb' : '#f59e0b',
-                        paddingVertical: 10,
-                        borderRadius: 12,
+                        flexDirection: 'row',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      onPress={() => {
-                        setSelectedMobileBookingService(srv);
-                        setBookingProjectTitle(`${srv.title} Project`);
-                        setBookingDescription('');
-                        setBookingHours('2');
-                        setBookingPaymentOption('50_50');
+                        justifyContent: 'space-between',
+                        paddingTop: 10,
+                        borderTopWidth: 1,
+                        borderTopColor: highContrast ? '#333333' : '#f1f5f9',
                       }}
                     >
-                      <Text style={{ color: idx % 2 === 0 ? '#ffffff' : '#000000', fontWeight: 'bold', fontSize: 12 }}>
-                        Book Provider
-                      </Text>
-                    </TouchableOpacity>
+                      <View>
+                        <Text style={{ fontSize: 10, color: subTextColor, fontWeight: '600' }}>Starting Rate</Text>
+                        <Text style={[dynamicText(16), { color: accentColor, fontWeight: '900' }]}>
+                          LKR {srv.hourlyRate.toLocaleString()} <Text style={{ fontSize: 11, fontWeight: 'normal' }}>/ hr</Text>
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: primaryButtonBg,
+                          paddingHorizontal: 18,
+                          paddingVertical: 10,
+                          borderRadius: 14,
+                          elevation: 2,
+                        }}
+                        onPress={() => {
+                          setSelectedMobileBookingService(srv);
+                          setBookingProjectTitle(`${srv.title} Project`);
+                          setBookingDescription('');
+                          setBookingHours('2');
+                          setBookingPaymentOption('50_50');
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Book provider ${srv.providerName}`}
+                      >
+                        <Text style={{ color: primaryButtonText, fontWeight: '800', fontSize: 13 }}>
+                          Book Provider 📅
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ))}
               </View>
@@ -2962,131 +3336,139 @@ export default function AppMobile() {
 
           {/* JOBS */}
           {activeTab === 'jobs' && (
-            <View>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  dynamicText(18),
-                  {
-                    color: textColor,
-                  },
-                ]}
+            <View style={{ marginBottom: 24 }}>
+              {/* Modern Header Banner */}
+              <View
+                style={{
+                  backgroundColor: highContrast ? '#000000' : 'rgba(30, 41, 59, 0.7)',
+                  borderRadius: 18,
+                  padding: 16,
+                  marginBottom: 16,
+                  borderWidth: 1,
+                  borderColor: highContrast ? '#ffff00' : '#334155',
+                }}
               >
-                💼 Disability-Confident Jobs
-              </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text
+                    style={[
+                      dynamicText(20),
+                      {
+                        fontWeight: '800',
+                        color: highContrast ? '#ffff00' : textColor,
+                      },
+                    ]}
+                  >
+                    💼 Inclusive Careers
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: '#10b981',
+                    }}
+                  >
+                    <Text style={{ color: '#10b981', fontSize: 11, fontWeight: '700' }}>
+                      {filteredJobs.length} OPEN ROLES
+                    </Text>
+                  </View>
+                </View>
+                <Text
+                  style={[
+                    dynamicText(12),
+                    {
+                      color: subTextColor,
+                      lineHeight: 18,
+                    },
+                  ]}
+                >
+                  Remote & hybrid jobs verified with supportive workplace accommodations for disabled talent.
+                </Text>
+              </View>
 
+              {/* Modern Search & Voice Bar */}
               <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  marginBottom: 12,
+                  backgroundColor: highContrast ? '#000000' : cardBg,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: highContrast ? '#ffff00' : '#334155',
+                  paddingHorizontal: 12,
+                  marginBottom: 14,
                 }}
               >
-                <View
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: cardBg,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: '#334155',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <TextInput
-                    style={[
-                      styles.searchInput,
-                      {
-                        flex: 1,
-                        color: textColor,
-                        marginBottom: 0,
-                        borderWidth: 0,
-                      },
-                    ]}
-                    placeholder="Search remote jobs..."
-                    placeholderTextColor={subTextColor}
-                    value={jobSearch}
-                    onChangeText={setJobSearch}
-                    accessibilityRole="search"
-                    accessibilityLabel="Search jobs input"
-                    accessibilityHint="Type to filter jobs by title or category"
-                  />
+                <Text style={{ fontSize: 16, marginRight: 8 }}>🔍</Text>
+                <TextInput
+                  style={[
+                    dynamicText(13),
+                    {
+                      flex: 1,
+                      color: textColor,
+                      paddingVertical: 12,
+                    },
+                  ]}
+                  placeholder="Search jobs, tech, roles..."
+                  placeholderTextColor={subTextColor}
+                  value={jobSearch}
+                  onChangeText={setJobSearch}
+                  accessibilityRole="search"
+                  accessibilityLabel="Search jobs input"
+                  accessibilityHint="Type to filter jobs by title or category"
+                />
 
+                {jobSearch.length > 0 && (
                   <TouchableOpacity
-                    onPress={startVoiceSearch}
-                    style={{ padding: 12 }}
+                    onPress={() => setJobSearch('')}
+                    style={{ padding: 6, marginRight: 4 }}
                     accessibilityRole="button"
-                    accessibilityLabel="Voice search"
-                    accessibilityHint="Double tap to dictate your search query"
+                    accessibilityLabel="Clear search input"
                   >
-                    <Text
-                      style={{
-                        fontSize: 18,
-                        color: isListeningJobs
-                          ? '#ef4444'
-                          : subTextColor,
-                      }}
-                    >
-                      {isListeningJobs ? '🔴' : '🎤'}
-                    </Text>
+                    <Text style={{ color: subTextColor, fontSize: 14 }}>✕</Text>
                   </TouchableOpacity>
-                </View>
+                )}
 
                 <TouchableOpacity
+                  onPress={startVoiceSearch}
                   style={{
-                    marginLeft: 8,
-                    paddingHorizontal: 12,
-                    paddingVertical: 12,
-                    backgroundColor: cardBg,
-                    borderRadius: 8,
-                    justifyContent: 'center',
+                    backgroundColor: isListeningJobs ? '#ef4444' : 'rgba(59, 130, 246, 0.15)',
+                    paddingHorizontal: 10,
+                    paddingVertical: 8,
+                    borderRadius: 10,
                     borderWidth: 1,
-                    borderColor: '#334155',
+                    borderColor: isListeningJobs ? '#ef4444' : '#3b82f6',
                   }}
-                  onPress={() =>
-                    setShowCategoryDropdown(
-                      !showCategoryDropdown,
-                    )
-                  }
                   accessibilityRole="button"
-                  accessibilityLabel={`Job category selector. Current category is ${jobCategory}`}
-                  accessibilityHint="Double tap to open or close the job category dropdown"
-                  accessibilityState={{
-                    expanded: showCategoryDropdown,
-                  }}
+                  accessibilityLabel="Voice search"
+                  accessibilityHint="Double tap to dictate your search query"
                 >
-                  <Text
-                    style={{
-                      color: textColor,
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    {jobCategory} ▼
+                  <Text style={{ fontSize: 14, color: isListeningJobs ? '#ffffff' : '#3b82f6' }}>
+                    {isListeningJobs ? '🔴 Listening' : '🎤 Voice'}
                   </Text>
                 </TouchableOpacity>
               </View>
 
-              {showCategoryDropdown && (
-                <View
-                  style={{
-                    backgroundColor: cardBg,
-                    borderRadius: 8,
-                    marginBottom: 12,
-                    padding: 8,
-                    borderWidth: 1,
-                    borderColor: '#334155',
-                  }}
-                  accessibilityRole="menu"
-                >
-                  {[
-                    'All Jobs',
-                    'Handcraft Items',
-                    'Computer Designing',
-                    'Software',
-                    'Marketing',
-                    'Support',
-                  ].map((cat) => (
+              {/* Category Filter Horizontal Chips */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginBottom: 12 }}
+                contentContainerStyle={{ paddingRight: 12 }}
+                accessibilityLabel="Job category filters"
+              >
+                {[
+                  'All Jobs',
+                  'Handcraft Items',
+                  'Computer Designing',
+                  'Software',
+                  'Marketing',
+                  'Support',
+                ].map((cat) => {
+                  const isSelected = jobCategory === cat;
+                  return (
                     <TouchableOpacity
                       key={cat}
                       onPress={() => {
@@ -3094,268 +3476,360 @@ export default function AppMobile() {
                         setShowCategoryDropdown(false);
                       }}
                       style={{
-                        paddingVertical: 10,
-                        borderBottomWidth:
-                          cat !== 'Support' ? 1 : 0,
-                        borderBottomColor: '#1e293b',
-                      }}
-                      accessibilityRole="menuitem"
-                      accessibilityLabel={cat}
-                      accessibilityHint={`Double tap to filter jobs by ${cat}`}
-                      accessibilityState={{
-                        selected:
-                          jobCategory === cat,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color:
-                            jobCategory === cat
-                              ? accentColor
-                              : textColor,
-                        }}
-                      >
-                        {cat}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={{ marginBottom: 16 }}
-                accessibilityLabel="Accessibility filters"
-              >
-                {[
-                  {
-                    label: 'Wheelchair Persons',
-                    key: 'wheelchair',
-                  },
-                  {
-                    label: 'Deaf Persons',
-                    key: 'deaf',
-                  },
-                  {
-                    label: 'Blind Persons',
-                    key: 'blind',
-                  },
-                ].map((f) => {
-                  const isActive =
-                    jobFilter[
-                    f.key as keyof typeof jobFilter
-                    ];
-
-                  return (
-                    <TouchableOpacity
-                      key={f.label}
-                      onPress={() =>
-                        setJobFilter((prev) => ({
-                          ...prev,
-                          [f.key]:
-                            !prev[
-                            f.key as keyof typeof prev
-                            ],
-                        }))
-                      }
-                      style={{
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: 16,
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        backgroundColor: isSelected
+                          ? (highContrast ? '#ffff00' : '#2563eb')
+                          : (highContrast ? '#111827' : cardBg),
                         borderWidth: 1,
-                        borderColor: isActive
-                          ? accentColor
-                          : subTextColor,
-                        backgroundColor: isActive
-                          ? accentColor
-                          : 'transparent',
+                        borderColor: isSelected
+                          ? (highContrast ? '#ffff00' : '#3b82f6')
+                          : '#334155',
                         marginRight: 8,
                       }}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{
-                        checked: isActive,
-                      }}
-                      accessibilityLabel={f.label}
-                      accessibilityHint={`Double tap to toggle ${f.label} filter`}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected }}
+                      accessibilityLabel={`Category filter: ${cat}`}
                     >
                       <Text
-                        style={{
-                          color: isActive
-                            ? '#fff'
-                            : subTextColor,
-                          fontSize: 12,
-                        }}
+                        style={[
+                          dynamicText(12),
+                          {
+                            fontWeight: isSelected ? '700' : '500',
+                            color: isSelected
+                              ? (highContrast ? '#000000' : '#ffffff')
+                              : textColor,
+                          },
+                        ]}
                       >
-                        {f.label}
+                        {cat}
                       </Text>
                     </TouchableOpacity>
                   );
                 })}
               </ScrollView>
 
+              {/* Accessibility Accommodations Filter Chips */}
+              <View style={{ marginBottom: 16 }}>
+                <Text
+                  style={[
+                    dynamicText(11),
+                    {
+                      color: subTextColor,
+                      fontWeight: '700',
+                      letterSpacing: 0.5,
+                      textTransform: 'uppercase',
+                      marginBottom: 8,
+                    },
+                  ]}
+                >
+                  Workplace Accommodations:
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingRight: 12 }}
+                  accessibilityLabel="Accessibility accommodation filters"
+                >
+                  {[
+                    { label: '♿ Wheelchair Access', key: 'wheelchair' },
+                    { label: '🧏 Deaf Accommodations', key: 'deaf' },
+                    { label: '🦯 Screen Reader / Blind', key: 'blind' },
+                  ].map((f) => {
+                    const isActive = jobFilter[f.key as keyof typeof jobFilter];
+                    return (
+                      <TouchableOpacity
+                        key={f.label}
+                        onPress={() =>
+                          setJobFilter((prev) => ({
+                            ...prev,
+                            [f.key]: !prev[f.key as keyof typeof prev],
+                          }))
+                        }
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 7,
+                          borderRadius: 14,
+                          borderWidth: 1,
+                          borderColor: isActive
+                            ? (highContrast ? '#ffff00' : '#10b981')
+                            : '#334155',
+                          backgroundColor: isActive
+                            ? (highContrast ? '#ffff00' : 'rgba(16, 185, 129, 0.2)')
+                            : 'transparent',
+                          marginRight: 8,
+                        }}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: isActive }}
+                        accessibilityLabel={f.label}
+                      >
+                        <Text
+                          style={[
+                            dynamicText(11),
+                            {
+                              color: isActive
+                                ? (highContrast ? '#000000' : '#34d399')
+                                : subTextColor,
+                              fontWeight: isActive ? '700' : '500',
+                            },
+                          ]}
+                        >
+                          {isActive ? '✓ ' : ''}{f.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* Job Listings List */}
               {loadingJobs ? (
-                <Text
+                <View
                   style={{
-                    color: subTextColor,
-                    textAlign: 'center',
-                    marginTop: 20,
+                    padding: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: cardBg,
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: '#334155',
                   }}
                 >
-                  Loading inclusive jobs...
-                </Text>
+                  <Text style={{ fontSize: 28, marginBottom: 8 }}>⏳</Text>
+                  <Text style={[dynamicText(14), { color: subTextColor, fontWeight: '600' }]}>
+                    Loading verified inclusive jobs...
+                  </Text>
+                </View>
               ) : filteredJobs.length === 0 ? (
-                <Text
+                <View
                   style={{
-                    color: subTextColor,
-                    textAlign: 'center',
-                    marginTop: 20,
+                    padding: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: cardBg,
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: '#334155',
                   }}
                 >
-                  No jobs found.
-                </Text>
+                  <Text style={{ fontSize: 32, marginBottom: 8 }}>🔍</Text>
+                  <Text style={[dynamicText(16), { color: textColor, fontWeight: '700', marginBottom: 4 }]}>
+                    No Jobs Found
+                  </Text>
+                  <Text style={[dynamicText(12), { color: subTextColor, textAlign: 'center', marginBottom: 16 }]}>
+                    No opportunities match your current filters. Try resetting search or changing categories.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setJobSearch('');
+                      setJobCategory('All Jobs');
+                      setJobFilter({ wheelchair: false, deaf: false, blind: false });
+                    }}
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      backgroundColor: highContrast ? '#ffff00' : '#2563eb',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: highContrast ? '#000000' : '#ffffff',
+                        fontWeight: '700',
+                        fontSize: 12,
+                      }}
+                    >
+                      Reset All Filters
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               ) : (
                 filteredJobs.map((job) => (
                   <View
                     key={job.id}
-                    style={[
-                      styles.jobCard,
-                      {
-                        backgroundColor: cardBg,
-                      },
-                    ]}
+                    style={{
+                      backgroundColor: highContrast ? '#000000' : cardBg,
+                      borderRadius: 18,
+                      padding: 16,
+                      marginBottom: 14,
+                      borderWidth: 1,
+                      borderColor: highContrast ? '#ffff00' : '#334155',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 3 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 5,
+                      elevation: 3,
+                    }}
                   >
-                    <View style={styles.rowAlign}>
+                    {/* Top Row: Logo, Title, Company */}
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 }}>
                       <Image
                         source={{
-                          uri: job.companyLogo,
+                          uri: job.companyLogo || 'https://images.unsplash.com/photo-1549923746-c502d488b3ea?w=100',
                         }}
-                        style={styles.avatarMini}
-                      />
-
-                      <View
                         style={{
-                          flex: 1,
-                          marginLeft: 10,
+                          width: 48,
+                          height: 48,
+                          borderRadius: 12,
+                          backgroundColor: '#1e293b',
+                          borderWidth: 1,
+                          borderColor: '#334155',
+                          marginRight: 12,
                         }}
-                      >
+                      />
+                      <View style={{ flex: 1 }}>
                         <Text
                           style={[
-                            styles.jobTitle,
-                            dynamicText(14),
+                            dynamicText(15),
                             {
+                              fontWeight: '700',
                               color: textColor,
+                              marginBottom: 4,
                             },
                           ]}
                         >
                           {job.title}
                         </Text>
-
                         <Text
                           style={[
-                            styles.companyName,
                             dynamicText(12),
                             {
                               color: subTextColor,
                             },
                           ]}
                         >
-                          {job.company} •{' '}
-                          {job.location}
+                          🏢 {job.company} • 📍 {job.location}
                         </Text>
                       </View>
                     </View>
 
-                    <Text
-                      style={[
-                        styles.salaryText,
-                        dynamicText(13),
-                        {
-                          color: accentColor,
-                          marginTop: 8,
-                        },
-                      ]}
+                    {/* Salary & Employment Badge Row */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: highContrast ? '#111827' : 'rgba(15, 23, 42, 0.6)',
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 12,
+                        marginBottom: 12,
+                      }}
                     >
-                      {job.salary}
-                    </Text>
-
-                    <View style={styles.badgeContainer}>
-                      {job.accessibilityBadges.map(
-                        (
-                          b: string,
-                          idx: number,
-                        ) => (
-                          <Text
-                            key={idx}
-                            style={[
-                              styles.jobBadge,
-                              {
-                                color: textColor,
-                                backgroundColor:
-                                  '#334155',
-                              },
-                            ]}
-                          >
-                            ✓ {b}
-                          </Text>
-                        ),
-                      )}
-
-                      {job.eligible_for_wheelchair && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 13, marginRight: 6 }}>💰</Text>
                         <Text
                           style={[
-                            styles.jobBadge,
+                            dynamicText(13),
                             {
-                              color: '#fff',
-                              backgroundColor:
-                                '#2563eb',
+                              fontWeight: '800',
+                              color: highContrast ? '#ffff00' : accentColor,
                             },
                           ]}
                         >
-                          ♿ Wheelchair
+                          {job.salary}
                         </Text>
+                      </View>
+                      <Text
+                        style={[
+                          dynamicText(11),
+                          {
+                            color: '#94a3b8',
+                            fontWeight: '600',
+                          },
+                        ]}
+                      >
+                        ⚡ Disability-Verified
+                      </Text>
+                    </View>
+
+                    {/* Accommodations and Accessibility Badges */}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                      {job.accessibilityBadges &&
+                        job.accessibilityBadges.map((b: string, idx: number) => (
+                          <View
+                            key={idx}
+                            style={{
+                              backgroundColor: 'rgba(51, 65, 85, 0.6)',
+                              paddingHorizontal: 10,
+                              paddingVertical: 4,
+                              borderRadius: 10,
+                              borderWidth: 1,
+                              borderColor: '#475569',
+                            }}
+                          >
+                            <Text style={[dynamicText(11), { color: textColor, fontWeight: '500' }]}>
+                              ✓ {b}
+                            </Text>
+                          </View>
+                        ))}
+
+                      {job.eligible_for_wheelchair && (
+                        <View
+                          style={{
+                            backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: '#3b82f6',
+                          }}
+                        >
+                          <Text style={[dynamicText(11), { color: '#60a5fa', fontWeight: '600' }]}>
+                            ♿ Wheelchair
+                          </Text>
+                        </View>
                       )}
 
                       {job.eligible_for_deaf && (
-                        <Text
-                          style={[
-                            styles.jobBadge,
-                            {
-                              color: '#fff',
-                              backgroundColor:
-                                '#9333ea',
-                            },
-                          ]}
+                        <View
+                          style={{
+                            backgroundColor: 'rgba(147, 51, 234, 0.2)',
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: '#a855f7',
+                          }}
                         >
-                          🧏 Deaf
-                        </Text>
+                          <Text style={[dynamicText(11), { color: '#c084fc', fontWeight: '600' }]}>
+                            🧏 Deaf Friendly
+                          </Text>
+                        </View>
                       )}
 
                       {job.eligible_for_blind && (
-                        <Text
-                          style={[
-                            styles.jobBadge,
-                            {
-                              color: '#fff',
-                              backgroundColor:
-                                '#d97706',
-                            },
-                          ]}
+                        <View
+                          style={{
+                            backgroundColor: 'rgba(217, 119, 6, 0.2)',
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: '#f59e0b',
+                          }}
                         >
-                          🦯 Blind
-                        </Text>
+                          <Text style={[dynamicText(11), { color: '#fbbf24', fontWeight: '600' }]}>
+                            🦯 Screen Reader
+                          </Text>
+                        </View>
                       )}
                     </View>
 
+                    {/* Action Button: Apply */}
                     <TouchableOpacity
-                      style={[
-                        styles.buyBtn,
-                        {
-                          backgroundColor:
-                            primaryButtonBg,
-                          marginTop: 10,
-                        },
-                      ]}
+                      style={{
+                        backgroundColor: highContrast ? '#ffff00' : primaryButtonBg,
+                        borderRadius: 14,
+                        paddingVertical: 12,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        shadowColor: '#2563eb',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 4,
+                      }}
                       onPress={() => {
                         setProposalJobId(job.id);
                         setProposalJobTitle(job.title);
@@ -3363,18 +3837,18 @@ export default function AppMobile() {
                       }}
                       accessibilityRole="button"
                       accessibilityLabel={`Apply for ${job.title} at ${job.company}`}
-                      accessibilityHint="Double tap to submit your application"
+                      accessibilityHint="Double tap to open proposal submission form"
                     >
                       <Text
                         style={[
-                          styles.buyBtnText,
+                          dynamicText(13),
                           {
-                            color:
-                              primaryButtonText,
+                            fontWeight: '700',
+                            color: highContrast ? '#000000' : primaryButtonText,
                           },
                         ]}
                       >
-                        Apply Now
+                        Apply with CV & Profile 🚀
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -3503,17 +3977,8 @@ export default function AppMobile() {
                 const isSelectedPin = selectedMapPin?.id === pin.id;
 
                 return (
-                  <TouchableOpacity
+                  <View
                     key={pin.id}
-                    activeOpacity={0.85}
-                    onPress={() => {
-                      setSelectedMapPin(pin);
-                      setSelectedMobilePlace(pin);
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Open ${pin.title}. ${pin.badge}. ${pin.distance}`}
-                    accessibilityHint="Opens place details with a button for real directions in Maps"
-                    accessibilityState={{ selected: isSelectedPin }}
                     style={[
                       styles.mapCard,
                       {
@@ -3525,46 +3990,60 @@ export default function AppMobile() {
                       },
                     ]}
                   >
-                    <Image
-                      source={{ uri: pin.image }}
-                      style={styles.mapImg}
-                      accessibilityIgnoresInvertColors
-                    />
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => {
+                        setSelectedMapPin(pin);
+                        setSelectedMobilePlace(pin);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open ${pin.title}. ${pin.badge}. ${pin.distance}`}
+                      accessibilityHint="Opens place details with a button for real directions in Maps"
+                      accessibilityState={{ selected: isSelectedPin }}
+                    >
+                      <Image
+                        source={{ uri: pin.image }}
+                        style={styles.mapImg}
+                        accessibilityIgnoresInvertColors
+                      />
 
-                    <View style={{ padding: 12 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                      <View style={{ padding: 12, paddingBottom: 4 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                          <Text
+                            style={[
+                              styles.mapPinTitle,
+                              dynamicText(15),
+                              {
+                                color: textColor,
+                                flex: 1,
+                              },
+                            ]}
+                          >
+                            {pin.title}
+                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: highContrast ? '#333300' : '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '800', color: highContrast ? '#ffff00' : '#b45309' }}>
+                              ⭐ {pin.accessibilityRating.toFixed(1)}
+                            </Text>
+                          </View>
+                        </View>
+
                         <Text
                           style={[
-                            styles.mapPinTitle,
-                            dynamicText(15),
+                            styles.mapAddress,
+                            dynamicText(11),
                             {
-                              color: textColor,
-                              flex: 1,
+                              color: subTextColor,
+                              marginTop: 2,
                             },
                           ]}
                         >
-                          {pin.title}
+                          📍 {pin.address} ({pin.distance})
                         </Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: highContrast ? '#333300' : '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                          <Text style={{ fontSize: 12, fontWeight: '800', color: highContrast ? '#ffff00' : '#b45309' }}>
-                            ⭐ {pin.accessibilityRating.toFixed(1)}
-                          </Text>
-                        </View>
                       </View>
+                    </TouchableOpacity>
 
-                      <Text
-                        style={[
-                          styles.mapAddress,
-                          dynamicText(11),
-                          {
-                            color: subTextColor,
-                            marginTop: 2,
-                          },
-                        ]}
-                      >
-                        📍 {pin.address} ({pin.distance})
-                      </Text>
-
+                    <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
                       {/* AC-86 - AC-90: Awarded Accessibility Badge Banner */}
                       <View
                         style={{
@@ -3687,7 +4166,7 @@ export default function AppMobile() {
                         </TouchableOpacity>
                       </View>
                     </View>
-                  </TouchableOpacity>
+                  </View>
                 );
               })}
 
@@ -3935,132 +4414,14 @@ export default function AppMobile() {
 
           {/* PROFILE */}
           {activeTab === 'profile' && (
-            <View>
-              <View
-                style={[
-                  styles.profileCard,
-                  {
-                    backgroundColor: cardBg,
-                  },
-                ]}
-              >
-                <Image
-                  source={{
-                    uri: mockCurrentUser.avatar,
-                  }}
-                  style={styles.profileAvatar}
-                />
-
-                <Text
-                  style={[
-                    styles.profileName,
-                    dynamicText(18),
-                    {
-                      color: textColor,
-                      marginTop: 8,
-                    },
-                  ]}
-                >
-                  {mockCurrentUser.name}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.badgeTag,
-                    {
-                      color: accentColor,
-                      marginTop: 4,
-                    },
-                  ]}
-                >
-                  ♿{' '}
-                  {mockCurrentUser.disabilityBadge}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.profileBio,
-                    dynamicText(11),
-                    {
-                      color: subTextColor,
-                      marginTop: 8,
-                    },
-                  ]}
-                >
-                  {mockCurrentUser.bio}
-                </Text>
-
-                <TouchableOpacity
-                  style={{
-                    marginTop: 14,
-                    backgroundColor: highContrast ? '#ff0000' : '#dc2626',
-                    paddingVertical: 8,
-                    paddingHorizontal: 16,
-                    borderRadius: 8,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  onPress={handleLogout}
-                  accessibilityRole="button"
-                  accessibilityLabel="Log out of application"
-                >
-                  <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 13 }}>
-                    🚪 Logout from Account
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  dynamicText(16),
-                  {
-                    color: textColor,
-                    marginTop: 16,
-                  },
-                ]}
-              >
-                🔔 Recent Notifications
-              </Text>
-
-              {mockNotifications.map((n) => (
-                <View
-                  key={n.id}
-                  style={[
-                    styles.notifCard,
-                    {
-                      backgroundColor: cardBg,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.notifTitle,
-                      dynamicText(13),
-                      {
-                        color: textColor,
-                      },
-                    ]}
-                  >
-                    {n.title}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.notifDesc,
-                      dynamicText(11),
-                      {
-                        color: subTextColor,
-                        marginTop: 2,
-                      },
-                    ]}
-                  >
-                    {n.description}
-                  </Text>
-                </View>
-              ))}
-            </View>
+            <ModernProfileScreen
+              onLogout={handleLogout}
+              onNavigateHome={() => setActiveTab('home')}
+              onSpeak={speakText}
+              highContrast={highContrast}
+              isDarkMode={isDarkMode}
+              fontScale={fontScale}
+            />
           )}
 
           {/* ADMIN DASHBOARD SCREEN */}
@@ -4844,8 +5205,15 @@ export default function AppMobile() {
             styles.tabBar,
             {
               backgroundColor: highContrast
-                ? '#000'
-                : '#1e293b',
+                ? '#000000'
+                : isDarkMode
+                  ? '#1e293b'
+                  : '#ffffff',
+              borderTopColor: highContrast
+                ? '#ffff00'
+                : isDarkMode
+                  ? '#334155'
+                  : '#e2e8f0',
             },
           ]}
         >
