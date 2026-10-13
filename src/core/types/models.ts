@@ -16,6 +16,12 @@ export interface UserProfile {
   totalOrders?: number;
   isVerified?: boolean;
   verified?: boolean;
+  accommodations?: {
+    visual?: boolean;
+    motor?: boolean;
+    hearing?: boolean;
+    cognitive?: boolean;
+  };
 }
 
 export type User = UserProfile;
