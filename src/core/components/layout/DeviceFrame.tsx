@@ -1,4 +1,5 @@
 import React from 'react';
+import accessHubLogo from '../../../assets/images/access_hub_logo.png';
 import { useAppState, ScreenView } from '../../context/AppStateContext';
 import { useAccessibility } from '../../context/AccessibilityContext';
 import { supabase } from '../../supabase';
@@ -77,9 +78,11 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
           
           {/* Logo & Slogan */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-teal-500 to-amber-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <span className="font-extrabold text-white text-xl">A</span>
-            </div>
+            <img
+              src={accessHubLogo}
+              alt="AccessHub Logo"
+              className="w-10 h-10 rounded-xl object-contain shadow-md"
+            />
             <div>
               <div className="flex items-center space-x-2">
                 <h1 className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-blue-400 via-teal-300 to-amber-300 bg-clip-text text-transparent">
