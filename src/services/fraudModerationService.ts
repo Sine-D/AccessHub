@@ -325,7 +325,7 @@ export async function approveModeratedContent(
     // Notice
   }
 
-  if (isDbId(contentId)) {
+  if (targetItem) {
     try {
       const tableName = targetItem.contentType === 'flagged_listing'
         ? 'marketplace_listings'
@@ -338,7 +338,7 @@ export async function approveModeratedContent(
       const { error } = await supabase
         .from(tableName)
         .update(updatePayload)
-        .eq('id', contentId);
+        .eq('id', targetItem.contentId || contentId);
 
       if (error) {
         console.warn(`Supabase approveModeratedContent notice (${tableName}):`, error.message);
@@ -389,7 +389,7 @@ export async function removeModeratedContent(
     // Notice
   }
 
-  if (isDbId(contentId)) {
+  if (targetItem) {
     try {
       const tableName = targetItem.contentType === 'flagged_listing'
         ? 'marketplace_listings'
@@ -398,7 +398,7 @@ export async function removeModeratedContent(
       const { error } = await supabase
         .from(tableName)
         .delete()
-        .eq('id', contentId);
+        .eq('id', targetItem.contentId || contentId);
 
       if (error) {
         console.warn(`Supabase removeModeratedContent notice (${tableName}):`, error.message);
