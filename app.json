@@ -12,13 +12,22 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.accesshub.app"
+      "bundleIdentifier": "com.accesshub.app",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Allow AccessHub to convert your speech into an editable search transcript.",
+        "NSMicrophoneUsageDescription": "Allow AccessHub to use the microphone for accessible voice search."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0f172a"
       },
-      "package": "com.accesshub.app"
+      "package": "com.accesshub.app",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro"
@@ -45,6 +54,11 @@
           ]
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f0e3a724-c496-49a9-bb67-785c4afabea6"
+      }
+    }
   }
 }
