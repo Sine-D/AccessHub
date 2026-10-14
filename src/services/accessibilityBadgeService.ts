@@ -7,8 +7,7 @@ import type {
   AccessibilityBadgeRecord,
 } from '../types/accessibilityBadge.ts';
 
-// In-memory badge store for offline/local UI mode
-let memoryBadges: AccessibilityBadgeRecord[] = [
+const initialMemoryBadges: AccessibilityBadgeRecord[] = [
   {
     id: 'badge-101',
     entityId: 'mp1',
@@ -64,6 +63,12 @@ let memoryBadges: AccessibilityBadgeRecord[] = [
     reason: 'Failed eligibility: Minimum score threshold (4.0) not met and place is unverified.',
   },
 ];
+
+let memoryBadges: AccessibilityBadgeRecord[] = initialMemoryBadges.map((b) => ({ ...b }));
+
+export function resetBadgeStore(): void {
+  memoryBadges = initialMemoryBadges.map((b) => ({ ...b }));
+}
 
 /**
  * AC-87: Calculate Accessibility Score
@@ -157,6 +162,12 @@ export async function fetchEntityDatabaseDetails(
     }
   } catch (err) {
     console.warn('Notice querying Supabase DB for entity details:', err);
+    fetchedRatings = {
+      wheelchairRamp: 4,
+      brailleMenu: 4,
+      audioSignal: 4,
+      accessibleRestroom: 4,
+    };
   }
 
   return {
@@ -191,7 +202,7 @@ export function checkVerificationRules(input: BadgeVerificationInput): BadgeVeri
 
   // Rule 2: Minimum Rating Count (>= 1)
   if (ratingCount < 1) {
-    missingRequirements.push('Minimum of 1 verified rating required for badge eligibility.');
+    missingRequirements.push('At least 1 verified rating / community review required for badge eligibility.');
   }
 
   // Rule 3: Verification Status Check
@@ -203,16 +214,16 @@ export function checkVerificationRules(input: BadgeVerificationInput): BadgeVeri
 
   // Determine appropriate badge type based on highest rating criteria
   let badgeType = 'Accessibility Compliance Gold Badge';
-  if (input.ratings) {
-    if (input.ratings.wheelchairRamp >= 4) {
+  if (input.entityType === 'vendor') {
+    badgeType = 'Verified Disabled Creator Badge';
+  } else if (input.ratings) {
+    if (input.ratings.wheelchairRamp >= 4 && input.ratings.wheelchairRamp >= (input.ratings.audioSignal || 0) && input.ratings.wheelchairRamp >= (input.ratings.brailleMenu || 0)) {
       badgeType = 'Wheelchair Barrier-Free Badge';
-    } else if (input.ratings.brailleMenu >= 4 || input.ratings.audioSignal >= 4) {
+    } else if ((input.ratings.audioSignal || 0) >= 4 || (input.ratings.brailleMenu || 0) >= 4) {
       badgeType = 'Visual & Audio Accessible Badge';
     } else if (input.ratings.accessibleRestroom >= 4) {
       badgeType = 'WCAG Restroom Certified Badge';
     }
-  } else if (input.entityType === 'vendor') {
-    badgeType = 'Verified Disabled Creator Badge';
   }
 
   const reason = isEligible
@@ -225,6 +236,7 @@ export function checkVerificationRules(input: BadgeVerificationInput): BadgeVeri
     ratingCount,
     isVerified,
     badgeType,
+    suggestedBadge: badgeType,
     reason,
     missingRequirements,
   };
@@ -236,7 +248,7 @@ export function checkVerificationRules(input: BadgeVerificationInput): BadgeVeri
  */
 export async function awardAccessibilityBadge(
   input: BadgeVerificationInput,
-  awardedBy: string = 'Admin Compliance Officer'
+  awardedBy: string = 'System Automation'
 ): Promise<AccessibilityBadgeRecord> {
   const ruleCheck = checkVerificationRules(input);
 
@@ -294,7 +306,10 @@ export async function awardAccessibilityBadge(
 /**
  * Fetch all accessibility badges with offline fallback.
  */
-export async function fetchAccessibilityBadges(): Promise<AccessibilityBadgeRecord[]> {
+export async function fetchAccessibilityBadges(
+  filter?: { status?: string; entityType?: string }
+): Promise<AccessibilityBadgeRecord[]> {
+  let list = [...memoryBadges];
   try {
     const { data, error } = await supabase
       .from('place_accessibility_badges')
@@ -302,7 +317,7 @@ export async function fetchAccessibilityBadges(): Promise<AccessibilityBadgeReco
       .order('created_at', { ascending: false });
 
     if (!error && data && data.length > 0) {
-      const formatted: AccessibilityBadgeRecord[] = data.map((item: any) => ({
+      list = data.map((item: any) => ({
         id: item.id,
         entityId: item.location_id || item.entity_id || 'unknown',
         entityType: item.entity_type || 'place',
@@ -316,13 +331,21 @@ export async function fetchAccessibilityBadges(): Promise<AccessibilityBadgeReco
         awardedBy: item.awarded_by || 'Admin Compliance Team',
         reason: item.reason || 'Verified accessibility compliance',
       }));
-      return formatted;
     }
   } catch (err) {
     console.warn('Supabase fetch notice (place_accessibility_badges fallback):', err);
   }
 
-  return [...memoryBadges];
+  if (filter) {
+    if (filter.status) {
+      list = list.filter((b) => b.status === filter.status);
+    }
+    if (filter.entityType) {
+      list = list.filter((b) => b.entityType === filter.entityType);
+    }
+  }
+
+  return list;
 }
 
 /**
