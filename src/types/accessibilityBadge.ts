@@ -34,6 +34,7 @@ export interface BadgeVerificationResult {
   ratingCount: number;
   isVerified: boolean;
   badgeType: string;
+  suggestedBadge?: string;
   reason: string;
   missingRequirements: string[];
 }
