@@ -16,6 +16,13 @@ import {
 } from 'react-native';
 import { useAppState } from '../../../core/hooks/useAppState';
 import { supabase } from '../../../services/supabaseClient';
+import {
+  saveUserProfile,
+  deleteUserAccount,
+  fetchUserProfile,
+  logoutUser,
+  ensureValidUUID,
+} from '../../../services/userProfileService';
 
 const AVATAR_PRESETS = [
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
@@ -85,36 +92,23 @@ export const ModernProfileScreen: React.FC<ModernProfileScreenProps> = ({
     setSyncing(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const isValidUUID = (id?: string) => Boolean(id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
       const sessionUserId = sessionData?.session?.user?.id;
       const userEmail = sessionData?.session?.user?.email || currentUser?.email;
 
-      let query = supabase.from('users').select('*');
-      if (isValidUUID(sessionUserId)) {
-        query = query.eq('id', sessionUserId);
-      } else if (isValidUUID(currentUser?.id)) {
-        query = query.eq('id', currentUser.id);
-      } else if (userEmail) {
-        query = query.eq('email', userEmail);
-      } else {
-        setSyncing(false);
-        return;
-      }
+      const profile = await fetchUserProfile(sessionUserId, userEmail);
 
-      const { data, error } = await query.maybeSingle();
-
-      if (!error && data) {
+      if (profile) {
         setCurrentUser((prev) => ({
           ...prev,
-          id: data.id,
-          name: data.name || prev.name,
-          email: data.email || prev.email,
-          role: (data.role as any) || prev.role,
-          avatar: data.avatar || prev.avatar || AVATAR_PRESETS[0],
-          bio: data.bio || prev.bio || 'Inclusive member of AccessHub.',
-          location: data.location || prev.location || 'Colombo, Sri Lanka',
-          isVerified: Boolean(data.is_verified ?? true),
-          accommodations: data.accommodations || prev.accommodations,
+          id: profile.id || prev.id,
+          name: profile.name || prev.name,
+          email: profile.email || prev.email,
+          role: (profile.role as any) || prev.role,
+          avatar: profile.avatar || prev.avatar || AVATAR_PRESETS[0],
+          bio: profile.bio || prev.bio || 'Inclusive member of AccessHub.',
+          location: profile.location || prev.location || 'Colombo, Sri Lanka',
+          isVerified: Boolean(profile.verified ?? true),
+          accommodations: profile.accommodations || prev.accommodations,
         }));
         announce('Profile synced with cloud database.');
       }
@@ -145,90 +139,139 @@ export const ModernProfileScreen: React.FC<ModernProfileScreenProps> = ({
     announce('Opened edit profile modal.');
   };
 
-  // Update Profile (CRUD - Update)
+  // Update Profile (CRUD - Update to public.users table)
   const handleSaveProfile = async () => {
     if (!editName.trim()) {
-      Alert.alert('Required', 'Please enter your full name.');
+      if (Platform.OS === 'web') {
+        alert('Please enter your full name.');
+      } else {
+        Alert.alert('Required', 'Please enter your full name.');
+      }
       return;
     }
 
     setSaving(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const targetId = sessionData?.session?.user?.id || currentUser?.id || 'usr-default';
+      const targetId = sessionData?.session?.user?.id || currentUser?.id;
+      const targetEmail = currentUser?.email || sessionData?.session?.user?.email || 'kavindi.p@accesslink.lk';
 
-      const updatedPayload = {
+      const result = await saveUserProfile({
         id: targetId,
         name: editName.trim(),
-        email: currentUser?.email || sessionData?.session?.user?.email,
+        email: targetEmail,
         bio: editBio.trim(),
         location: editLocation.trim(),
         avatar: editAvatar.trim(),
         accommodations: editAccommodations,
         role: currentUser?.role || 'customer',
-      };
+        verified: true,
+      });
 
-      // 1. Upsert/Update into Supabase public.users table
-      const { error: dbError } = await supabase
-        .from('users')
-        .upsert(updatedPayload, { onConflict: 'id' });
-
-      if (dbError) {
-        console.warn('Supabase profile update warning:', dbError.message);
+      if (result.success && result.user) {
+        setCurrentUser((prev) => ({
+          ...prev,
+          ...result.user,
+        }));
+      } else {
+        // Local state update fallback
+        setCurrentUser((prev) => ({
+          ...prev,
+          name: editName.trim(),
+          bio: editBio.trim(),
+          location: editLocation.trim(),
+          avatar: editAvatar.trim(),
+          accommodations: editAccommodations,
+        }));
       }
-
-      // 2. Update local App state
-      setCurrentUser((prev) => ({
-        ...prev,
-        ...updatedPayload,
-      }));
 
       setEditModalVisible(false);
       announce('Profile updated successfully.');
-      Alert.alert('✅ Profile Updated', 'Your profile details have been successfully saved to the database.');
+      if (Platform.OS === 'web') {
+        alert('✅ Profile details have been saved to the database!');
+      } else {
+        Alert.alert('✅ Profile Updated', 'Your profile details have been saved to the database.');
+      }
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to update profile.');
+      const errMsg = err?.message || 'Failed to update profile.';
+      if (Platform.OS === 'web') {
+        alert(`Error: ${errMsg}`);
+      } else {
+        Alert.alert('Error', errMsg);
+      }
     } finally {
       setSaving(false);
     }
   };
 
-  // Delete Profile (CRUD - Delete)
+  // Delete Profile (CRUD - Delete from public.users table)
   const handleDeleteProfile = async () => {
     setDeleting(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const targetId = sessionData?.session?.user?.id || currentUser?.id;
+      const targetEmail = currentUser?.email || sessionData?.session?.user?.email;
 
-      if (targetId) {
-        // Delete from users table
-        const { error: delError } = await supabase
-          .from('users')
-          .delete()
-          .eq('id', targetId);
+      await deleteUserAccount(targetId, targetEmail);
 
-        if (delError) {
-          console.warn('Notice on user delete:', delError.message);
-        }
-      }
-
-      // Sign out auth session
-      try {
-        await supabase.auth.signOut();
-      } catch (e) {
-        // Ignore
-      }
+      // Reset state
+      setCurrentUser((prev) => ({
+        ...prev,
+        name: 'Guest User',
+        email: '',
+        role: 'customer',
+        avatar: AVATAR_PRESETS[0],
+        bio: '',
+        location: '',
+      }));
 
       setDeleteConfirmVisible(false);
       announce('Profile and account deleted permanently.');
-      Alert.alert('🗑️ Account Deleted', 'Your profile and data have been removed from AccessHub.');
+      if (Platform.OS === 'web') {
+        alert('🗑️ Account Deleted: Your profile and data have been removed from AccessHub.');
+      } else {
+        Alert.alert('🗑️ Account Deleted', 'Your profile and data have been removed from AccessHub.');
+      }
 
-      // Trigger global logout redirect
+      // Trigger global logout redirect to auth
       onLogout();
     } catch (err: any) {
-      Alert.alert('Delete Failed', err?.message || 'Could not delete profile.');
+      const msg = err?.message || 'Could not delete profile.';
+      if (Platform.OS === 'web') {
+        alert(`Delete Failed: ${msg}`);
+      } else {
+        Alert.alert('Delete Failed', msg);
+      }
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // Safe Logout handler supporting Web and Mobile
+  const handleLogoutPress = () => {
+    const executeLogout = async () => {
+      await logoutUser();
+      announce('Logged out successfully.');
+      onLogout();
+    };
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+        if (window.confirm('Are you sure you want to log out of AccessHub?')) {
+          executeLogout();
+        }
+      } else {
+        executeLogout();
+      }
+    } else {
+      Alert.alert('🚪 Confirm Sign Out', 'Are you sure you want to log out of AccessHub?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: executeLogout,
+        },
+      ]);
     }
   };
 
@@ -347,6 +390,23 @@ export const ModernProfileScreen: React.FC<ModernProfileScreenProps> = ({
               🔄 Sync Cloud
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.secondaryActionBtn,
+              {
+                borderColor: highContrast ? '#ff0000' : '#fee2e2',
+                backgroundColor: highContrast ? '#330000' : '#fef2f2',
+              },
+            ]}
+            onPress={handleLogoutPress}
+            accessibilityRole="button"
+            accessibilityLabel="Log out from AccessHub"
+          >
+            <Text style={[styles.secondaryActionText, { color: highContrast ? '#ff5555' : '#ef4444' }]}>
+              🚪 Log Out
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -454,16 +514,7 @@ export const ModernProfileScreen: React.FC<ModernProfileScreenProps> = ({
           {/* Logout Button */}
           <TouchableOpacity
             style={[styles.logoutBtn, { backgroundColor: highContrast ? '#333333' : '#0f172a' }]}
-            onPress={() => {
-              Alert.alert('🚪 Confirm Sign Out', 'Are you sure you want to log out of AccessHub?', [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Sign Out',
-                  style: 'destructive',
-                  onPress: onLogout,
-                },
-              ]);
-            }}
+            onPress={handleLogoutPress}
             accessibilityRole="button"
             accessibilityLabel="Log out from your account"
           >
