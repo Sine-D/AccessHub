@@ -503,5 +503,197 @@ describe('accessibilityBadgeService Comprehensive Suite', () => {
       const details = await fetchEntityDatabaseDetails('user-vendor-1', 'vendor');
       expect(details.isVerified).toBe(true);
     });
+
+    it('queries place_accessibility_ratings and aggregates criteria averages for place entityType', async () => {
+      const mockRatings = [
+        {
+          wheelchair_ramp: 5,
+          braille_menu: 3,
+          audio_signal: 4,
+          accessible_restroom: 5,
+          verification_status: 'verified',
+        },
+        {
+          wheelchair_ramp: 3,
+          braille_menu: 5,
+          audio_signal: 4,
+          accessible_restroom: 5,
+          verification_status: 'verified',
+        },
+      ];
+
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValueOnce({
+            data: mockRatings,
+            error: null,
+          }),
+        }),
+      });
+
+      const details = await fetchEntityDatabaseDetails('place-agg-1', 'place');
+      expect(details.ratingCount).toBe(2);
+      expect(details.isVerified).toBe(true);
+      expect(details.ratings).toBeDefined();
+      expect(details.ratings?.wheelchairRamp).toBe(4); // avg(5, 3) = 4
+      expect(details.ratings?.brailleMenu).toBe(4);    // avg(3, 5) = 4
+      expect(details.ratings?.audioSignal).toBe(4);
+      expect(details.ratings?.accessibleRestroom).toBe(5);
+    });
+
+    it('marks place as not verified when ratingsData has no verified entries and length is 0', async () => {
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValueOnce({
+            data: [],
+            error: null,
+          }),
+        }),
+      });
+
+      const details = await fetchEntityDatabaseDetails('place-empty', 'place');
+      expect(details.ratingCount).toBe(0);
+      expect(details.isVerified).toBe(false);
+    });
+
+    it('handles vendor with pending status as isVerified = false', async () => {
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockResolvedValueOnce({
+              data: { status: 'pending' },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      const details = await fetchEntityDatabaseDetails('vendor-pending', 'vendor');
+      expect(details.isVerified).toBe(false);
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // 6. Badge Rules Specific Branches & Upsert Persistence
+  // ────────────────────────────────────────────────────────────────────────────
+  describe('Specific Badge Types & Persistence Branches', () => {
+    it('assigns WCAG Restroom Certified Badge when only restroom is >= 4 and others are lower', () => {
+      const res = checkVerificationRules({
+        entityId: 'e-restroom',
+        entityType: 'place',
+        entityName: 'Accessible Restroom Stop',
+        ratings: { wheelchairRamp: 3, brailleMenu: 2, audioSignal: 2, accessibleRestroom: 5 },
+        ratingCount: 5,
+        isVerified: true,
+      });
+
+      expect(res.badgeType).toBe('WCAG Restroom Certified Badge');
+      expect(res.suggestedBadge).toBe('WCAG Restroom Certified Badge');
+    });
+
+    it('assigns Accessibility Compliance Gold Badge fallback when no individual rating is >= 4', () => {
+      const res = checkVerificationRules({
+        entityId: 'e-fallback',
+        entityType: 'place',
+        entityName: 'General Venue',
+        ratings: { wheelchairRamp: 3, brailleMenu: 3, audioSignal: 3, accessibleRestroom: 3 },
+        ratingCount: 1,
+        isVerified: true,
+      });
+
+      expect(res.badgeType).toBe('Accessibility Compliance Gold Badge');
+      expect(res.isEligible).toBe(false); // score 3.0 < 4.0
+    });
+
+    it('updates badge id from Supabase data when upsert succeeds', async () => {
+      (supabase.from as jest.Mock).mockReturnValue({
+        upsert: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValueOnce({
+              data: { id: 'db-upserted-badge-id-99' },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+      const badge = await awardAccessibilityBadge({
+        entityId: 'p-new-badge',
+        entityType: 'place',
+        entityName: 'New Hub',
+        ratings: { wheelchairRamp: 5, brailleMenu: 5, audioSignal: 5, accessibleRestroom: 5 },
+        ratingCount: 10,
+        isVerified: true,
+      });
+
+      expect(badge.id).toBe('db-upserted-badge-id-99');
+    });
+
+    it('maps Supabase data in fetchAccessibilityBadges when query succeeds', async () => {
+      const mockBadgeRows = [
+        {
+          id: 'b-db-1',
+          location_id: 'loc-1',
+          entity_type: 'place',
+          entity_name: 'Database Location',
+          badge_type: 'WCAG Restroom Certified Badge',
+          score: 4.8,
+          rating_count: 5,
+          status: 'awarded',
+          is_verified: true,
+          created_at: new Date().toISOString(),
+          awarded_by: 'Super Admin',
+          reason: 'Fully compliant',
+        },
+      ];
+
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          order: jest.fn().mockResolvedValueOnce({
+            data: mockBadgeRows,
+            error: null,
+          }),
+        }),
+      });
+
+      const badges = await fetchAccessibilityBadges();
+      expect(badges).toHaveLength(1);
+      expect(badges[0].id).toBe('b-db-1');
+      expect(badges[0].badgeType).toBe('WCAG Restroom Certified Badge');
+      expect(badges[0].entityName).toBe('Database Location');
+    });
+
+    // Parametric badge evaluation tests (15 combinations)
+    const testCombos = [
+      { r: 5, b: 5, a: 5, rest: 5, expected: 'Wheelchair Barrier-Free Badge' },
+      { r: 5, b: 2, a: 2, rest: 2, expected: 'Wheelchair Barrier-Free Badge' },
+      { r: 2, b: 5, a: 2, rest: 2, expected: 'Visual & Audio Accessible Badge' },
+      { r: 2, b: 2, a: 5, rest: 2, expected: 'Visual & Audio Accessible Badge' },
+      { r: 2, b: 2, a: 2, rest: 5, expected: 'WCAG Restroom Certified Badge' },
+      { r: 4, b: 4, a: 4, rest: 4, expected: 'Wheelchair Barrier-Free Badge' },
+      { r: 3, b: 4, a: 4, rest: 3, expected: 'Visual & Audio Accessible Badge' },
+      { r: 1, b: 1, a: 1, rest: 4, expected: 'WCAG Restroom Certified Badge' },
+    ];
+
+    testCombos.forEach((combo, idx) => {
+      it(`parametric badge #${idx + 1}: ratings (${combo.r},${combo.b},${combo.a},${combo.rest}) -> ${combo.expected}`, () => {
+        const result = checkVerificationRules({
+          entityId: `eval-${idx}`,
+          entityType: 'place',
+          entityName: `Venue ${idx}`,
+          ratings: {
+            wheelchairRamp: combo.r,
+            brailleMenu: combo.b,
+            audioSignal: combo.a,
+            accessibleRestroom: combo.rest,
+          },
+          ratingCount: 5,
+          isVerified: true,
+        });
+
+        expect(result.badgeType).toBe(combo.expected);
+      });
+    });
   });
 });
+
