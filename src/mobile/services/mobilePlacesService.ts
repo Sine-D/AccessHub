@@ -1,4 +1,5 @@
 import { mockMapPins } from '../../mock/data';
+import { Platform } from 'react-native';
 import type { MapPin } from '../../core/types';
 import type { PlaceDetails } from '../../features/map/types/placeDetails';
 import { isCommunityVerificationSummary } from '../../features/map/types/placeDetails';
@@ -17,7 +18,12 @@ const verification: Record<string, PlaceDetails['verification']> = {
   mp3: null,
 };
 
-const apiBase = () => process.env.EXPO_PUBLIC_ACCESSIBLE_PLACES_API_URL?.trim().replace(/\/$/, '');
+const apiBase = () => {
+  const configured = Platform.OS === 'web'
+    ? process.env.EXPO_PUBLIC_ACCESSIBLE_PLACES_WEB_API_URL || process.env.EXPO_PUBLIC_ACCESSIBLE_PLACES_API_URL
+    : process.env.EXPO_PUBLIC_ACCESSIBLE_PLACES_API_URL;
+  return configured?.trim().replace(/\/$/, '');
+};
 
 const toMapPin = (row: Record<string, any>): MapPin => ({
   id: String(row.id),
@@ -40,16 +46,29 @@ const toMapPin = (row: Record<string, any>): MapPin => ({
 export async function listMobilePlaces(signal?: AbortSignal): Promise<MapPin[]> {
   const base = apiBase();
   if (base) {
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) controller.abort();
+    const timeout = setTimeout(abort, 8_000);
     try {
-      const response = await fetch(`${base}/accessible-places`, { headers: { Accept: 'application/json' }, signal });
+      const response = await fetch(`${base}/accessible-places`, {
+        headers: { Accept: 'application/json' },
+        signal: controller.signal,
+      });
       if (!response.ok) throw new Error('The accessible places directory could not be loaded.');
       const body = await response.json();
       if (!Array.isArray(body)) throw new Error('The places service returned invalid data.');
-      return body.map(toMapPin);
+      const places = body.map(toMapPin);
+      console.info(`[Places Mobile] source=api count=${places.length}`);
+      return places;
     } catch (error) {
       if (signal?.aborted) throw error;
       // A local development API may be offline or unreachable from the phone.
       // Continue to Supabase or the bundled directory instead of blanking the map.
+    } finally {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', abort);
     }
   }
 
@@ -59,10 +78,16 @@ export async function listMobilePlaces(signal?: AbortSignal): Promise<MapPin[]> 
       .select('id,title,type,lat,lng,address,badge,accessibility_features,accessibility_rating,image')
       .eq('published', true)
       .order('id');
-    if (!error && data?.length) return data.map(toMapPin);
+    if (!error && data?.length) {
+      const places = data.map(toMapPin);
+      console.info(`[Places Mobile] source=supabase count=${places.length}`);
+      return places;
+    }
   }
 
-  return mockMapPins.map((place) => ({ ...place, accessibilityFeatures: [...place.accessibilityFeatures] }));
+  const places = mockMapPins.map((place) => ({ ...place, accessibilityFeatures: [...place.accessibilityFeatures] }));
+  console.info(`[Places Mobile] source=mock count=${places.length}`);
+  return places;
 }
 
 export async function getMobilePlaceDetails(placeId: string, signal?: AbortSignal): Promise<PlaceDetails> {

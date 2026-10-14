@@ -890,6 +890,7 @@ export default function AppMobile() {
   };
 
   useEffect(() => {
+    if (activeTab !== 'map') return;
     const controller = new AbortController();
     setMobilePlacesLoading(true);
     setMobilePlacesError('');
@@ -904,7 +905,7 @@ export default function AppMobile() {
         if (!controller.signal.aborted) setMobilePlacesLoading(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [activeTab]);
 
   const filteredMobilePlaces = useMemo(() => {
     const text = mapSearchText.trim().toLowerCase();

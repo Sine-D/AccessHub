@@ -18,6 +18,8 @@ export async function queryPlaces(params,fetcher=fetch) {
   records.push(...rows);if(rows.length<pageSize)break;
   if(records.length>=10000)throw new Error('Directory requires paginated UI; refine the query.');
  }
- return records.map(r=>({id:r.id,title:r.title,type:r.type,lat:r.lat,lng:r.lng,address:r.address,badge:r.badge,category:r.category,accessibilityFeatures:r.accessibility_features,accessibilityRating:r.accessibility_rating,image:r.image,distance:'Distance not calculated'}));
+ const places=records.map(r=>({id:r.id,title:r.title,type:r.type,lat:r.lat,lng:r.lng,address:r.address,badge:r.badge,category:r.category,accessibilityFeatures:r.accessibility_features,accessibilityRating:r.accessibility_rating,image:r.image,distance:'Distance not calculated'}));
+ console.info(`[Places API] source=supabase count=${places.length}`);
+ return places;
 }
 
