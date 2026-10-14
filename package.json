@@ -15,6 +15,7 @@
     "preview": "vite preview",
     "test": "node --loader ./scripts/node-ts-loader.mjs --test tests/*.mjs",
     "test:jest": "jest",
+    "test:coverage": "jest --coverage",
     "test:ac-202": "node --loader ./scripts/node-ts-loader.mjs --test tests/AC-202.test.mjs"
   },
   "dependencies": {
