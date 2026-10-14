@@ -230,3 +230,15 @@ export async function rejectVendorVerification(
   }
 }
 
+/**
+ * State isolation helpers for unit tests.
+ */
+export function resetVendorVerificationStore(): void {
+  memoryQueue = initialVerificationRequests.map((r) => ({ ...r }));
+}
+
+export function getMemoryVendorVerifications(): VendorVerificationRequest[] {
+  return [...memoryQueue];
+}
+
+
