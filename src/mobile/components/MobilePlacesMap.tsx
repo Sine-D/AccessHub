@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -29,11 +29,23 @@ export function MobilePlacesMap({ onLocationChange, onSelectPlace, places, selec
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const [locationSettingsRequired, setLocationSettingsRequired] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
   const center = useMemo<Coordinate>(() => {
     const selected = places.find((place) => place.id === selectedPlaceId);
     const place = selected ?? places[0];
     return place ? { latitude: place.lat, longitude: place.lng } : defaultCoordinate;
   }, [places, selectedPlaceId]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' || !mapReady || places.length < 2) return;
+    mapRef.current?.fitToCoordinates(
+      places.map((place) => ({ latitude: place.lat, longitude: place.lng })),
+      {
+        animated: true,
+        edgePadding: { top: 48, right: 48, bottom: 48, left: 48 },
+      },
+    );
+  }, [mapReady, places]);
 
   const moveToCurrentLocation = async () => {
     setLocationMessage(null);
@@ -134,6 +146,7 @@ export function MobilePlacesMap({ onLocationChange, onSelectPlace, places, selec
           ref={mapRef}
           style={StyleSheet.absoluteFill}
           initialRegion={{ ...center, latitudeDelta: 0.08, longitudeDelta: 0.08 }}
+          onMapReady={() => setMapReady(true)}
           showsUserLocation={Boolean(userCoordinate)}
           accessibilityLabel={`Map showing ${places.length} accessible places`}
         >

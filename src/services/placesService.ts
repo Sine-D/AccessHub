@@ -30,10 +30,12 @@ const isMapPin = (value: unknown): value is MapPin => {
  */
 export const getAccessiblePlaces = async (signal?: AbortSignal, features: Feature[] = []): Promise<MapPin[]> => {
   if (!apiBaseUrl) {
-    return filterPlaces(mockMapPins, features).map((place) => ({
+    const places = filterPlaces(mockMapPins, features).map((place) => ({
       ...place,
       accessibilityFeatures: [...place.accessibilityFeatures],
     }));
+    console.info(`[Places Web] source=mock count=${places.length}`);
+    return places;
   }
 
   const params = new URLSearchParams();
@@ -52,7 +54,9 @@ export const getAccessiblePlaces = async (signal?: AbortSignal, features: Featur
     throw new Error('The accessible places response has an invalid format.');
   }
 
-  return filterPlaces(payload, features);
+  const places = filterPlaces(payload, features);
+  console.info(`[Places Web] source=api count=${places.length}`);
+  return places;
 };
 
 const isPlaceDetails = (value: unknown): value is PlaceDetails => {
