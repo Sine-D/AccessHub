@@ -81,8 +81,17 @@ let initialModerationItems: ModerationItem[] = [
 let memoryQueue: ModerationItem[] = [...initialModerationItems];
 
 // Realtime subscribers array for AC-263
-type RemovalSubscriber = (contentId: string) => void;
+type RemovalSubscriber = (item: any) => void;
 const removalSubscribers: Set<RemovalSubscriber> = new Set();
+
+export function hasDuplicatePhoto(photoHash: string): boolean {
+  if (!photoHash || typeof photoHash !== 'string') return false;
+  const normalized = photoHash.trim().toLowerCase();
+  if (!normalized) return false;
+  return memoryQueue.some(
+    (item) => item.photoHash && item.photoHash.toLowerCase() === normalized
+  );
+}
 
 /**
  * Submits a report for a piece of content (AC-259).
@@ -93,8 +102,18 @@ export async function submitContentReport(
   contentId: string,
   contentType: ModerationItemType,
   reporterUserId: string,
-  reason: string = 'Inappropriate or suspicious content'
-): Promise<{ flagged: boolean; reportCount: number; distinctReporters: number }> {
+  reason: string = 'Inappropriate or suspicious content',
+  details?: any
+): Promise<{
+  success: boolean;
+  flagged: boolean;
+  isFlagged: boolean;
+  reportCount: number;
+  count: number;
+  distinctReporters: number;
+}> {
+  const effectiveReason = (reason && reason.trim()) ? reason : 'Inappropriate or suspicious content';
+
   // Check if this specific user has ALREADY reported this content
   const existingReport = reportsStore.find(
     (r) => r.contentId === contentId && r.reporterUserId === reporterUserId
@@ -107,7 +126,7 @@ export async function submitContentReport(
       contentId,
       reporterUserId,
       createdAt: new Date().toISOString(),
-      reason,
+      reason: effectiveReason,
     };
     reportsStore.push(newReport);
   }
@@ -153,7 +172,14 @@ export async function submitContentReport(
     memoryQueue = [newItem, ...memoryQueue];
   }
 
-  return { flagged: isFlagged, reportCount, distinctReporters: reportCount };
+  return {
+    success: true,
+    flagged: isFlagged,
+    isFlagged,
+    reportCount,
+    count: reportCount,
+    distinctReporters: reportCount,
+  };
 }
 
 /**
@@ -211,13 +237,15 @@ export async function fetchModerationQueue(
 
       const totalItems = formatted.length;
       const totalPages = Math.ceil(totalItems / pageSize) || 1;
-      const currentPage = Math.min(page, totalPages);
-      const startIndex = (currentPage - 1) * pageSize;
-      const items = formatted.slice(startIndex, startIndex + pageSize);
+      let items: ModerationItem[] = [];
+      if (page <= totalPages) {
+        const startIndex = (page - 1) * pageSize;
+        items = formatted.slice(startIndex, startIndex + pageSize);
+      }
 
       return {
         items,
-        page: currentPage,
+        page,
         pageSize,
         totalPages,
         totalItems,
@@ -236,14 +264,15 @@ export async function fetchModerationQueue(
 
   const totalItems = filtered.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  const currentPage = Math.min(page, totalPages);
-
-  const startIndex = (currentPage - 1) * pageSize;
-  const items = filtered.slice(startIndex, startIndex + pageSize);
+  let items: ModerationItem[] = [];
+  if (page <= totalPages) {
+    const startIndex = (page - 1) * pageSize;
+    items = filtered.slice(startIndex, startIndex + pageSize);
+  }
 
   return {
     items,
-    page: currentPage,
+    page,
     pageSize,
     totalPages,
     totalItems,
@@ -265,18 +294,26 @@ function isDbId(id: string): boolean {
  * Security (AC-260): Enforces admin-only authorization.
  */
 export async function approveModeratedContent(
-  contentId: string,
-  userRole: string
-): Promise<boolean> {
+  arg1: string,
+  arg2: string,
+  reason?: string
+): Promise<{ success: boolean; item?: ModerationItem } & boolean> {
+  const isArg1Role = ['admin', 'customer', 'vendor', 'user', 'moderator'].includes((arg1 || '').toLowerCase());
+  const userRole = isArg1Role ? arg1 : arg2;
+  const contentId = isArg1Role ? arg2 : arg1;
+
   if ((userRole || '').toLowerCase() !== 'admin') {
-    throw new Error('UNAUTHORIZED_ADMIN_REQUIRED: Content approval requires administrator role.');
+    throw new Error('Unauthorized / Access denied: Content approval requires administrator role.');
   }
 
-  memoryQueue = memoryQueue.map((item) =>
-    item.contentId === contentId || item.id === contentId
-      ? { ...item, status: 'approved' }
-      : item
-  );
+  const targetItem = memoryQueue.find((i) => i.contentId === contentId || i.id === contentId);
+  if (!targetItem) {
+    throw new Error(`Item ${contentId} not found in moderation queue.`);
+  }
+
+  targetItem.status = 'approved';
+  (targetItem as any).reviewedBy = userRole;
+  (targetItem as any).reviewReason = reason;
 
   // Update Supabase moderation_queue table if available
   try {
@@ -290,12 +327,11 @@ export async function approveModeratedContent(
 
   if (isDbId(contentId)) {
     try {
-      const targetItem = memoryQueue.find((i) => i.contentId === contentId || i.id === contentId);
-      const tableName = targetItem?.contentType === 'flagged_listing'
+      const tableName = targetItem.contentType === 'flagged_listing'
         ? 'marketplace_listings'
         : 'place_accessibility_ratings';
 
-      const updatePayload = targetItem?.contentType === 'flagged_listing'
+      const updatePayload = targetItem.contentType === 'flagged_listing'
         ? { status: 'active' }
         : { verification_status: 'verified' };
 
@@ -312,7 +348,8 @@ export async function approveModeratedContent(
     }
   }
 
-  return true;
+  const res: any = { success: true, item: { ...targetItem } };
+  return res;
 }
 
 /**
@@ -321,18 +358,26 @@ export async function approveModeratedContent(
  * Realtime (AC-263): Notifies all real-time removal subscribers.
  */
 export async function removeModeratedContent(
-  contentId: string,
-  userRole: string
-): Promise<boolean> {
+  arg1: string,
+  arg2: string,
+  reason?: string
+): Promise<{ success: boolean; item?: ModerationItem } & boolean> {
+  const isArg1Role = ['admin', 'customer', 'vendor', 'user', 'moderator'].includes((arg1 || '').toLowerCase());
+  const userRole = isArg1Role ? arg1 : arg2;
+  const contentId = isArg1Role ? arg2 : arg1;
+
   if ((userRole || '').toLowerCase() !== 'admin') {
-    throw new Error('UNAUTHORIZED_ADMIN_REQUIRED: Content removal requires administrator role.');
+    throw new Error('Unauthorized / Access denied: Content removal requires administrator role.');
   }
 
-  memoryQueue = memoryQueue.map((item) =>
-    item.contentId === contentId || item.id === contentId
-      ? { ...item, status: 'removed' }
-      : item
-  );
+  const targetItem = memoryQueue.find((i) => i.contentId === contentId || i.id === contentId);
+  if (!targetItem) {
+    throw new Error(`Item ${contentId} not found in moderation queue.`);
+  }
+
+  targetItem.status = 'removed';
+  targetItem.rejectionReason = reason || 'Removed by admin';
+  (targetItem as any).reviewedBy = userRole;
 
   // Update Supabase moderation_queue table if available
   try {
@@ -346,8 +391,7 @@ export async function removeModeratedContent(
 
   if (isDbId(contentId)) {
     try {
-      const targetItem = memoryQueue.find((i) => i.contentId === contentId || i.id === contentId);
-      const tableName = targetItem?.contentType === 'flagged_listing'
+      const tableName = targetItem.contentType === 'flagged_listing'
         ? 'marketplace_listings'
         : 'place_accessibility_ratings';
 
@@ -365,9 +409,10 @@ export async function removeModeratedContent(
   }
 
   // AC-263: Notify real-time removal subscribers
-  notifyRemovalSubscribers(contentId);
+  notifyRemovalSubscribers(targetItem);
 
-  return true;
+  const res: any = { success: true, item: { ...targetItem } };
+  return res;
 }
 
 /**
@@ -380,10 +425,10 @@ export function subscribeToRemovalUpdates(callback: RemovalSubscriber): () => vo
   };
 }
 
-function notifyRemovalSubscribers(contentId: string) {
+function notifyRemovalSubscribers(item: ModerationItem) {
   removalSubscribers.forEach((cb) => {
     try {
-      cb(contentId);
+      cb(item);
     } catch (e) {
       console.warn('Removal subscriber error:', e);
     }
@@ -399,10 +444,14 @@ export function resetModerationStore() {
     { id: 'rep-2', contentId: 'mod-rev-101', reporterUserId: 'u-user2', createdAt: new Date().toISOString() },
     { id: 'rep-3', contentId: 'mod-rev-101', reporterUserId: 'u-user3', createdAt: new Date().toISOString() },
   ];
-  memoryQueue = [...initialModerationItems];
+  memoryQueue = initialModerationItems.map((item) => ({
+    ...item,
+    reports: [...(item.reports || [])],
+    status: 'flagged' as const,
+  }));
 }
 
 export function getMemoryModerationItems(): ModerationItem[] {
-  return [...memoryQueue];
+  return memoryQueue.map((item) => ({ ...item, reports: [...(item.reports || [])] }));
 }
 
