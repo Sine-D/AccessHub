@@ -4,6 +4,7 @@ import { useAccessibilityStore } from '../store/useAccessibilityStore';
 import { AccessibleInput } from '../../../components/common/accessible/AccessibleInput';
 import { AccessibleButton } from '../../../components/common/accessible/AccessibleButton';
 import { initiateEmailSignUp, verifyEmailOtp, resendSignUpOtp } from '../../../services/authService';
+import { saveUserProfile } from '../../../services/userProfileService';
 
 export interface Step4Props {
   onComplete: (user?: any) => void;
@@ -126,9 +127,18 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
       }
 
       // ── Success ───────────────────────────────────────────────────────────
+      // Persist created user into Supabase public.users table
+      const saved = await saveUserProfile({
+        id: result.userId,
+        name: formData.fullName,
+        email: formData.email,
+        role: formData.role as any,
+        accommodations: formData.accommodations,
+      });
+
       announceText(`Account created and verified successfully for ${formData.fullName}! Welcome to AccessHub.`);
       onComplete({
-        id: result.userId,
+        id: (saved.success && saved.user?.id) ? saved.user.id : result.userId,
         name: formData.fullName,
         email: formData.email,
         role: formData.role,
