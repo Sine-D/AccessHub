@@ -45,6 +45,7 @@ import {
 } from './services/routeService';
 import { CreateAccountScreen } from './features/auth/screens/CreateAccountScreen';
 import { ModernProfileScreen } from './features/profile';
+import { saveUserProfile, logoutUser } from './services/userProfileService';
 import { MobileVendorVerificationQueue } from './features/admin/components/MobileVendorVerificationQueue';
 import { MobileListingModerationQueue } from './features/admin/components/MobileListingModerationQueue';
 import { MobileFraudModerationQueue } from './features/admin/components/MobileFraudModerationQueue';
@@ -89,11 +90,7 @@ export default function AppMobile() {
   const [activeTab, setActiveTab] = useState<MobileTab>(isAdmin ? 'admin' : 'splash');
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      // Ignore
-    }
+    await logoutUser();
     setUserRole('customer');
     setCurrentUser((prev) => ({
       ...prev,
@@ -321,9 +318,13 @@ export default function AppMobile() {
 
       setUserRole(detectedRole);
       if (userObj) {
+        // Ensure user is persisted to public.users table with a valid UUID
+        const saved = await saveUserProfile(userObj);
+        const resolvedUser = (saved.success && saved.user) ? saved.user : userObj;
+
         setCurrentUser((prev) => ({
           ...prev,
-          ...userObj,
+          ...resolvedUser,
         }));
       }
 
@@ -1484,15 +1485,15 @@ export default function AppMobile() {
     return (
       <CreateAccountScreen
         onCancel={() => setActiveTab('auth')}
-        onSuccess={(createdUser) => {
+        onSuccess={async (createdUser) => {
           if (createdUser) {
+            // Persist created user into Supabase public.users table
+            const saved = await saveUserProfile(createdUser);
+            const resolvedUser = (saved.success && saved.user) ? saved.user : createdUser;
+
             setCurrentUser((prev) => ({
               ...prev,
-              id: createdUser.id || prev.id,
-              name: createdUser.name || prev.name,
-              email: createdUser.email || prev.email,
-              role: createdUser.role || prev.role,
-              accommodations: createdUser.accommodations || prev.accommodations,
+              ...resolvedUser,
             }));
             setUserRole(createdUser.role || 'customer');
           }
