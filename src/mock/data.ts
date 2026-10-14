@@ -295,6 +295,19 @@ export const mockMapPins: MapPinItem[] = [
     accessibilityRating: 4.9,
     distance: '5.1 km away',
     image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=300'
+  },
+  {
+    id: 'mp4',
+    title: 'Access Garden Restaurant',
+    type: 'service',
+    lat: 6.9147,
+    lng: 79.8771,
+    address: 'Cotta Road, Colombo 08',
+    badge: 'Wheelchair Ramp & Accessible Restroom',
+    accessibilityFeatures: ['Wheelchair ramp', 'Step-free entrance', 'Accessible restroom'],
+    accessibilityRating: 4.7,
+    distance: '3.1 km away',
+    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=300'
   }
 ];
 

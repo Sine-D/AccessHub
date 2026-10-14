@@ -48,7 +48,13 @@ export async function interpretGemini(input, fetcher = fetch) {
       signal: AbortSignal.timeout(10000),
     },
   );
-  if (!response.ok) throw new Error('Gemini provider unavailable.');
+  if (!response.ok) {
+    let detail = '';
+    if (process.env.AI_DEBUG === 'true') {
+      try { detail = `: ${(await response.text()).slice(0, 300)}`; } catch { /* Ignore unreadable error bodies. */ }
+    }
+    throw new Error(`Gemini provider unavailable (${response.status})${detail}`);
+  }
 
   const body = await response.json();
   const text = body.candidates?.[0]?.content?.parts
