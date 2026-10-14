@@ -5,6 +5,12 @@ import { mockProducts } from '../../../mock/data';
 import { TopHeader } from '../../../core/navigation/TopHeader';
 import { BottomNav } from '../../../core/navigation/BottomNav';
 import { supabase } from '../../../core/supabase';
+import {
+  saveUserProfile,
+  deleteUserAccount,
+  fetchUserProfile,
+  logoutUser,
+} from '../../../services/userProfileService';
 import { 
   ShieldCheck, 
   Star, 
@@ -56,38 +62,25 @@ export const ProfileScreen: React.FC = () => {
     setSyncing(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const isValidUUID = (id?: string) => Boolean(id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
       const sessionUserId = sessionData?.session?.user?.id;
       const userEmail = sessionData?.session?.user?.email || currentUser.email;
 
-      let query = supabase.from('users').select('*');
-      if (isValidUUID(sessionUserId)) {
-        query = query.eq('id', sessionUserId);
-      } else if (isValidUUID(currentUser.id)) {
-        query = query.eq('id', currentUser.id);
-      } else if (userEmail) {
-        query = query.eq('email', userEmail);
-      } else {
-        setSyncing(false);
-        return;
+      const profile = await fetchUserProfile(sessionUserId, userEmail);
+
+      if (profile) {
+        setCurrentUser((prev) => ({
+          ...prev,
+          id: profile.id || prev.id,
+          name: profile.name || prev.name,
+          email: profile.email || prev.email,
+          role: profile.role || prev.role,
+          avatar: profile.avatar || prev.avatar,
+          bio: profile.bio || prev.bio,
+          location: profile.location || prev.location,
+          accommodations: profile.accommodations || prev.accommodations,
+        }));
+        if (settings.screenReader) speakText('Profile synced with cloud.');
       }
-
-      const { data, error } = await query.maybeSingle();
-
-        if (!error && data) {
-          setCurrentUser((prev) => ({
-            ...prev,
-            id: data.id,
-            name: data.name || prev.name,
-            email: data.email || prev.email,
-            role: data.role || prev.role,
-            avatar: data.avatar || prev.avatar,
-            bio: data.bio || prev.bio,
-            location: data.location || prev.location,
-            accommodations: data.accommodations || prev.accommodations,
-          }));
-          if (settings.screenReader) speakText('Profile synced with cloud.');
-        }
     } catch (err) {
       console.warn('Sync notice:', err);
     } finally {
@@ -114,31 +107,42 @@ export const ProfileScreen: React.FC = () => {
     if (settings.screenReader) speakText('Opened edit profile modal');
   };
 
-  // Update Profile (CRUD - Update)
+  // Update Profile (CRUD - Update to public.users table)
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const targetId = sessionData?.session?.user?.id || currentUser.id;
+      const targetEmail = currentUser.email || sessionData?.session?.user?.email || 'kavindi.p@accesslink.lk';
 
-      const payload = {
+      const result = await saveUserProfile({
         id: targetId,
         name: editName.trim(),
         bio: editBio.trim(),
         location: editLocation.trim(),
         avatar: editAvatar,
         accommodations: editAccommodations,
-        email: currentUser.email,
+        email: targetEmail,
         role: currentUser.role,
-      };
+        verified: true,
+      });
 
-      await supabase.from('users').upsert(payload, { onConflict: 'id' });
-
-      setCurrentUser((prev) => ({
-        ...prev,
-        ...payload,
-      }));
+      if (result.success && result.user) {
+        setCurrentUser((prev) => ({
+          ...prev,
+          ...result.user,
+        }));
+      } else {
+        setCurrentUser((prev) => ({
+          ...prev,
+          name: editName.trim(),
+          bio: editBio.trim(),
+          location: editLocation.trim(),
+          avatar: editAvatar,
+          accommodations: editAccommodations,
+        }));
+      }
 
       setIsEditing(false);
       if (settings.screenReader) speakText('Profile updated successfully.');
@@ -149,35 +153,43 @@ export const ProfileScreen: React.FC = () => {
     }
   };
 
-  // Delete Profile (CRUD - Delete)
+  // Delete Profile (CRUD - Delete from public.users table)
   const handleDeleteAccount = async () => {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const targetId = sessionData?.session?.user?.id || currentUser.id;
+      const targetEmail = currentUser.email || sessionData?.session?.user?.email;
 
-      if (targetId) {
-        await supabase.from('users').delete().eq('id', targetId);
-      }
+      await deleteUserAccount(targetId, targetEmail);
 
-      await supabase.auth.signOut();
       setUserRole('customer');
-      setCurrentUser((prev) => ({ ...prev, role: 'customer' }));
+      setCurrentUser((prev) => ({
+        ...prev,
+        name: 'Guest User',
+        email: '',
+        role: 'customer',
+        avatar: AVATAR_OPTIONS[0],
+        bio: '',
+        location: '',
+      }));
       setIsDeleting(false);
-      setActiveScreen('auth');
       if (settings.screenReader) speakText('Account deleted permanently.');
+      setActiveScreen('auth');
     } catch (err) {
       console.warn('Delete error:', err);
     }
   };
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      // Ignore
-    }
+    await logoutUser();
     setUserRole('customer');
-    setCurrentUser((prev) => ({ ...prev, role: 'customer' }));
+    setCurrentUser((prev) => ({
+      ...prev,
+      name: 'Guest User',
+      email: '',
+      role: 'customer',
+      avatar: AVATAR_OPTIONS[0],
+    }));
     if (settings.screenReader) {
       speakText('Logged out successfully');
     }
