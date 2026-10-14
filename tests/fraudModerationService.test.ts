@@ -314,4 +314,167 @@ describe('fraudModerationService Comprehensive Suite', () => {
       expect(item101?.status).toBe('flagged');
     });
   });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // 6. Supabase Database Integration & Table Synchronization
+  // ────────────────────────────────────────────────────────────────────────────
+  describe('Supabase Database Synchronization & Queries', () => {
+    it('maps moderation_queue Supabase table rows when query succeeds', async () => {
+      const mockDbQueue = [
+        {
+          id: 'mod-db-1',
+          content_type: 'flagged_review',
+          content_id: 'rev-db-101',
+          title: 'Flagged Review DB',
+          description: 'Misleading description',
+          photo_uri: 'https://test.com/photo.jpg',
+          author_name: 'Test Author',
+          author_id: 'u-auth-1',
+          reports: ['u1', 'u2', 'u3'],
+          report_count: 3,
+          status: 'flagged',
+          created_at: new Date().toISOString(),
+        },
+      ];
+
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          order: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockResolvedValueOnce({
+                data: mockDbQueue,
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      });
+
+      const res = await fetchModerationQueue('admin', {
+        typeFilter: 'flagged_review',
+        statusFilter: 'flagged',
+      });
+
+      expect(res.items).toHaveLength(1);
+      expect(res.items[0].id).toBe('mod-db-1');
+      expect(res.items[0].contentType).toBe('flagged_review');
+    });
+
+    it('approves listing and updates marketplace_listings table for flagged_listing', async () => {
+      (supabase.from as jest.Mock).mockImplementation((table: string) => {
+        if (table === 'marketplace_listings') {
+          return {
+            update: jest.fn().mockReturnValue({
+              eq: jest.fn().mockResolvedValueOnce({ error: null }),
+            }),
+          };
+        }
+        return {
+          update: jest.fn().mockReturnValue({
+            or: jest.fn().mockResolvedValueOnce({ error: null }),
+          }),
+        };
+      });
+
+      const res = await approveModeratedContent('admin', 'mod-list-103', 'Verified compliant');
+      expect(res.success).toBe(true);
+      expect(supabase.from).toHaveBeenCalledWith('marketplace_listings');
+    });
+
+    it('approves review and updates place_accessibility_ratings table for flagged_review', async () => {
+      (supabase.from as jest.Mock).mockImplementation((table: string) => {
+        if (table === 'place_accessibility_ratings') {
+          return {
+            update: jest.fn().mockReturnValue({
+              eq: jest.fn().mockResolvedValueOnce({ error: null }),
+            }),
+          };
+        }
+        return {
+          update: jest.fn().mockReturnValue({
+            or: jest.fn().mockResolvedValueOnce({ error: null }),
+          }),
+        };
+      });
+
+      const res = await approveModeratedContent('admin', 'mod-rev-101', 'Verified genuine');
+      expect(res.success).toBe(true);
+      expect(supabase.from).toHaveBeenCalledWith('place_accessibility_ratings');
+    });
+
+    it('removes listing and deletes from marketplace_listings table for flagged_listing', async () => {
+      (supabase.from as jest.Mock).mockImplementation((table: string) => {
+        if (table === 'marketplace_listings') {
+          return {
+            delete: jest.fn().mockReturnValue({
+              eq: jest.fn().mockResolvedValueOnce({ error: null }),
+            }),
+          };
+        }
+        return {
+          update: jest.fn().mockReturnValue({
+            or: jest.fn().mockResolvedValueOnce({ error: null }),
+          }),
+        };
+      });
+
+      const res = await removeModeratedContent('admin', 'mod-list-103', 'Confirmed fraudulent product');
+      expect(res.success).toBe(true);
+      expect(supabase.from).toHaveBeenCalledWith('marketplace_listings');
+    });
+
+    it('removes review and deletes from place_accessibility_ratings table for flagged_review', async () => {
+      (supabase.from as jest.Mock).mockImplementation((table: string) => {
+        if (table === 'place_accessibility_ratings') {
+          return {
+            delete: jest.fn().mockReturnValue({
+              eq: jest.fn().mockResolvedValueOnce({ error: null }),
+            }),
+          };
+        }
+        return {
+          update: jest.fn().mockReturnValue({
+            or: jest.fn().mockResolvedValueOnce({ error: null }),
+          }),
+        };
+      });
+
+      const res = await removeModeratedContent('admin', 'mod-rev-101', 'Offensive content');
+      expect(res.success).toBe(true);
+      expect(supabase.from).toHaveBeenCalledWith('place_accessibility_ratings');
+    });
+
+    it('handles database error during approval gracefully', async () => {
+      (supabase.from as jest.Mock).mockImplementation(() => {
+        throw new Error('Supabase database offline');
+      });
+
+      const res = await approveModeratedContent('admin', 'mod-rev-104', 'Reason');
+      expect(res.success).toBe(true);
+    });
+
+    it('handles database error during removal gracefully', async () => {
+      (supabase.from as jest.Mock).mockImplementation(() => {
+        throw new Error('Supabase database offline');
+      });
+
+      const res = await removeModeratedContent('admin', 'mod-rev-104', 'Reason');
+      expect(res.success).toBe(true);
+    });
+
+    // Parametric tests: multi-user report progression
+    [1, 2, 3, 4, 5].forEach((reporterIndex) => {
+      it(`parametric reporter: records report from user "user-num-${reporterIndex}"`, async () => {
+        const res = await submitContentReport(
+          'target-progression-item',
+          'flagged_review',
+          `user-num-${reporterIndex}`,
+          `Reason ${reporterIndex}`
+        );
+        expect(res.success).toBe(true);
+        expect(res.count).toBeGreaterThanOrEqual(1);
+      });
+    });
+  });
 });
+
