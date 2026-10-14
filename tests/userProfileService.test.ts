@@ -210,4 +210,187 @@ describe('userProfileService Test Suite', () => {
       expect(getCachedProfile()).toBeNull();
     });
   });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // 5. LocalStorage Caching & Storage Exception Handling
+  // ────────────────────────────────────────────────────────────────────────────
+  describe('LocalStorage Cache Handling', () => {
+    const originalWindow = global.window;
+
+    afterEach(() => {
+      global.window = originalWindow;
+    });
+
+    it('reads cached profile from window.localStorage when available', () => {
+      const mockStorage: Record<string, string> = {
+        accesshub_cached_profile: JSON.stringify({ id: 'loc-id', name: 'LocalStorage User' }),
+      };
+
+      (global as any).window = {
+        localStorage: {
+          getItem: jest.fn((k: string) => mockStorage[k] || null),
+          setItem: jest.fn(),
+          removeItem: jest.fn(),
+        },
+      };
+
+      const cached = getCachedProfile();
+      expect(cached?.name).toBe('LocalStorage User');
+    });
+
+    it('writes profile to window.localStorage when setCachedProfile is called', () => {
+      const mockSetItem = jest.fn();
+      (global as any).window = {
+        localStorage: {
+          getItem: jest.fn(),
+          setItem: mockSetItem,
+          removeItem: jest.fn(),
+        },
+      };
+
+      setCachedProfile({ id: 'ls-write', name: 'Saved LS' });
+      expect(mockSetItem).toHaveBeenCalledWith(
+        'accesshub_cached_profile',
+        expect.stringContaining('Saved LS')
+      );
+    });
+
+    it('removes profile from window.localStorage when clearCachedProfile is called', () => {
+      const mockRemoveItem = jest.fn();
+      (global as any).window = {
+        localStorage: {
+          getItem: jest.fn(),
+          setItem: jest.fn(),
+          removeItem: mockRemoveItem,
+        },
+      };
+
+      clearCachedProfile();
+      expect(mockRemoveItem).toHaveBeenCalledWith('accesshub_cached_profile');
+    });
+
+    it('handles localStorage read exceptions gracefully', () => {
+      (global as any).window = {
+        localStorage: {
+          getItem: jest.fn(() => {
+            throw new Error('Storage access denied');
+          }),
+        },
+      };
+
+      expect(() => getCachedProfile()).not.toThrow();
+    });
+
+    it('handles localStorage write exceptions gracefully', () => {
+      (global as any).window = {
+        localStorage: {
+          setItem: jest.fn(() => {
+            throw new Error('QuotaExceededError');
+          }),
+        },
+      };
+
+      expect(() => setCachedProfile({ name: 'Quota User' })).not.toThrow();
+    });
+
+    it('handles localStorage remove exceptions gracefully', () => {
+      (global as any).window = {
+        localStorage: {
+          removeItem: jest.fn(() => {
+            throw new Error('Storage error');
+          }),
+        },
+      };
+
+      expect(() => clearCachedProfile()).not.toThrow();
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // 6. Database Error & Fallback Pathways
+  // ────────────────────────────────────────────────────────────────────────────
+  describe('Database Exception & Fallback Coverage', () => {
+    it('returns null immediately when fetchUserProfile is called without id and email', async () => {
+      const res = await fetchUserProfile(undefined, undefined);
+      expect(res).toBeNull();
+    });
+
+    it('handles database exception during fetchUserProfile gracefully and falls back to cache', async () => {
+      setCachedProfile({ id: 'fallback-cache-id', name: 'Fallback User' });
+
+      (supabase.from as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockRejectedValueOnce(new Error('Network reset')),
+          }),
+        }),
+      });
+
+      const res = await fetchUserProfile('123e4567-e89b-12d3-a456-426614174000', 'test@test.com');
+      expect(res?.name).toBe('Fallback User');
+    });
+
+    it('handles database exception during saveUserProfile gracefully', async () => {
+      (supabase.from as jest.Mock).mockImplementation(() => {
+        throw new Error('Database server down');
+      });
+
+      const res = await saveUserProfile({
+        name: 'Offline Save',
+        email: 'offline@save.lk',
+      });
+
+      expect(res.success).toBe(false);
+      expect(res.error).toBe('Database server down');
+    });
+
+    it('handles database exception during deleteUserAccount gracefully', async () => {
+      (supabase.from as jest.Mock).mockImplementation(() => {
+        throw new Error('DB connection refused');
+      });
+
+      const res = await deleteUserAccount('123e4567-e89b-12d3-a456-426614174000', 'err@test.lk');
+      expect(res.success).toBe(false);
+      expect(res.error).toBe('DB connection refused');
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // 7. Parametric UUID Validation Matrix (15+ Tests)
+  // ────────────────────────────────────────────────────────────────────────────
+  describe('Parametric UUID Validations', () => {
+    const validUUIDs = [
+      'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      'fb5e1979-d586-4447-b844-0a373ff2556b',
+      '00000000-0000-0000-0000-000000000000',
+      'ffffffff-ffff-ffff-ffff-ffffffffffff',
+      '12345678-1234-5678-1234-567812345678',
+    ];
+
+    validUUIDs.forEach((uuid) => {
+      it(`parametric: recognizes valid UUID "${uuid}"`, () => {
+        expect(isValidUUID(uuid)).toBe(true);
+        expect(ensureValidUUID(uuid)).toBe(uuid);
+      });
+    });
+
+    const invalidIDs = [
+      'user_12345',
+      'abc',
+      '123e4567-e89b-12d3-a456',
+      '123e4567-e89b-12d3-a456-426614174000-extra',
+      'not-a-uuid-at-all',
+      'null',
+      'undefined',
+    ];
+
+    invalidIDs.forEach((id) => {
+      it(`parametric: rejects non-UUID "${id}" and generates valid UUID`, () => {
+        expect(isValidUUID(id)).toBe(false);
+        const fixed = ensureValidUUID(id);
+        expect(isValidUUID(fixed)).toBe(true);
+      });
+    });
+  });
 });
+
