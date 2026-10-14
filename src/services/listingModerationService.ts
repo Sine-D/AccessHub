@@ -213,3 +213,11 @@ export function getMemoryMarketplaceListings(): Product[] {
   return [...memoryProducts];
 }
 
+/**
+ * Reset memory store to initial mockProducts copy for testing.
+ */
+export function resetListingStore(): void {
+  memoryProducts = [...mockProducts];
+}
+
+
