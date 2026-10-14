@@ -4,6 +4,7 @@ import { useAccessibility } from '../../../core/hooks/useAccessibility';
 import { UserRole } from '../../../core/types';
 import signupLoginImg from '../../../assets/images/signup_login.jpg';
 import { supabase } from '../../../core/supabase';
+import { saveUserProfile, fetchUserProfile } from '../../../services/userProfileService';
 import { 
   User, 
   ShoppingBag, 
@@ -54,19 +55,33 @@ export const AuthScreen: React.FC = () => {
 
       // 1. Attempt Supabase Auth
       try {
-        const { data: authData, error: err } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (!err && authData?.user) {
-          const { data: profile } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', authData.user.id)
-            .maybeSingle();
+        if (authMode === 'register') {
+          // Perform real registration and persist to public.users table
+          try {
+            await supabase.auth.signUp({
+              email,
+              password,
+              options: { data: { full_name: displayName, role: detectedRole } }
+            });
+          } catch (e) {
+            // Ignore signup network/limit errors
+          }
 
-          if (profile?.role) detectedRole = profile.role as UserRole;
-          if (profile?.name) displayName = profile.name;
+          await saveUserProfile({
+            name: displayName,
+            email,
+            role: detectedRole,
+          });
+        } else {
+          const { data: authData, error: err } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (!err && authData?.user) {
+            const profile = await fetchUserProfile(authData.user.id, email);
+            if (profile?.role) detectedRole = profile.role as UserRole;
+            if (profile?.name) displayName = profile.name;
+          }
         }
       } catch (err) {
         // Fallback for offline demo
@@ -80,10 +95,19 @@ export const AuthScreen: React.FC = () => {
         detectedRole = userRole || 'customer';
       }
 
+      // Save user profile state
+      const saved = await saveUserProfile({
+        name: displayName,
+        email,
+        role: detectedRole,
+      });
+
       setUserRole(detectedRole);
       setCurrentUser((prev) => ({
         ...prev,
+        id: (saved.success && saved.user?.id) ? saved.user.id : prev.id,
         name: displayName,
+        email,
         role: detectedRole,
       }));
 
