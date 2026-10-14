@@ -12,6 +12,7 @@
     "build": "tsc && vite build",
     "lint": "tsc",
     "preview": "vite preview",
+    "server": "node --env-file=server/.env --loader ./scripts/node-ts-loader.mjs server/index.mjs",
     "test": "node --loader ./scripts/node-ts-loader.mjs --test",
     "test:ac-202": "node --loader ./scripts/node-ts-loader.mjs --test tests/AC-202.test.mjs"
   },

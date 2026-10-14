@@ -71,6 +71,7 @@ const mockDescriptions: Record<string, string> = {
   mp1: 'An inclusive craft studio with an accessible entrance and customer service area.',
   mp2: 'A community support centre offering disability services and accessible information.',
   mp3: 'An inclusive technology workplace with step-free circulation and lift access.',
+  mp4: 'An accessible restaurant with a wheelchair ramp, step-free entrance and accessible restroom.',
 };
 
 const mockVerification: Record<string, PlaceDetails['verification']> = {

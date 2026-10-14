@@ -36,7 +36,7 @@ export function createApi({interpret = async () => {throw Object.assign(new Erro
    let input; try {input=validateInput(await readBody(req));} catch(e) {return send(e.status || 400,{error:e.message});}
    const userId=await authenticate(req);
    // OpenAI processing requires a real validated Supabase session. Local keyword mode is public.
-   return send(200,await interpret(input,{userId}));
+   return send(200,await interpret(input,{userId,clientId:req.socket.remoteAddress || 'unknown'}));
   } catch(e) {send(e.status || 503,{error:'Service temporarily unavailable. Use keyword search.'});}
  });
 }

@@ -146,6 +146,7 @@ Ensure you have the following installed on your environment:
 | `npm run build` | Runs TypeScript checks and compiles the app into `dist/` for production. |
 | `npm run lint` | Executes TypeScript type verification across the project. |
 | `npm run preview` | Serves the production build locally for verification. |
+| `npm run server` | Starts the local search and accessible-places API on port 8787. |
 
 ---
 
