@@ -288,3 +288,173 @@ export async function fetchSalesAnalytics(
   };
 }
 
+export function resetSalesStore(): void {
+  memoryTransactions = initialTransactions.map((t) => ({ ...t }));
+}
+
+export function getTransactionsStore(): SalesTransaction[] {
+  return [...memoryTransactions];
+}
+
+export async function recordTransaction(
+  data: Partial<SalesTransaction>
+): Promise<SalesTransaction> {
+  const newTx: SalesTransaction = {
+    id: data.id || `tx-${Date.now()}`,
+    orderId: data.orderId || `ord-${Date.now()}`,
+    vendorId: data.vendorId || 'u-vendor',
+    vendorName: data.vendorName || 'Artisan Vendor',
+    category: data.category || 'Handcrafted Decor',
+    district: data.district || 'Colombo',
+    productTitle: data.productTitle || 'Artisan Craft',
+    amount: data.amount || 0,
+    commission: data.commission ?? Math.round((data.amount || 0) * 0.1),
+    status: data.status || 'completed',
+    createdAt: data.createdAt || new Date().toISOString(),
+  };
+
+  memoryTransactions.unshift(newTx);
+  return newTx;
+}
+
+export async function exportAnalyticsReport(format: 'json' | 'csv' = 'json'): Promise<string> {
+  const analytics = await getSalesAnalytics();
+  if (format === 'json') {
+    return JSON.stringify(
+      {
+        summary: analytics.summary,
+        transactions: analytics.transactions,
+        exportedAt: new Date().toISOString(),
+      },
+      null,
+      2
+    );
+  }
+
+  // CSV format
+  const headers = 'Order ID,Vendor,Category,District,Amount,Commission,Status,Date';
+  const rows = analytics.transactions.map((t) =>
+    [
+      t.orderId,
+      `"${t.vendorName}"`,
+      `"${t.category}"`,
+      `"${t.district}"`,
+      t.amount,
+      t.commission,
+      t.status,
+      t.createdAt,
+    ].join(',')
+  );
+
+  return [headers, ...rows].join('\n');
+}
+
+export async function getSalesAnalytics(filter?: {
+  district?: string;
+  category?: string;
+  fromDate?: string;
+  toDate?: string;
+  dateRange?: string;
+}) {
+  let transactions = [...memoryTransactions];
+
+  if (filter?.district && filter.district !== 'All') {
+    transactions = transactions.filter((t) => t.district === filter.district);
+  }
+  if (filter?.category && filter.category !== 'All') {
+    transactions = transactions.filter((t) => t.category === filter.category);
+  }
+  if (filter?.fromDate) {
+    const fromTime = new Date(filter.fromDate).getTime();
+    transactions = transactions.filter((t) => new Date(t.createdAt).getTime() >= fromTime);
+  }
+  if (filter?.toDate) {
+    const toTime = new Date(filter.toDate).getTime();
+    transactions = transactions.filter((t) => new Date(t.createdAt).getTime() <= toTime);
+  }
+
+  const totalRevenue = transactions.reduce((sum, t) => sum + t.amount, 0);
+  const platformCommission = transactions.reduce((sum, t) => sum + t.commission, 0);
+  const vendorPayout = totalRevenue - platformCommission;
+  const totalOrders = transactions.length;
+  const completedOrders = transactions.filter((t) => t.status === 'completed').length;
+  const averageOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+  const revenueGrowthPercentage = 12.5;
+  const ordersGrowthPercentage = 8.3;
+
+  const summary = {
+    totalRevenue,
+    platformCommission,
+    vendorPayout,
+    totalOrders,
+    averageOrderValue,
+    completedOrders,
+    revenueGrowthPercentage,
+    ordersGrowthPercentage,
+  };
+
+  // Monthly data formatted with month: "MMM YYYY"
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthlyMap = new Map<string, { revenue: number; orders: number; commission: number }>();
+
+  // Ensure recent months
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+    monthlyMap.set(key, { revenue: 0, orders: 0, commission: 0 });
+  }
+
+  transactions.forEach((t) => {
+    const d = new Date(t.createdAt);
+    const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+    const curr = monthlyMap.get(key) || { revenue: 0, orders: 0, commission: 0 };
+    curr.revenue += t.amount;
+    curr.orders += 1;
+    curr.commission += t.commission;
+    monthlyMap.set(key, curr);
+  });
+
+  const monthlyData = Array.from(monthlyMap.entries()).map(([month, data]) => ({
+    month,
+    revenue: data.revenue,
+    orders: data.orders,
+    commission: data.commission,
+  }));
+
+  // Category breakdown
+  const categoryMap = new Map<string, number>();
+  transactions.forEach((t) => {
+    categoryMap.set(t.category, (categoryMap.get(t.category) || 0) + t.amount);
+  });
+  const categoryBreakdown = Array.from(categoryMap.entries()).map(([category, revenue]) => {
+    const percentage = totalRevenue > 0 ? Math.round((revenue / totalRevenue) * 100) : 0;
+    return { category, revenue, percentage };
+  });
+
+  // District breakdown
+  const districtMap = new Map<string, { revenue: number; orders: number }>();
+  transactions.forEach((t) => {
+    const curr = districtMap.get(t.district) || { revenue: 0, orders: 0 };
+    curr.revenue += t.amount;
+    curr.orders += 1;
+    districtMap.set(t.district, curr);
+  });
+  const districtBreakdown = Array.from(districtMap.entries()).map(([district, val]) => ({
+    district,
+    revenue: val.revenue,
+    orders: val.orders,
+  }));
+
+  return {
+    summary,
+    monthlyData,
+    categoryBreakdown,
+    districtBreakdown,
+    transactions,
+    filteredDistrict: filter?.district,
+    filteredCategory: filter?.category,
+  };
+}
+
+
