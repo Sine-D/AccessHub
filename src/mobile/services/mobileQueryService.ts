@@ -45,7 +45,7 @@ export async function interpretMobileQuery(
 
       if (!response.ok) throw new Error('The AI search service is unavailable.');
       const body = (await response.json()) as Partial<SearchResponse>;
-      if (!isSearchQuery(body.query) || !['keyword', 'openai'].includes(String(body.source))) {
+      if (!isSearchQuery(body.query) || !['keyword', 'openai', 'gemini'].includes(String(body.source))) {
         throw new Error('The AI search service returned an invalid response.');
       }
       return body as SearchResponse;

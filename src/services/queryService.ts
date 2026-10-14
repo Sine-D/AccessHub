@@ -16,7 +16,7 @@ export async function interpretQuery(text:string,locale:string,signal?:AbortSign
    const r=await fetch(base+'/api/interpret',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(input),signal:controller.signal});
    if(!r.ok) throw new Error('Search unavailable');
    const body=await r.json();
-   if(!isSearchQuery(body.query) || !['keyword','openai'].includes(body.source)) throw new Error('Invalid response');
+    if(!isSearchQuery(body.query) || !['keyword','openai','gemini'].includes(body.source)) throw new Error('Invalid response');
    return body;
   } catch(e) {if(signal?.aborted) throw e;} finally{clearTimeout(timeout);signal?.removeEventListener('abort',abort);}
  }

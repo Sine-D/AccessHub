@@ -12,7 +12,7 @@ export interface SearchQuery {
   needsClarification: boolean;
   clarification: string | null;
 }
-export interface SearchResponse { query: SearchQuery; source: 'openai' | 'keyword'; }
+export interface SearchResponse { query: SearchQuery; source: 'gemini' | 'openai' | 'keyword'; }
 export const emptyQuery = (): SearchQuery => ({
   intent: 'unknown', keywords: '', category: null, location: null, minPrice: null,
   maxPrice: null, features: [], needsClarification: true,
