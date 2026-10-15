@@ -157,13 +157,13 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
       {/* Score Calculator Form */}
       <View
         style={{
-          backgroundColor: highContrast ? '#111111' : '#1e293b',
+          backgroundColor: highContrast ? '#111111' : '#ffffff',
           padding: 16,
           borderRadius: 16,
           marginBottom: 16,
         }}
       >
-        <Text style={{ fontSize: 14, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#ffffff', marginBottom: 8 }}>
+        <Text style={{ fontSize: 14, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#172033', marginBottom: 8 }}>
           Calculate Score & Award Badge
         </Text>
 
@@ -178,7 +178,7 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
           accessibilityLabel="Select Place or Entity Dropdown Menu"
           accessibilityState={{ expanded: isDropdownOpen }}
           style={{
-            backgroundColor: '#334155',
+            backgroundColor: '#f7f9fc',
             paddingHorizontal: 14,
             paddingVertical: 12,
             minHeight: 44,
@@ -187,11 +187,11 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
             alignItems: 'center',
             justifyContent: 'space-between',
             borderWidth: 1,
-            borderColor: isDropdownOpen ? (highContrast ? '#ffff00' : '#2563eb') : '#475569',
+            borderColor: isDropdownOpen ? (highContrast ? '#ffff00' : '#1877f2') : '#dfe3ea',
             marginBottom: isDropdownOpen ? 4 : 12,
           }}
         >
-          <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '700', flex: 1 }}>
+          <Text style={{ color: highContrast ? '#ffffff' : '#172033', fontSize: 13, fontWeight: '700', flex: 1 }}>
             📍 {MOBILE_PLACES.find((p) => p.id === selectedPlaceId)?.name || entityName || 'Select a place...'}
           </Text>
           <Text style={{ color: highContrast ? '#ffff00' : '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>
@@ -203,7 +203,7 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
         {isDropdownOpen && (
           <View
             style={{
-              backgroundColor: '#0f172a',
+              backgroundColor: '#ffffff',
               borderWidth: 1,
               borderColor: '#475569',
               borderRadius: 10,
@@ -231,15 +231,15 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
                     paddingHorizontal: 14,
                     paddingVertical: 12,
                     minHeight: 44,
-                    backgroundColor: isSelected ? (highContrast ? '#003300' : '#2563eb') : (index % 2 === 0 ? '#1e293b' : '#0f172a'),
+                    backgroundColor: isSelected ? (highContrast ? '#003300' : '#1877f2') : (index % 2 === 0 ? '#ffffff' : '#f7f9fc'),
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     borderBottomWidth: index < MOBILE_PLACES.length - 1 ? 1 : 0,
-                    borderBottomColor: '#334155',
+                    borderBottomColor: '#e4e7ec',
                   }}
                 >
-                  <Text style={{ color: isSelected ? '#ffffff' : '#e2e8f0', fontSize: 12, fontWeight: isSelected ? '800' : '600' }}>
+                  <Text style={{ color: isSelected ? '#ffffff' : '#344054', fontSize: 12, fontWeight: isSelected ? '800' : '600' }}>
                     {p.name}
                   </Text>
                   {isSelected && <Text style={{ color: '#4ade80', fontWeight: 'bold' }}>✓ Selected</Text>}
@@ -256,8 +256,8 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
             placeholder="Enter custom place or vendor name..."
             placeholderTextColor="#94a3b8"
             style={{
-              backgroundColor: '#0f172a',
-              color: '#ffffff',
+              backgroundColor: '#f7f9fc',
+              color: '#172033',
               borderWidth: 1,
               borderColor: '#475569',
               paddingHorizontal: 12,
@@ -328,7 +328,7 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
         ))}
 
         {/* Score Summary Box */}
-        <View style={{ backgroundColor: '#0f172a', padding: 12, borderRadius: 12, marginTop: 8, marginBottom: 12 }}>
+        <View style={{ backgroundColor: '#f7f9fc', padding: 12, borderRadius: 12, marginTop: 8, marginBottom: 12 }}>
           <Text style={{ color: '#38bdf8', fontSize: 13, fontWeight: 'bold' }}>
             Overall Score: {currentScore.overallScore.toFixed(1)} / 5.0 ({currentScore.percentage}%)
           </Text>
@@ -363,7 +363,7 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
       </View>
 
       {/* Badges List (AC-90) */}
-      <Text style={{ fontSize: 14, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#ffffff', marginBottom: 8 }}>
+      <Text style={{ fontSize: 14, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#172033', marginBottom: 8 }}>
         Awarded & Evaluated Badges ({badges.length})
       </Text>
 
@@ -371,7 +371,7 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
         <View
           key={b.id}
           style={{
-            backgroundColor: highContrast ? '#111111' : '#1e293b',
+            backgroundColor: highContrast ? '#111111' : '#ffffff',
             padding: 12,
             borderRadius: 12,
             marginBottom: 8,
@@ -380,7 +380,7 @@ export const MobileAccessibilityBadgeManager: React.FC<MobileAccessibilityBadgeM
           }}
         >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#ffffff' }}>♿ {b.badgeType}</Text>
+            <Text style={{ fontSize: 13, fontWeight: 'bold', color: highContrast ? '#ffffff' : '#172033' }}>♿ {b.badgeType}</Text>
             <Text style={{ fontSize: 10, fontWeight: 'bold', color: b.status === 'awarded' ? '#34d399' : '#f87171' }}>
               {b.status.toUpperCase()}
             </Text>

@@ -145,7 +145,7 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
           style={{
             flex: 1,
             minWidth: '45%',
-            backgroundColor: highContrast ? '#111111' : '#1e293b',
+            backgroundColor: highContrast ? '#111111' : '#ffffff',
             padding: 12,
             borderRadius: 12,
             borderLeftWidth: 4,
@@ -167,7 +167,7 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
           style={{
             flex: 1,
             minWidth: '45%',
-            backgroundColor: highContrast ? '#111111' : '#1e293b',
+            backgroundColor: highContrast ? '#111111' : '#ffffff',
             padding: 12,
             borderRadius: 12,
             borderLeftWidth: 4,
@@ -188,7 +188,7 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
           style={{
             flex: 1,
             minWidth: '45%',
-            backgroundColor: highContrast ? '#111111' : '#1e293b',
+            backgroundColor: highContrast ? '#111111' : '#ffffff',
             padding: 12,
             borderRadius: 12,
             borderLeftWidth: 4,
@@ -209,7 +209,7 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
           style={{
             flex: 1,
             minWidth: '45%',
-            backgroundColor: highContrast ? '#111111' : '#1e293b',
+            backgroundColor: highContrast ? '#111111' : '#ffffff',
             padding: 12,
             borderRadius: 12,
             borderLeftWidth: 4,
@@ -229,13 +229,13 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
       {/* Filter Controls (AC-67) */}
       <View
         style={{
-          backgroundColor: highContrast ? '#111111' : '#1e293b',
+          backgroundColor: highContrast ? '#111111' : '#ffffff',
           padding: 14,
           borderRadius: 16,
           marginBottom: 16,
         }}
       >
-        <Text style={{ fontSize: 13, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#ffffff', marginBottom: 10 }}>
+        <Text style={{ fontSize: 13, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#172033', marginBottom: 10 }}>
           Filter Sales Reports (AC-67)
         </Text>
 
@@ -344,13 +344,13 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
       {/* Monthly Sales Graph (AC-66) */}
       <View
         style={{
-          backgroundColor: highContrast ? '#111111' : '#1e293b',
+          backgroundColor: highContrast ? '#111111' : '#ffffff',
           padding: 14,
           borderRadius: 16,
           marginBottom: 16,
         }}
       >
-        <Text style={{ fontSize: 13, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#ffffff', marginBottom: 12 }}>
+        <Text style={{ fontSize: 13, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#172033', marginBottom: 12 }}>
           Monthly Sales Timeline (AC-66)
         </Text>
 
@@ -394,13 +394,13 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
       {/* Category Market Share Breakdown (Mobile) */}
       <View
         style={{
-          backgroundColor: highContrast ? '#111111' : '#1e293b',
+          backgroundColor: highContrast ? '#111111' : '#ffffff',
           padding: 14,
           borderRadius: 16,
           marginBottom: 16,
         }}
       >
-        <Text style={{ fontSize: 13, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#ffffff', marginBottom: 12 }}>
+        <Text style={{ fontSize: 13, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#172033', marginBottom: 12 }}>
           Category Market Share Breakdown
         </Text>
 
@@ -431,13 +431,13 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
       {/* Filtered Sales Ledger Table / List */}
       <View
         style={{
-          backgroundColor: highContrast ? '#111111' : '#1e293b',
+          backgroundColor: highContrast ? '#111111' : '#ffffff',
           padding: 14,
           borderRadius: 16,
           marginBottom: 16,
         }}
       >
-        <Text style={{ fontSize: 13, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#ffffff', marginBottom: 10 }}>
+        <Text style={{ fontSize: 13, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#172033', marginBottom: 10 }}>
           Sales Transactions Ledger ({transactions.length})
         </Text>
 
@@ -454,7 +454,7 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
               <View
                 key={t.id}
                 style={{
-                  backgroundColor: '#0f172a',
+                  backgroundColor: '#f7f9fc',
                   padding: 10,
                   borderRadius: 10,
                   borderLeftWidth: 3,
@@ -462,7 +462,7 @@ export const MobileSalesAnalyticsDashboard: React.FC<MobileSalesAnalyticsDashboa
                 }}
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#ffffff' }}>{t.productTitle}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#172033' }}>{t.productTitle}</Text>
                   <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#34d399' }}>
                     LKR {t.amount.toLocaleString()}
                   </Text>

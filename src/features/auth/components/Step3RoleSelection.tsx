@@ -70,7 +70,7 @@ export const Step3RoleSelection: React.FC = () => {
     <ScrollView contentContainerStyle={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.badge, { color: highContrast ? '#ffff00' : '#0d9488' }]}>
+        <Text style={[styles.badge, { color: highContrast ? '#ffff00' : '#1877f2' }]}>
           STEP 3 OF 4
         </Text>
         <Text style={[styles.title, { fontSize: titleFontSize, color: highContrast ? '#ffffff' : '#0f172a' }]}>
@@ -104,8 +104,8 @@ export const Step3RoleSelection: React.FC = () => {
       </View>
 
       {/* Conditional Sub-section: Accessibility Accommodation Presets */}
-      <View style={[styles.accommodationBox, { borderColor: highContrast ? '#ffff00' : '#0d9488' }]}>
-        <Text style={[styles.sectionTitle, { fontSize: sectionTitleFontSize, color: highContrast ? '#ffff00' : '#0d9488' }]}>
+      <View style={[styles.accommodationBox, { borderColor: highContrast ? '#ffff00' : '#1877f2' }]}>
+        <Text style={[styles.sectionTitle, { fontSize: sectionTitleFontSize, color: highContrast ? '#ffff00' : '#1877f2' }]}>
           ♿ Accessibility Accommodations {isPwdUser ? '(Recommended for PWD)' : '(Optional)'}:
         </Text>
         <Text style={styles.sectionDesc}>

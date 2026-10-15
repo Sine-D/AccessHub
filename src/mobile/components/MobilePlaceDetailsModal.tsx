@@ -103,7 +103,7 @@ export function MobilePlaceDetailsModal({ onClose, place, theme, userCoordinate 
         </View>
 
         <TouchableOpacity accessibilityRole="link" accessibilityHint="Opens your maps app with walking directions. Confirm route accessibility before travelling." onPress={() => void openDirections()} style={[styles.directions, { backgroundColor: theme.accent }]}>
-          <Text style={styles.directionsText}>Open route in Maps</Text>
+          <Text style={styles.directionsText}>Get accessible directions</Text>
         </TouchableOpacity>
         <Text style={{ color: theme.subText, marginTop: 6 }}>
           {userCoordinate ? 'Starting from your current location.' : 'Your maps app will choose the starting location.'}

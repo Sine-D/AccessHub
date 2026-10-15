@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { ReviewForm } from './components/reviews/ReviewForm';
 import { MobileCheckoutModal } from './components/MobileCheckoutModal';
 import { addReview, getReviewsForLocation } from './mock/reviews';
@@ -81,6 +83,20 @@ type MobileTab =
   | 'profile'
   | 'bookedProviders';
 
+type AdminTab = 'vendors' | 'listings' | 'reviews' | 'freelancers' | 'accounts' | 'bookings' | 'badges' | 'analytics' | 'compliance';
+
+const ADMIN_TABS: Array<{ id: AdminTab; label: string; icon: string }> = [
+  { id: 'vendors', label: 'Vendors', icon: 'business-outline' },
+  { id: 'listings', label: 'Listings', icon: 'storefront-outline' },
+  { id: 'freelancers', label: 'Talent', icon: 'people-outline' },
+  { id: 'bookings', label: 'Bookings', icon: 'card-outline' },
+  { id: 'reviews', label: 'Safety', icon: 'shield-checkmark-outline' },
+  { id: 'badges', label: 'Badges', icon: 'ribbon-outline' },
+  { id: 'accounts', label: 'Accounts', icon: 'wallet-outline' },
+  { id: 'analytics', label: 'Analytics', icon: 'bar-chart-outline' },
+  { id: 'compliance', label: 'Compliance', icon: 'checkmark-circle-outline' },
+];
+
 export default function AppMobile() {
   const { userRole, setUserRole, currentUser, setCurrentUser, setActiveScreen, bookingRequests, addBookingRequest } = useAppState();
   const isAdmin = userRole === 'admin' || currentUser?.role === 'admin';
@@ -149,7 +165,7 @@ export default function AppMobile() {
   const [bookingHours, setBookingHours] = useState('2');
   const [bookingPaymentOption, setBookingPaymentOption] = useState<'50_50' | 'full'>('50_50');
   const [bookingSuccessAlert, setBookingSuccessAlert] = useState(false);
-  const [adminTab, setAdminTab] = useState<'vendors' | 'listings' | 'reviews' | 'freelancers' | 'accounts' | 'bookings' | 'badges' | 'analytics' | 'compliance'>('vendors');
+  const [adminTab, setAdminTab] = useState<AdminTab>('vendors');
   const [mobileUsers, setMobileUsers] = useState<any[]>([]);
   const [selectedMobileProfile, setSelectedMobileProfile] = useState<any | null>(null);
 
@@ -924,12 +940,13 @@ export default function AppMobile() {
     );
   };
 
-  const themeBg = highContrast ? '#000000' : '#0f172a';
-  const cardBg = highContrast ? '#111111' : '#1e293b';
-  const textColor = highContrast ? '#ffff00' : '#f8fafc';
-  const subTextColor = highContrast ? '#ffffff' : '#94a3b8';
-  const accentColor = highContrast ? '#ffff00' : '#38bdf8';
-  const primaryButtonBg = highContrast ? '#ffff00' : '#2563eb';
+  // 60 / 30 / 10 visual balance: canvas / surfaces / brand actions.
+  const themeBg = highContrast ? '#000000' : '#f3f5f9';
+  const cardBg = highContrast ? '#111111' : '#ffffff';
+  const textColor = highContrast ? '#ffff00' : '#172033';
+  const subTextColor = highContrast ? '#ffffff' : '#667085';
+  const accentColor = highContrast ? '#ffff00' : '#1877f2';
+  const primaryButtonBg = highContrast ? '#ffff00' : '#1877f2';
   const primaryButtonText = highContrast ? '#000000' : '#ffffff';
 
   if (activeTab === 'splash') {
@@ -977,18 +994,18 @@ export default function AppMobile() {
         <SafeAreaView
           style={{
             flex: 1,
-            backgroundColor: '#ffffff',
+            backgroundColor: '#f6f8fc',
           }}
         >
           <StatusBar
             barStyle="dark-content"
-            backgroundColor="#ffffff"
+            backgroundColor="#f6f8fc"
           />
 
           <View
             style={{
               flex: 1,
-              backgroundColor: '#ffffff',
+              backgroundColor: '#f6f8fc',
               justifyContent: 'space-between',
               alignItems: 'center',
               paddingHorizontal: 24,
@@ -1001,13 +1018,22 @@ export default function AppMobile() {
                 justifyContent: 'center',
                 alignItems: 'center',
                 width: '100%',
+                backgroundColor: '#ffffff',
+                borderRadius: 32,
+                paddingHorizontal: 20,
+                paddingVertical: 26,
+                shadowColor: '#0f172a',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.08,
+                shadowRadius: 24,
+                elevation: 4,
               }}
             >
               <Image
                 source={require('./assets/images/Onboarding.png')}
                 style={{
-                  width: 280,
-                  height: 280,
+                  width: 250,
+                  height: 250,
                   resizeMode: 'contain',
                   marginBottom: 24,
                 }}
@@ -1057,12 +1083,12 @@ export default function AppMobile() {
 
             <TouchableOpacity
               style={{
-                backgroundColor: '#0d9488',
+                backgroundColor: '#1877f2',
                 paddingVertical: 16,
                 borderRadius: 20,
                 width: '90%',
                 alignItems: 'center',
-                shadowColor: '#0d9488',
+                shadowColor: '#1877f2',
                 shadowOffset: {
                   width: 0,
                   height: 4,
@@ -1095,12 +1121,12 @@ export default function AppMobile() {
         <SafeAreaView
           style={{
             flex: 1,
-            backgroundColor: '#ffffff',
+            backgroundColor: '#f6f8fc',
           }}
         >
           <StatusBar
             barStyle="dark-content"
-            backgroundColor="#ffffff"
+            backgroundColor="#f6f8fc"
           />
 
           <ScrollView
@@ -1110,6 +1136,7 @@ export default function AppMobile() {
               alignItems: 'center',
               paddingHorizontal: 24,
               paddingVertical: 40,
+              backgroundColor: '#f6f8fc',
             }}
           >
             <View
@@ -1121,8 +1148,8 @@ export default function AppMobile() {
               <Image
                 source={require('./assets/images/signup_login.jpg')}
                 style={{
-                  width: 280,
-                  height: 260,
+                  width: 245,
+                  height: 225,
                   resizeMode: 'contain',
                   marginBottom: 20,
                 }}
@@ -1156,13 +1183,13 @@ export default function AppMobile() {
 
               <TouchableOpacity
                 style={{
-                  backgroundColor: '#0d9488',
+                  backgroundColor: '#1877f2',
                   paddingVertical: 16,
                   borderRadius: 20,
                   width: '90%',
                   alignItems: 'center',
                   marginBottom: 12,
-                  shadowColor: '#0d9488',
+                  shadowColor: '#1877f2',
                   shadowOffset: {
                     width: 0,
                     height: 4,
@@ -1386,7 +1413,7 @@ export default function AppMobile() {
                   onPress={handleMobileLogin}
                   disabled={isLoggingIn}
                   style={{
-                    backgroundColor: '#0d9488',
+                    backgroundColor: '#1877f2',
                     paddingVertical: 14,
                     borderRadius: 14,
                     alignItems: 'center',
@@ -1437,7 +1464,7 @@ export default function AppMobile() {
         ]}
       >
         <StatusBar
-          barStyle="light-content"
+          barStyle={highContrast ? 'light-content' : 'dark-content'}
           backgroundColor={themeBg}
         />
 
@@ -1448,14 +1475,19 @@ export default function AppMobile() {
             {
               backgroundColor: highContrast
                 ? '#000'
-                : '#1e293b',
+                : '#ffffff',
             },
           ]}
         >
           <View style={styles.brandRow}>
-            <View style={styles.logoBadge}>
-              <Text style={styles.logoText}>A</Text>
-            </View>
+            <LinearGradient
+              colors={highContrast ? ['#ffff00', '#ffff00'] : ['#6366f1', '#14b8a6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.logoBadge}
+            >
+              <Ionicons name="accessibility" size={20} color={highContrast ? '#000' : '#fff'} />
+            </LinearGradient>
 
             <View>
               <Text
@@ -1479,7 +1511,7 @@ export default function AppMobile() {
                   },
                 ]}
               >
-                Inclusive Mobile Ecosystem
+                Access without limits
               </Text>
             </View>
           </View>
@@ -1491,23 +1523,13 @@ export default function AppMobile() {
                 {
                   backgroundColor: highContrast
                     ? '#ffff00'
-                    : '#0d9488',
+                    : '#1877f2',
                 },
               ]}
               onPress={() => setAiModalVisible(true)}
             >
-              <Text
-                style={[
-                  styles.aiButtonText,
-                  {
-                    color: highContrast
-                      ? '#000'
-                      : '#fff',
-                  },
-                ]}
-              >
-                ✨ AI Hub
-              </Text>
+              <Ionicons name="sparkles" size={15} color={highContrast ? '#000' : '#fff'} />
+              <Text style={[styles.aiButtonText, { color: highContrast ? '#000' : '#fff' }]}>Ask AI</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1516,16 +1538,14 @@ export default function AppMobile() {
                 {
                   backgroundColor: highContrast
                     ? '#ff0000'
-                    : '#dc2626',
+                    : '#eef2f7',
                 },
               ]}
               onPress={handleLogout}
               accessibilityRole="button"
               accessibilityLabel="Log out of application"
             >
-              <Text style={styles.logoutButtonText}>
-                🚪 Logout
-              </Text>
+              <Ionicons name="log-out-outline" size={18} color={highContrast ? '#ffffff' : '#475467'} />
             </TouchableOpacity>
           </View>
         </View>
@@ -1537,7 +1557,7 @@ export default function AppMobile() {
             {
               backgroundColor: highContrast
                 ? '#222'
-                : '#334155',
+                : '#ffffff',
             },
           ]}
         >
@@ -1557,9 +1577,8 @@ export default function AppMobile() {
               );
             }}
           >
-            <Text style={styles.a11yChipText}>
-              🔊 {ttsActive ? 'TTS ON' : 'TTS'}
-            </Text>
+            <Ionicons name="volume-high-outline" size={15} color={ttsActive ? '#ffffff' : (highContrast ? '#ffffff' : '#475467')} />
+            <Text style={[styles.a11yChipText, ttsActive && styles.a11yChipTextActive]}>{ttsActive ? 'Audio on' : 'Audio'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1571,12 +1590,8 @@ export default function AppMobile() {
               setHighContrast(!highContrast)
             }
           >
-            <Text style={styles.a11yChipText}>
-              👁️{' '}
-              {highContrast
-                ? 'Contrast ON'
-                : 'Contrast'}
-            </Text>
+            <Ionicons name="contrast-outline" size={15} color={highContrast ? '#000' : '#475467'} />
+            <Text style={[styles.a11yChipText, highContrast && styles.a11yChipTextActive]}>{highContrast ? 'Contrast on' : 'Contrast'}</Text>
           </TouchableOpacity>
 
           <View style={styles.scaleGroup}>
@@ -1590,7 +1605,7 @@ export default function AppMobile() {
                 ]}
                 onPress={() => setFontScale(s)}
               >
-                <Text style={styles.scaleBtnText}>
+                <Text style={[styles.scaleBtnText, fontScale === s && styles.scaleBtnTextActive]}>
                   {s.toUpperCase()}
                 </Text>
               </TouchableOpacity>
@@ -1606,19 +1621,18 @@ export default function AppMobile() {
           {/* HOME */}
           {activeTab === 'home' && (
             <View>
-              <View
-                style={[
-                  styles.heroCard,
-                  {
-                    backgroundColor: cardBg,
-                  },
-                ]}
+              <LinearGradient
+                colors={highContrast ? ['#111111', '#111111'] : ['#1877f2', '#5856d6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.heroCard}
               >
+                <View style={styles.heroGlow} />
                 <Text
                   style={[
                     styles.heroBadge,
                     {
-                      color: accentColor,
+                      color: highContrast ? accentColor : '#dbeafe',
                     },
                   ]}
                 >
@@ -1630,7 +1644,7 @@ export default function AppMobile() {
                     styles.heroTitle,
                     dynamicText(20),
                     {
-                      color: textColor,
+                      color: highContrast ? textColor : '#ffffff',
                     },
                   ]}
                 >
@@ -1642,7 +1656,7 @@ export default function AppMobile() {
                     styles.heroSub,
                     dynamicText(12),
                     {
-                      color: subTextColor,
+                      color: highContrast ? subTextColor : '#e8efff',
                     },
                   ]}
                 >
@@ -1656,7 +1670,7 @@ export default function AppMobile() {
                       style={[
                         styles.statValue,
                         {
-                          color: accentColor,
+                          color: highContrast ? accentColor : '#ffffff',
                         },
                       ]}
                     >
@@ -1672,7 +1686,7 @@ export default function AppMobile() {
                       style={[
                         styles.statLabel,
                         {
-                          color: subTextColor,
+                          color: highContrast ? subTextColor : '#dbeafe',
                         },
                       ]}
                     >
@@ -1685,7 +1699,7 @@ export default function AppMobile() {
                       style={[
                         styles.statValue,
                         {
-                          color: accentColor,
+                          color: highContrast ? accentColor : '#ffffff',
                         },
                       ]}
                     >
@@ -1696,7 +1710,7 @@ export default function AppMobile() {
                       style={[
                         styles.statLabel,
                         {
-                          color: subTextColor,
+                          color: highContrast ? subTextColor : '#dbeafe',
                         },
                       ]}
                     >
@@ -1709,7 +1723,7 @@ export default function AppMobile() {
                       style={[
                         styles.statValue,
                         {
-                          color: accentColor,
+                          color: highContrast ? accentColor : '#ffffff',
                         },
                       ]}
                     >
@@ -1720,7 +1734,7 @@ export default function AppMobile() {
                       style={[
                         styles.statLabel,
                         {
-                          color: subTextColor,
+                          color: highContrast ? subTextColor : '#dbeafe',
                         },
                       ]}
                     >
@@ -1728,7 +1742,7 @@ export default function AppMobile() {
                     </Text>
                   </View>
                 </View>
-              </View>
+              </LinearGradient>
 
               <Text
                 style={[
@@ -1739,7 +1753,7 @@ export default function AppMobile() {
                   },
                 ]}
               >
-                🚀 Inclusive Suite
+                Explore AccessHub
               </Text>
 
               <View style={styles.quickGrid}>
@@ -1754,9 +1768,9 @@ export default function AppMobile() {
                     setActiveTab('marketplace')
                   }
                 >
-                  <Text style={styles.quickIcon}>
-                    🛒
-                  </Text>
+                  <View style={[styles.quickIconWrap, { backgroundColor: '#e8f1ff' }]}>
+                    <Ionicons name="bag-handle-outline" size={23} color="#1877f2" />
+                  </View>
 
                   <Text
                     style={[
@@ -1782,9 +1796,9 @@ export default function AppMobile() {
                     setActiveTab('services')
                   }
                 >
-                  <Text style={styles.quickIcon}>
-                    🤝
-                  </Text>
+                  <View style={[styles.quickIconWrap, { backgroundColor: '#e9fbf5' }]}>
+                    <Ionicons name="people-outline" size={23} color="#079669" />
+                  </View>
 
                   <Text
                     style={[
@@ -1810,9 +1824,9 @@ export default function AppMobile() {
                     setActiveTab('jobs')
                   }
                 >
-                  <Text style={styles.quickIcon}>
-                    💼
-                  </Text>
+                  <View style={[styles.quickIconWrap, { backgroundColor: '#fff7e6' }]}>
+                    <Ionicons name="briefcase-outline" size={23} color="#d97706" />
+                  </View>
 
                   <Text
                     style={[
@@ -1838,9 +1852,9 @@ export default function AppMobile() {
                     setActiveTab('map')
                   }
                 >
-                  <Text style={styles.quickIcon}>
-                    🗺️
-                  </Text>
+                  <View style={[styles.quickIconWrap, { backgroundColor: '#f2ebff' }]}>
+                    <Ionicons name="map-outline" size={23} color="#7c3aed" />
+                  </View>
 
                   <Text
                     style={[
@@ -1865,71 +1879,64 @@ export default function AppMobile() {
                   },
                 ]}
               >
-                ✨ Featured Assistive Tech
+                Featured for you
               </Text>
 
               {mockProducts.slice(0, 2).map((item) => (
                 <View
                   key={item.id}
-                  style={[
-                    styles.productCard,
-                    {
-                      backgroundColor: cardBg,
-                    },
-                  ]}
+                  style={[styles.homeFeedCard, { backgroundColor: cardBg }]}
                 >
+                  <View style={styles.homeFeedHeader}>
+                    <Image source={{ uri: item.sellerAvatar }} style={styles.homeFeedAvatar} />
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.homeFeedSellerRow}>
+                        <Text style={[styles.homeFeedSeller, { color: textColor }]}>{item.sellerName}</Text>
+                        <Ionicons name="checkmark-circle" size={14} color="#1877f2" />
+                      </View>
+                      <Text style={[styles.homeFeedMeta, { color: subTextColor }]}>{item.distanceKm} km away · Accessible seller</Text>
+                    </View>
+                    <TouchableOpacity accessibilityLabel={`More options for ${item.title}`} style={styles.homeFeedMore}>
+                      <Ionicons name="ellipsis-horizontal" size={20} color={subTextColor} />
+                    </TouchableOpacity>
+                  </View>
+
                   <Image
                     source={{ uri: item.image }}
-                    style={styles.productImg}
+                    style={styles.homeFeedImage}
                   />
 
-                  <View style={styles.productBody}>
-                    <Text
-                      style={[
-                        styles.badgeTag,
-                        {
-                          color: accentColor,
-                        },
-                      ]}
+                  <View style={styles.homeFeedActions}>
+                    <View style={styles.homeFeedActionGroup}>
+                      <TouchableOpacity accessibilityLabel={`Like ${item.title}`}><Ionicons name="heart-outline" size={24} color={textColor} /></TouchableOpacity>
+                      <TouchableOpacity accessibilityLabel={`Share ${item.title}`}><Ionicons name="paper-plane-outline" size={23} color={textColor} /></TouchableOpacity>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.homeFeedOrderButton}
+                      onPress={() => {
+                        setCheckoutProduct(item);
+                        setCheckoutModalVisible(true);
+                      }}
                     >
-                      ♿ {item.disabilityBadge}
-                    </Text>
+                      <Text style={styles.homeFeedOrderText}>Order now</Text>
+                    </TouchableOpacity>
+                  </View>
 
+                  <View style={styles.homeFeedBody}>
+                    <Text style={[styles.homeFeedBadge, { color: accentColor }]}>♿ {item.disabilityBadge}</Text>
                     <Text
                       style={[
-                        styles.productTitle,
+                        styles.homeFeedTitle,
                         dynamicText(14),
-                        {
-                          color: textColor,
-                        },
+                        { color: textColor },
                       ]}
                     >
                       {item.title}
                     </Text>
-
-                    <Text
-                      style={[
-                        styles.productPrice,
-                        dynamicText(15),
-                        {
-                          color: accentColor,
-                        },
-                      ]}
-                    >
-                      LKR {item.price.toLocaleString()}
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.sellerName,
-                        dynamicText(11),
-                        {
-                          color: subTextColor,
-                        },
-                      ]}
-                    >
-                      By {item.sellerName}
-                    </Text>
+                    <View style={styles.homeFeedPriceRow}>
+                      <Text style={[styles.homeFeedPrice, { color: textColor }]}>LKR {item.price.toLocaleString()}</Text>
+                      <Text style={[styles.homeFeedRating, { color: subTextColor }]}>★ {item.sellerRating} · {item.reviewsCount} reviews</Text>
+                    </View>
                   </View>
                 </View>
               ))}
@@ -3945,6 +3952,7 @@ export default function AppMobile() {
                   },
                 ]}
               >
+                <LinearGradient colors={['#1877f2', '#8b5cf6', '#ec4899']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.profileCover} />
                 <Image
                   source={{
                     uri: mockCurrentUser.avatar,
@@ -3990,6 +3998,23 @@ export default function AppMobile() {
                 >
                   {mockCurrentUser.bio}
                 </Text>
+
+                <View style={styles.profileSocialStats}>
+                  <View style={styles.profileSocialStat}>
+                    <Text style={[styles.profileSocialValue, { color: textColor }]}>{mockCurrentUser.totalOrders ?? 0}</Text>
+                    <Text style={[styles.profileSocialLabel, { color: subTextColor }]}>Orders</Text>
+                  </View>
+                  <View style={styles.profileSocialDivider} />
+                  <View style={styles.profileSocialStat}>
+                    <Text style={[styles.profileSocialValue, { color: textColor }]}>{mockCurrentUser.rating}</Text>
+                    <Text style={[styles.profileSocialLabel, { color: subTextColor }]}>Rating</Text>
+                  </View>
+                  <View style={styles.profileSocialDivider} />
+                  <View style={styles.profileSocialStat}>
+                    <Text style={[styles.profileSocialValue, { color: textColor }]}>Verified</Text>
+                    <Text style={[styles.profileSocialLabel, { color: subTextColor }]}>Status</Text>
+                  </View>
+                </View>
 
                 <TouchableOpacity
                   style={{
@@ -4086,246 +4111,50 @@ export default function AppMobile() {
                 </TouchableOpacity>
               </View>
             ) : (
-              <View style={{ padding: 16 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <Text
-                    style={[
-                      styles.sectionTitle,
-                      dynamicText(18),
-                      { color: textColor },
-                    ]}
-                  >
-                    🛡️ Admin Dashboard
-                  </Text>
-                  <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                    <TouchableOpacity
-                      onPress={() => setAdminTab(adminTab === 'accounts' ? 'freelancers' : 'accounts')}
-                      style={{
-                        backgroundColor: adminTab === 'accounts' ? '#f59e0b' : 'rgba(245, 158, 11, 0.2)',
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: 12,
-                        borderColor: '#f59e0b',
-                        borderWidth: 1,
-                      }}
-                    >
-                      <Text style={{ color: adminTab === 'accounts' ? '#000' : '#f59e0b', fontSize: 11, fontWeight: 'bold' }}>
-                        📊 Account Dashboard
-                      </Text>
-                    </TouchableOpacity>
-
-                    <View style={{ backgroundColor: '#0284c7', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }}>
-                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
-                        {mobilePendingApps.length} Pending
-                      </Text>
-                    </View>
+              <View style={styles.adminPage}>
+                <LinearGradient
+                  colors={highContrast ? ['#111111', '#111111'] : ['#172554', '#1877f2']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.adminHero}
+                >
+                  <View style={styles.adminHeroIcon}>
+                    <Ionicons name="shield-checkmark" size={25} color="#ffffff" />
                   </View>
-                </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.adminEyebrow}>ACCESSHUB OPERATIONS</Text>
+                    <Text style={styles.adminTitle}>Control center</Text>
+                    <Text style={styles.adminSubtitle}>Trust, safety and marketplace health in one place.</Text>
+                  </View>
+                  <View style={styles.adminPendingPill}>
+                    <Text style={styles.adminPendingValue}>{mobilePendingApps.length}</Text>
+                    <Text style={styles.adminPendingLabel}>Pending</Text>
+                  </View>
+                </LinearGradient>
 
               {/* Sub-Tab Navigation Bar */}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
-                style={{ marginBottom: 16 }}
+                contentContainerStyle={styles.adminTabsContent}
+                style={styles.adminTabs}
               >
-                <TouchableOpacity
-                  onPress={() => setAdminTab('vendors')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Admin tab Vendors"
-                  accessibilityState={{ selected: adminTab === 'vendors' }}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    minHeight: 44,
-                    borderRadius: 14,
-                    backgroundColor: adminTab === 'vendors' ? '#6366f1' : cardBg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderColor: '#6366f1',
-                    borderWidth: 1,
-                  }}
-                >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
-                    🏢 Vendors
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setAdminTab('listings')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Admin tab Listings"
-                  accessibilityState={{ selected: adminTab === 'listings' }}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    minHeight: 44,
-                    borderRadius: 14,
-                    backgroundColor: adminTab === 'listings' ? '#38bdf8' : cardBg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderColor: '#38bdf8',
-                    borderWidth: 1,
-                  }}
-                >
-                  <Text style={{ color: adminTab === 'listings' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 12 }}>
-                    🛍️ Listings
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setAdminTab('freelancers')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Admin tab Freelancers"
-                  accessibilityState={{ selected: adminTab === 'freelancers' }}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    minHeight: 44,
-                    borderRadius: 14,
-                    backgroundColor: adminTab === 'freelancers' ? '#0284c7' : cardBg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderColor: '#0284c7',
-                    borderWidth: 1,
-                  }}
-                >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
-                    🛠️ Freelancers
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setAdminTab('bookings')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Admin tab Bookings"
-                  accessibilityState={{ selected: adminTab === 'bookings' }}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    minHeight: 44,
-                    borderRadius: 14,
-                    backgroundColor: adminTab === 'bookings' ? '#10b981' : cardBg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderColor: '#10b981',
-                    borderWidth: 1,
-                  }}
-                >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
-                    💳 Bookings
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setAdminTab('reviews')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Admin tab Fraud Queue"
-                  accessibilityState={{ selected: adminTab === 'reviews' }}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    minHeight: 44,
-                    borderRadius: 14,
-                    backgroundColor: adminTab === 'reviews' ? '#ef4444' : cardBg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderColor: '#ef4444',
-                    borderWidth: 1,
-                  }}
-                >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
-                    🚨 Fraud Queue
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setAdminTab('badges')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Admin tab Accessibility Badges"
-                  accessibilityState={{ selected: adminTab === 'badges' }}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    minHeight: 44,
-                    borderRadius: 14,
-                    backgroundColor: adminTab === 'badges' ? '#0d9488' : cardBg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderColor: '#0d9488',
-                    borderWidth: 1,
-                  }}
-                >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
-                    🏅 Badges
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setAdminTab('accounts')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Admin tab Account Verification"
-                  accessibilityState={{ selected: adminTab === 'accounts' }}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    minHeight: 44,
-                    borderRadius: 14,
-                    backgroundColor: adminTab === 'accounts' ? '#f59e0b' : cardBg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderColor: '#f59e0b',
-                    borderWidth: 1,
-                  }}
-                >
-                  <Text style={{ color: adminTab === 'accounts' ? '#000' : '#fff', fontWeight: 'bold', fontSize: 12 }}>
-                    📊 Account
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setAdminTab('analytics')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Admin tab Sales Analytics"
-                  accessibilityState={{ selected: adminTab === 'analytics' }}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    minHeight: 44,
-                    borderRadius: 14,
-                    backgroundColor: adminTab === 'analytics' ? '#0284c7' : cardBg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderColor: '#0284c7',
-                    borderWidth: 1,
-                  }}
-                >
-                  <Text style={{ color: adminTab === 'analytics' ? '#fff' : '#94a3b8', fontWeight: 'bold', fontSize: 12 }}>
-                    📈 Sales
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setAdminTab('compliance')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Admin tab Compliance Monitoring"
-                  accessibilityState={{ selected: adminTab === 'compliance' }}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    minHeight: 44,
-                    borderRadius: 14,
-                    backgroundColor: adminTab === 'compliance' ? '#10b981' : cardBg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderColor: '#10b981',
-                    borderWidth: 1,
-                  }}
-                >
-                  <Text style={{ color: adminTab === 'compliance' ? '#fff' : '#94a3b8', fontWeight: 'bold', fontSize: 12 }}>
-                    ✅ Compliance
-                  </Text>
-                </TouchableOpacity>
+                {ADMIN_TABS.map((item) => {
+                  const selected = adminTab === item.id;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      onPress={() => setAdminTab(item.id)}
+                      accessibilityRole="tab"
+                      accessibilityLabel={`Admin tab ${item.label}`}
+                      accessibilityState={{ selected }}
+                      style={[styles.adminTab, selected && styles.adminTabActive]}
+                    >
+                      <Ionicons name={item.icon as any} size={17} color={selected ? '#ffffff' : '#667085'} />
+                      <Text style={[styles.adminTabLabel, selected && styles.adminTabLabelActive]}>{item.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
 
                 {/* ACCESSIBILITY BADGES MANAGER (AC-86 to AC-90) */}
@@ -4357,7 +4186,7 @@ export default function AppMobile() {
 
                     {/* Financial Stats Grid */}
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                      <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
+                      <View style={[styles.adminMetricCard, { backgroundColor: cardBg }]}>
                         <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Total Buyers</Text>
                         <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', marginTop: 2 }}>
                           {mobileUsers.filter(u => (u.role || '').toLowerCase() === 'buyer').length || mobileUsers.length}
@@ -4365,7 +4194,7 @@ export default function AppMobile() {
                         <Text style={{ color: '#34d399', fontSize: 10, marginTop: 2 }}>● Supabase Synced</Text>
                       </View>
 
-                      <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
+                      <View style={[styles.adminMetricCard, { backgroundColor: cardBg }]}>
                         <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Verified Freelancers</Text>
                         <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', marginTop: 2 }}>
                           {mobileServices.length}
@@ -4373,7 +4202,7 @@ export default function AppMobile() {
                         <Text style={{ color: '#38bdf8', fontSize: 10, marginTop: 2 }}>✔ Live Verified Services</Text>
                       </View>
 
-                      <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
+                      <View style={[styles.adminMetricCard, { backgroundColor: cardBg }]}>
                         <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Escrow Volume</Text>
                         <Text style={{ color: '#fbbf24', fontSize: 16, fontWeight: 'bold', marginTop: 2 }}>
                           LKR {mobileServices.reduce((acc, s) => acc + (s.hourlyRate * 3), 0).toLocaleString()}
@@ -4381,7 +4210,7 @@ export default function AppMobile() {
                         <Text style={{ color: '#94a3b8', fontSize: 10, marginTop: 2 }}>🔒 Protected in Vault</Text>
                       </View>
 
-                      <View style={{ flex: 1, minWidth: '45%', backgroundColor: cardBg, padding: 14, borderRadius: 16, borderColor: '#334155', borderWidth: 1 }}>
+                      <View style={[styles.adminMetricCard, { backgroundColor: cardBg }]}>
                         <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Platform Revenue</Text>
                         <Text style={{ color: '#34d399', fontSize: 16, fontWeight: 'bold', marginTop: 2 }}>
                           LKR {Math.round(mobileServices.reduce((acc, s) => acc + (s.hourlyRate * 3), 0) * 0.10).toLocaleString()}
@@ -4846,7 +4675,7 @@ export default function AppMobile() {
             {
               backgroundColor: highContrast
                 ? '#000'
-                : '#1e293b',
+                : '#ffffff',
             },
           ]}
         >
@@ -4857,24 +4686,31 @@ export default function AppMobile() {
           ).map((tab) => (
             <TouchableOpacity
               key={tab}
-              style={styles.tabItem}
+              style={[
+                styles.tabItem,
+                activeTab === tab && styles.tabItemActive,
+              ]}
               onPress={() => setActiveTab(tab)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activeTab === tab }}
             >
-              <Text style={styles.tabIcon}>
-                {tab === 'home'
-                  ? '🏠'
+              <Ionicons
+                name={(tab === 'home'
+                  ? activeTab === tab ? 'home' : 'home-outline'
                   : tab === 'marketplace'
-                    ? '🛒'
+                    ? activeTab === tab ? 'bag-handle' : 'bag-handle-outline'
                     : tab === 'services'
-                      ? '🤝'
+                      ? activeTab === tab ? 'people' : 'people-outline'
                       : tab === 'jobs'
-                        ? '💼'
+                        ? activeTab === tab ? 'briefcase' : 'briefcase-outline'
                         : tab === 'map'
-                          ? '🗺️'
+                          ? activeTab === tab ? 'map' : 'map-outline'
                           : tab === 'admin'
-                            ? '🛡️'
-                            : '👤'}
-              </Text>
+                            ? activeTab === tab ? 'shield-checkmark' : 'shield-checkmark-outline'
+                            : activeTab === tab ? 'person' : 'person-outline') as any}
+                size={20}
+                color={activeTab === tab ? accentColor : subTextColor}
+              />
 
               <Text
                 style={[
@@ -4891,7 +4727,7 @@ export default function AppMobile() {
                   },
                 ]}
               >
-                {tab === 'admin' ? 'Admin' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'marketplace' ? 'Shop' : tab === 'services' ? 'Services' : tab === 'admin' ? 'Admin' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -5276,10 +5112,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: '#e7eaf0',
   },
 
   brandRow: {
@@ -5288,13 +5125,17 @@ const styles = StyleSheet.create({
   },
 
   logoBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#2563eb',
+    width: 40,
+    height: 40,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 10,
+    shadowColor: '#1877f2',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
   logoText: {
@@ -5304,29 +5145,36 @@ const styles = StyleSheet.create({
   },
 
   brandTitle: {
-    fontWeight: 'bold',
+    fontWeight: '900',
+    letterSpacing: -0.4,
   },
 
   brandSub: {
     fontSize: 10,
+    marginTop: 1,
+    letterSpacing: 0.25,
   },
 
   aiButton: {
+    minHeight: 38,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   aiButtonText: {
-    fontWeight: 'bold',
+    fontWeight: '800',
     fontSize: 12,
   },
 
   logoutButtonHeader: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginLeft: 8,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    marginLeft: 7,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -5341,48 +5189,61 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(148, 163, 184, 0.10)',
   },
 
   a11yChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#1e293b',
+    minHeight: 34,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: '#eef2f7',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
 
   a11yChipActive: {
-    backgroundColor: '#eab308',
+    backgroundColor: '#1877f2',
   },
 
   a11yChipText: {
-    color: '#fff',
+    color: '#475467',
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '800',
+  },
+
+  a11yChipTextActive: {
+    color: '#ffffff',
   },
 
   scaleGroup: {
     flexDirection: 'row',
-    backgroundColor: '#1e293b',
-    borderRadius: 6,
-    padding: 2,
+    backgroundColor: '#eef2f7',
+    borderRadius: 10,
+    padding: 3,
   },
 
   scaleBtn: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
 
   scaleBtnActive: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#1877f2',
   },
 
   scaleBtnText: {
-    color: '#fff',
+    color: '#475467',
     fontSize: 9,
     fontWeight: 'bold',
+  },
+
+  scaleBtnTextActive: {
+    color: '#ffffff',
   },
 
   contentScroll: {
@@ -5390,48 +5251,71 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    padding: 14,
-    paddingBottom: 24,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 36,
   },
 
   heroCard: {
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 16,
+    padding: 20,
+    borderRadius: 26,
+    marginBottom: 22,
+    minHeight: 205,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+
+  heroGlow: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    right: -55,
+    top: -70,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
   },
 
   heroBadge: {
     fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 1,
+    fontWeight: '900',
+    letterSpacing: 1.4,
   },
 
   heroTitle: {
-    fontWeight: 'bold',
-    marginTop: 4,
+    fontWeight: '900',
+    marginTop: 7,
+    letterSpacing: -0.5,
   },
 
   heroSub: {
-    marginTop: 4,
-    lineHeight: 16,
+    marginTop: 7,
+    lineHeight: 18,
+    maxWidth: '88%',
   },
 
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 14,
-    paddingTop: 12,
+    marginTop: 18,
+    paddingTop: 15,
     borderTopWidth: 1,
-    borderTopColor: '#334155',
+    borderTopColor: 'rgba(255, 255, 255, 0.16)',
   },
 
   statBox: {
-    alignItems: 'center',
+    flex: 1,
+    alignItems: 'flex-start',
   },
 
   statValue: {
-    fontWeight: 'bold',
-    fontSize: 15,
+    fontWeight: '900',
+    fontSize: 16,
   },
 
   statLabel: {
@@ -5440,24 +5324,159 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontWeight: 'bold',
-    marginBottom: 10,
-    marginTop: 6,
+    fontWeight: '900',
+    marginBottom: 12,
+    marginTop: 8,
+    letterSpacing: -0.25,
+  },
+
+  adminPage: {
+    paddingBottom: 12,
+  },
+
+  adminHero: {
+    minHeight: 142,
+    borderRadius: 24,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    shadowColor: '#1877f2',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 6,
+  },
+
+  adminHeroIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+
+  adminEyebrow: {
+    color: '#bfdbfe',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.15,
+  },
+
+  adminTitle: {
+    color: '#ffffff',
+    fontSize: 23,
+    fontWeight: '900',
+    letterSpacing: -0.6,
+    marginTop: 3,
+  },
+
+  adminSubtitle: {
+    color: '#dbeafe',
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 3,
+  },
+
+  adminPendingPill: {
+    minWidth: 58,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderRadius: 15,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+
+  adminPendingValue: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+
+  adminPendingLabel: {
+    color: '#dbeafe',
+    fontSize: 8,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+
+  adminTabs: {
+    marginVertical: 16,
+  },
+
+  adminTabsContent: {
+    gap: 8,
+    paddingHorizontal: 1,
+    paddingRight: 14,
+  },
+
+  adminTab: {
+    minHeight: 44,
+    paddingHorizontal: 13,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e4e7ec',
+  },
+
+  adminTabActive: {
+    backgroundColor: '#1877f2',
+    borderColor: '#1877f2',
+  },
+
+  adminTabLabel: {
+    color: '#667085',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  adminTabLabelActive: {
+    color: '#ffffff',
+  },
+
+  adminMetricCard: {
+    flex: 1,
+    minWidth: '45%',
+    padding: 15,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e4e7ec',
+    shadowColor: '#101828',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 9,
+    elevation: 2,
   },
 
   quickGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 20,
   },
 
   quickCard: {
     width: '48%',
+    minHeight: 118,
     padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 10,
+    borderRadius: 20,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e7eaf0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
 
   quickIcon: {
@@ -5465,25 +5484,164 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
+  quickIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+
   quickText: {
-    fontWeight: 'bold',
+    fontWeight: '800',
+  },
+
+  homeFeedCard: {
+    borderRadius: 22,
+    overflow: 'hidden',
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#e4e7ec',
+    shadowColor: '#101828',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.07,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+
+  homeFeedHeader: {
+    minHeight: 66,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  homeFeedAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#dbeafe',
+  },
+
+  homeFeedSellerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+
+  homeFeedSeller: {
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
+  homeFeedMeta: {
+    fontSize: 9,
+    marginTop: 2,
+  },
+
+  homeFeedMore: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  homeFeedImage: {
+    width: '100%',
+    height: 240,
+    backgroundColor: '#eef2f7',
+  },
+
+  homeFeedActions: {
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  homeFeedActionGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+
+  homeFeedOrderButton: {
+    minHeight: 38,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1877f2',
+  },
+
+  homeFeedOrderText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+
+  homeFeedBody: {
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 16,
+  },
+
+  homeFeedBadge: {
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+
+  homeFeedTitle: {
+    fontWeight: '900',
+    lineHeight: 20,
+    marginTop: 4,
+  },
+
+  homeFeedPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+
+  homeFeedPrice: {
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  homeFeedRating: {
+    fontSize: 9,
+    fontWeight: '700',
   },
 
   productCard: {
     flexDirection: 'row',
-    borderRadius: 12,
+    borderRadius: 20,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#e7eaf0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 3,
   },
 
   productImg: {
-    width: 100,
-    height: 110,
+    width: 118,
+    height: 132,
   },
 
   productBody: {
     flex: 1,
-    padding: 10,
+    padding: 13,
     justifyContent: 'space-between',
   },
 
@@ -5507,9 +5665,10 @@ const styles = StyleSheet.create({
   },
 
   buyBtn: {
-    paddingVertical: 6,
+    minHeight: 36,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: 11,
     alignItems: 'center',
   },
 
@@ -5519,17 +5678,27 @@ const styles = StyleSheet.create({
   },
 
   searchInput: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    marginBottom: 12,
+    minHeight: 48,
+    paddingHorizontal: 15,
+    paddingVertical: 11,
+    borderRadius: 15,
+    marginBottom: 14,
     fontSize: 13,
+    borderWidth: 1,
+    borderColor: '#dde2ea',
   },
 
   serviceCard: {
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 12,
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#e7eaf0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
 
   rowAlign: {
@@ -5538,9 +5707,9 @@ const styles = StyleSheet.create({
   },
 
   avatarMini: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
   },
 
   providerName: {
@@ -5560,9 +5729,16 @@ const styles = StyleSheet.create({
   },
 
   jobCard: {
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 12,
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#e7eaf0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
 
   jobTitle: {
@@ -5585,20 +5761,25 @@ const styles = StyleSheet.create({
 
   jobBadge: {
     fontSize: 9,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
   },
 
   mapCard: {
-    borderRadius: 12,
+    borderRadius: 20,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 3,
   },
 
   mapImg: {
     width: '100%',
-    height: 120,
+    height: 170,
   },
 
   mapPinTitle: {
@@ -5616,15 +5797,28 @@ const styles = StyleSheet.create({
   },
 
   profileCard: {
-    padding: 16,
-    borderRadius: 16,
+    padding: 22,
+    paddingTop: 0,
+    borderRadius: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e7eaf0',
+    overflow: 'hidden',
+  },
+
+  profileCover: {
+    width: '120%',
+    height: 105,
+    marginBottom: -43,
   },
 
   profileAvatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 86,
+    height: 86,
+    borderRadius: 28,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    backgroundColor: '#eef2f7',
   },
 
   profileName: {
@@ -5636,10 +5830,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
 
+  profileSocialStats: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 18,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#eaecf0',
+  },
+
+  profileSocialStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+
+  profileSocialValue: {
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  profileSocialLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+
+  profileSocialDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#eaecf0',
+  },
+
   notifCard: {
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 8,
+    padding: 15,
+    borderRadius: 17,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e7eaf0',
   },
 
   notifTitle: {
@@ -5653,14 +5882,23 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#334155',
-    paddingVertical: 6,
+    borderTopColor: '#e7eaf0',
+    paddingHorizontal: 7,
+    paddingTop: 7,
+    paddingBottom: Platform.OS === 'ios' ? 4 : 8,
   },
 
   tabItem: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 2,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+
+  tabItemActive: {
+    backgroundColor: '#e8f1ff',
   },
 
   tabIcon: {
@@ -5669,19 +5907,22 @@ const styles = StyleSheet.create({
 
   tabLabel: {
     fontSize: 9,
-    marginTop: 2,
+    marginTop: 3,
+    letterSpacing: 0.1,
   },
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(1, 6, 15, 0.82)',
     justifyContent: 'center',
     padding: 16,
   },
 
   modalContent: {
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.16)',
   },
 
   modalTitle: {
@@ -5695,14 +5936,15 @@ const styles = StyleSheet.create({
   modalInput: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 14,
     marginTop: 12,
     fontSize: 13,
   },
 
   modalAskBtn: {
-    paddingVertical: 8,
-    borderRadius: 8,
+    minHeight: 46,
+    paddingVertical: 10,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -5710,8 +5952,8 @@ const styles = StyleSheet.create({
   aiResBox: {
     marginTop: 12,
     padding: 10,
-    borderRadius: 8,
-    backgroundColor: '#0f172a',
+    borderRadius: 14,
+    backgroundColor: '#07111f',
   },
 
   aiResText: {

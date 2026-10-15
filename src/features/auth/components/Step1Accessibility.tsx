@@ -24,7 +24,7 @@ export const Step1Accessibility: React.FC = () => {
     <View style={styles.container}>
       {/* Step Header */}
       <View style={styles.header}>
-        <Text style={[styles.badge, { color: highContrast ? '#ffff00' : '#0d9488' }]}>
+        <Text style={[styles.badge, { color: highContrast ? '#ffff00' : '#1877f2' }]}>
           STEP 1 OF 4
         </Text>
         <Text style={[styles.title, { fontSize: titleFontSize, color: highContrast ? '#ffffff' : '#0f172a' }]}>
@@ -48,7 +48,7 @@ export const Step1Accessibility: React.FC = () => {
         <Switch
           value={highContrast}
           onValueChange={setHighContrast}
-          trackColor={{ false: '#cbd5e1', true: '#0d9488' }}
+          trackColor={{ false: '#cbd5e1', true: '#1877f2' }}
           thumbColor={highContrast ? '#ffff00' : '#ffffff'}
           accessibilityLabel="Toggle High Contrast Theme"
           accessibilityHint="Switches between normal dark theme and high contrast yellow-and-black theme"
@@ -93,7 +93,7 @@ export const Step1Accessibility: React.FC = () => {
         <Switch
           value={audioGuidance}
           onValueChange={setAudioGuidance}
-          trackColor={{ false: '#cbd5e1', true: '#0d9488' }}
+          trackColor={{ false: '#cbd5e1', true: '#1877f2' }}
           thumbColor={audioGuidance ? '#ffff00' : '#ffffff'}
           accessibilityLabel="Toggle Audio & Voice Guidance"
           accessibilityHint="Enables or disables screen reader audio announcements"

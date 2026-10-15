@@ -107,7 +107,7 @@ export const MobileAccessibilityComplianceDashboard: React.FC<MobileAccessibilit
           style={{
             flex: 1,
             minWidth: '45%',
-            backgroundColor: highContrast ? '#111111' : '#1e293b',
+            backgroundColor: highContrast ? '#111111' : '#ffffff',
             padding: 12,
             borderRadius: 12,
             borderLeftWidth: 4,
@@ -130,7 +130,7 @@ export const MobileAccessibilityComplianceDashboard: React.FC<MobileAccessibilit
           style={{
             flex: 1,
             minWidth: '45%',
-            backgroundColor: highContrast ? '#111111' : '#1e293b',
+            backgroundColor: highContrast ? '#111111' : '#ffffff',
             padding: 12,
             borderRadius: 12,
             borderLeftWidth: 4,
@@ -151,7 +151,7 @@ export const MobileAccessibilityComplianceDashboard: React.FC<MobileAccessibilit
           style={{
             flex: 1,
             minWidth: '45%',
-            backgroundColor: highContrast ? '#111111' : '#1e293b',
+            backgroundColor: highContrast ? '#111111' : '#ffffff',
             padding: 12,
             borderRadius: 12,
             borderLeftWidth: 4,
@@ -172,7 +172,7 @@ export const MobileAccessibilityComplianceDashboard: React.FC<MobileAccessibilit
           style={{
             flex: 1,
             minWidth: '45%',
-            backgroundColor: highContrast ? '#111111' : '#1e293b',
+            backgroundColor: highContrast ? '#111111' : '#ffffff',
             padding: 12,
             borderRadius: 12,
             borderLeftWidth: 4,
@@ -217,14 +217,14 @@ export const MobileAccessibilityComplianceDashboard: React.FC<MobileAccessibilit
       {/* Compliance Audit Records List */}
       <View
         style={{
-          backgroundColor: highContrast ? '#111111' : '#1e293b',
+          backgroundColor: highContrast ? '#111111' : '#ffffff',
           padding: 14,
           borderRadius: 16,
           marginBottom: 16,
         }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <Text style={{ fontSize: 14, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#ffffff' }}>
+          <Text style={{ fontSize: 14, fontWeight: 'bold', color: highContrast ? '#ffff00' : '#172033' }}>
             Compliance Audit Records ({badges.length})
           </Text>
           {onNavigateTab && (
@@ -251,7 +251,7 @@ export const MobileAccessibilityComplianceDashboard: React.FC<MobileAccessibilit
               <View
                 key={b.id}
                 style={{
-                  backgroundColor: '#0f172a',
+                  backgroundColor: '#f7f9fc',
                   padding: 12,
                   borderRadius: 12,
                   borderLeftWidth: 4,
@@ -259,7 +259,7 @@ export const MobileAccessibilityComplianceDashboard: React.FC<MobileAccessibilit
                 }}
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#ffffff' }}>{b.entityName}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#172033' }}>{b.entityName}</Text>
                   <Text
                     style={{
                       fontSize: 10,
@@ -276,8 +276,8 @@ export const MobileAccessibilityComplianceDashboard: React.FC<MobileAccessibilit
                 </View>
 
                 <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                  WCAG Score: <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>{b.score.toFixed(1)} / 5.0</Text> • Status:{' '}
-                  <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>{b.isVerified ? 'Verified' : 'Unverified'}</Text>
+                  WCAG Score: <Text style={{ color: '#172033', fontWeight: 'bold' }}>{b.score.toFixed(1)} / 5.0</Text> • Status:{' '}
+                  <Text style={{ color: '#172033', fontWeight: 'bold' }}>{b.isVerified ? 'Verified' : 'Unverified'}</Text>
                 </Text>
 
                 {!!b.reason && (

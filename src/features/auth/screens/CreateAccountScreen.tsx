@@ -65,7 +65,7 @@ export const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({
             accessibilityLabel="Cancel registration and return to login"
             style={styles.backBtn}
           >
-            <Text style={[styles.backText, { color: highContrast ? '#ffff00' : '#0d9488' }]}>
+            <Text style={[styles.backText, { color: highContrast ? '#ffff00' : '#1877f2' }]}>
               ✕ Cancel
             </Text>
           </TouchableOpacity>
@@ -77,7 +77,7 @@ export const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({
             AccessHub Registration
           </Text>
 
-          <Text style={[styles.stepBadge, { color: highContrast ? '#ffff00' : '#0d9488' }]}>
+          <Text style={[styles.stepBadge, { color: highContrast ? '#ffff00' : '#1877f2' }]}>
             {step}/4
           </Text>
         </View>
@@ -89,7 +89,7 @@ export const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({
               styles.progressBar,
               {
                 width: `${(step / 4) * 100}%`,
-                backgroundColor: highContrast ? '#ffff00' : '#0d9488',
+                backgroundColor: highContrast ? '#ffff00' : '#1877f2',
               },
             ]}
           />

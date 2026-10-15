@@ -135,7 +135,7 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.badge, { color: highContrast ? '#ffff00' : '#0d9488' }]}>
+        <Text style={[styles.badge, { color: highContrast ? '#ffff00' : '#1877f2' }]}>
           STEP 4 OF 4
         </Text>
         <Text style={[styles.title, { fontSize: titleFontSize, color: highContrast ? '#ffffff' : '#0f172a' }]}>
@@ -149,16 +149,16 @@ export const Step4AudioOtpVerification: React.FC<Step4Props> = ({ onComplete }) 
       {/* Sending Indicator */}
       {sendingEmail && (
         <View style={styles.sendingRow}>
-          <ActivityIndicator size="small" color={highContrast ? '#ffff00' : '#0d9488'} />
-          <Text style={[styles.sendingText, { color: highContrast ? '#ffff00' : '#0d9488' }]}>
+          <ActivityIndicator size="small" color={highContrast ? '#ffff00' : '#1877f2'} />
+          <Text style={[styles.sendingText, { color: highContrast ? '#ffff00' : '#1877f2' }]}>
             Sending OTP code to your email...
           </Text>
         </View>
       )}
 
       {/* Audio Assistance Card */}
-      <View style={[styles.audioBox, { borderColor: highContrast ? '#ffff00' : '#0d9488' }]}>
-        <Text style={[styles.audioTitle, { color: highContrast ? '#ffff00' : '#0d9488' }]}>
+      <View style={[styles.audioBox, { borderColor: highContrast ? '#ffff00' : '#1877f2' }]}>
+        <Text style={[styles.audioTitle, { color: highContrast ? '#ffff00' : '#1877f2' }]}>
           🔊 Audio Assistance Mode
         </Text>
         <Text style={styles.audioDesc}>

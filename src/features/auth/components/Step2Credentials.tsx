@@ -136,7 +136,7 @@ export const Step2Credentials: React.FC = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.badge, { color: highContrast ? '#ffff00' : '#0d9488' }]}>
+        <Text style={[styles.badge, { color: highContrast ? '#ffff00' : '#1877f2' }]}>
           STEP 2 OF 4
         </Text>
         <Text style={[styles.title, { fontSize: titleFontSize, color: highContrast ? '#ffffff' : '#0f172a' }]}>
